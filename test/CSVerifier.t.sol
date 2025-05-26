@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -7,6 +7,7 @@ import { stdJson } from "forge-std/StdJson.sol";
 
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
+import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { CSVerifier } from "../src/CSVerifier.sol";
@@ -23,7 +24,15 @@ function dec(Slot self) pure returns (Slot slot) {
     }
 }
 
-using { dec } for Slot;
+function inc(Slot self) pure returns (Slot slot) {
+    assembly ("memory-safe") {
+        slot := add(self, 1)
+    }
+}
+
+using { dec, inc } for Slot;
+
+GIndex constant NULL_GINDEX = GIndex.wrap(0);
 
 contract CSVerifierTestBase is Test, Utilities {
     using stdJson for string;
@@ -35,16 +44,14 @@ contract CSVerifierTestBase is Test, Utilities {
         ICSVerifier.WithdrawalWitness witness;
     }
 
-    struct SlashingFixture {
-        bytes32 _blockRoot;
-        bytes _pubkey;
-        ICSVerifier.ProvableBeaconBlockHeader beaconBlock;
-        ICSVerifier.SlashingWitness witness;
-    }
-
     CSVerifier public verifier;
     Stub public module;
     Slot public firstSupportedSlot;
+    address public admin;
+    address public stranger;
+
+    bytes32 public pauseRole;
+    bytes32 public resumeRole;
 
     string internal fixturesPath = "./test/fixtures/CSVerifier/";
 
@@ -61,6 +68,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     function setUp() public {
         module = new Stub();
         firstSupportedSlot = Slot.wrap(100_500);
+        admin = nextAddress("ADMIN");
     }
 
     function test_constructor() public {
@@ -70,14 +78,17 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: withdrawalAddress,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0xfff0, 4),
-            gIHistoricalSummariesCurr: pack(0xffff, 4),
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c1, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000001, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: pack(0xfff0, 4),
+                gIHistoricalSummariesCurr: pack(0xffff, 4),
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c1, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000001, 40)
+            }),
             firstSupportedSlot: firstSupportedSlot,
-            pivotSlot: Slot.wrap(100_501)
+            pivotSlot: Slot.wrap(100_501),
+            admin: admin
         });
 
         assertEq(address(verifier.WITHDRAWAL_ADDRESS()), withdrawalAddress);
@@ -118,73 +129,82 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     }
 
     function test_constructor_RevertWhen_InvalidChainConfig() public {
-        vm.expectRevert(CSVerifier.InvalidChainConfig.selector);
+        vm.expectRevert(ICSVerifier.InvalidChainConfig.selector);
         verifier = new CSVerifier({
             withdrawalAddress: nextAddress(),
             module: address(module),
             slotsPerEpoch: 0,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot
+            pivotSlot: firstSupportedSlot,
+            admin: admin
         });
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
-        vm.expectRevert(CSVerifier.ZeroModuleAddress.selector);
+        vm.expectRevert(ICSVerifier.ZeroModuleAddress.selector);
         verifier = new CSVerifier({
             withdrawalAddress: nextAddress(),
             module: address(0),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot
+            pivotSlot: firstSupportedSlot,
+            admin: admin
         });
     }
 
     function test_constructor_RevertWhen_ZeroWithdrawalAddress() public {
-        vm.expectRevert(CSVerifier.ZeroWithdrawalAddress.selector);
+        vm.expectRevert(ICSVerifier.ZeroWithdrawalAddress.selector);
         verifier = new CSVerifier({
             withdrawalAddress: address(0),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot
+            pivotSlot: firstSupportedSlot,
+            admin: admin
         });
     }
-}
 
-contract CSVerifierSlashingTest is CSVerifierTestBase {
-    function setUp() public {
-        module = new Stub();
-
+    function test_constructor_RevertWhen_ZeroAdminAddress() public {
+        vm.expectRevert(ICSVerifier.ZeroAdminAddress.selector);
         verifier = new CSVerifier({
-            withdrawalAddress: nextAddress("WITHDRAWAL_ADDRESS"),
+            withdrawalAddress: nextAddress(),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
-            firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
-            pivotSlot: Slot.wrap(100_500)
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
+            firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
+            pivotSlot: firstSupportedSlot,
+            admin: address(0)
         });
     }
 }
@@ -192,20 +212,32 @@ contract CSVerifierSlashingTest is CSVerifierTestBase {
 contract CSVerifierWithdrawalTest is CSVerifierTestBase {
     function setUp() public {
         module = new Stub();
+        admin = nextAddress("ADMIN");
 
         verifier = new CSVerifier({
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
-            pivotSlot: Slot.wrap(100_500)
+            pivotSlot: Slot.wrap(100_500),
+            admin: admin
         });
+
+        pauseRole = verifier.PAUSE_ROLE();
+        resumeRole = verifier.RESUME_ROLE();
+
+        vm.startPrank(admin);
+        verifier.grantRole(pauseRole, admin);
+        verifier.grantRole(resumeRole, admin);
+        vm.stopPrank();
     }
 
     function test_processWithdrawalProof() public {
@@ -252,7 +284,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                CSVerifier.UnsupportedSlot.selector,
+                ICSVerifier.UnsupportedSlot.selector,
                 fixture.beaconBlock.header.slot
             )
         );
@@ -280,7 +312,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             abi.encode("lol")
         );
 
-        vm.expectRevert(CSVerifier.InvalidBlockHeader.selector);
+        vm.expectRevert(ICSVerifier.InvalidBlockHeader.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -303,13 +335,13 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
 
         vm.mockCall(
             address(module),
-            abi.encodeWithSelector(ICSModule.submitWithdrawal.selector),
+            abi.encodeWithSelector(ICSModule.submitWithdrawals.selector),
             ""
         );
 
         vm.etch(verifier.BEACON_ROOTS(), new bytes(0));
 
-        vm.expectRevert(CSVerifier.RootNotFound.selector);
+        vm.expectRevert(ICSVerifier.RootNotFound.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -332,7 +364,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             ""
         );
 
-        vm.expectRevert(CSVerifier.RootNotFound.selector);
+        vm.expectRevert(ICSVerifier.RootNotFound.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -353,7 +385,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
 
         fixture.witness.withdrawalCredentials = bytes32(0);
 
-        vm.expectRevert(CSVerifier.InvalidWithdrawalAddress.selector);
+        vm.expectRevert(ICSVerifier.InvalidWithdrawalAddress.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -377,7 +409,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             32 +
             154;
 
-        vm.expectRevert(CSVerifier.ValidatorNotWithdrawn.selector);
+        vm.expectRevert(ICSVerifier.ValidatorNotWithdrawn.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -396,7 +428,127 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
 
         fixture.witness.amount = 154;
 
-        vm.expectRevert(CSVerifier.PartialWithdrawal.selector);
+        vm.expectRevert(ICSVerifier.PartialWithdrawal.selector);
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_RevertWhenPaused() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_ForkBeforePivot() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        verifier = new CSVerifier({
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            module: address(module),
+            slotsPerEpoch: 32,
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0x0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x0, 40)
+            }),
+            firstSupportedSlot: fixture.beaconBlock.header.slot.dec(),
+            pivotSlot: fixture.beaconBlock.header.slot.inc(),
+            admin: admin
+        });
+
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_ForkAtPivot() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        verifier = new CSVerifier({
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            module: address(module),
+            slotsPerEpoch: 32,
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0x0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x0, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
+            firstSupportedSlot: fixture.beaconBlock.header.slot.dec(),
+            pivotSlot: fixture.beaconBlock.header.slot,
+            admin: admin
+        });
+
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_ForkAfterPivot() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        verifier = new CSVerifier({
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            module: address(module),
+            slotsPerEpoch: 32,
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0x0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x0, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
+            firstSupportedSlot: fixture.beaconBlock.header.slot.dec(),
+            pivotSlot: fixture.beaconBlock.header.slot.dec(),
+            admin: admin
+        });
+
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -420,8 +572,90 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
 
         vm.mockCall(
             address(module),
-            abi.encodeWithSelector(ICSModule.submitWithdrawal.selector),
+            abi.encodeWithSelector(ICSModule.submitWithdrawals.selector),
             ""
         );
+    }
+}
+
+contract CSVerifierPauseTest is CSVerifierTestBase {
+    function setUp() public {
+        module = new Stub();
+        admin = nextAddress("ADMIN");
+        stranger = nextAddress("STRANGER");
+
+        verifier = new CSVerifier({
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            module: address(module),
+            slotsPerEpoch: 32,
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: NULL_GINDEX,
+                gIFirstWithdrawalCurr: NULL_GINDEX,
+                gIFirstValidatorPrev: NULL_GINDEX,
+                gIFirstValidatorCurr: NULL_GINDEX
+            }),
+            firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
+            pivotSlot: Slot.wrap(100_500),
+            admin: admin
+        });
+
+        pauseRole = verifier.PAUSE_ROLE();
+        resumeRole = verifier.RESUME_ROLE();
+
+        vm.startPrank(admin);
+        verifier.grantRole(pauseRole, admin);
+        verifier.grantRole(resumeRole, admin);
+        vm.stopPrank();
+    }
+
+    function test_pause() public {
+        assertFalse(verifier.isPaused());
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+    }
+
+    function test_pause_RevertWhenNoRole() public {
+        expectRoleRevert(stranger, pauseRole);
+        vm.prank(stranger);
+        verifier.pauseFor(100_500);
+    }
+
+    function test_pause_RevertWhenPaused() public {
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+    }
+
+    function test_resume() public {
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+
+        vm.prank(admin);
+        verifier.resume();
+        assertFalse(verifier.isPaused());
+    }
+
+    function test_resume_RevertWhenNoRole() public {
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+
+        expectRoleRevert(stranger, resumeRole);
+        vm.prank(stranger);
+        verifier.resume();
+    }
+
+    function test_resume_RevertWhenNotPaused() public {
+        vm.expectRevert(PausableUntil.PausedExpected.selector);
+        vm.prank(admin);
+        verifier.resume();
     }
 }

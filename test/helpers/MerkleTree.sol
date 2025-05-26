@@ -1,33 +1,80 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
-/// @dev See https://github.com/succinctlabs/telepathy-contracts/blob/main/src/libraries/MerkleProof.sol
+/// @dev There's no leaves sorting for simplicity.
 contract MerkleTree {
-    uint256 internal treeHeight;
-    bytes32[][] internal tree;
+    bytes32[] internal tree;
     bytes32[] internal leaves;
 
+    uint256 internal constant BUFFER_SIZE = 256;
+
     function root() external view returns (bytes32) {
-        return tree.length == 0 ? bytes32(0) : tree[treeHeight][0];
+        return tree.length == 0 ? bytes32(0) : tree[0];
     }
 
-    function getProof(uint256 index) public view returns (bytes32[] memory) {
-        // Generate the proof
-        bytes32[] memory proof = new bytes32[](treeHeight);
-        for (uint256 i = 0; i < treeHeight; i++) {
-            if (index % 2 == 0) {
-                // sibling is on the right
-                proof[i] = tree[i][index + 1];
-            } else {
-                // sibling is on the left
-                proof[i] = tree[i][index - 1];
-            }
+    function getProof(
+        uint256 index
+    ) public view returns (bytes32[] memory proof) {
+        if (tree.length == 1) {
+            return proof;
+        }
 
-            index = index / 2;
+        uint256 i = tree.length - 1 - index;
+        uint256 proofLength = _log2(i + 1);
+        proof = new bytes32[](proofLength);
+        uint256 p = 0;
+
+        while (i > 0) {
+            if (i % 2 == 0) {
+                proof[p] = tree[i - 1];
+            } else {
+                proof[p] = tree[i + 1];
+            }
+            i = (i - 1) / 2;
+            p++;
         }
 
         return proof;
+    }
+
+    function getMultiProof(
+        uint256[] memory indicies
+    ) public view returns (bytes32[] memory proof, bool[] memory proofFlags) {
+        uint256[] memory stack = new uint256[](BUFFER_SIZE);
+        for (uint256 i; i < indicies.length; ++i) {
+            stack[i] = tree.length - 1 - indicies[i];
+        }
+        uint256 stackPos;
+        uint256 stackLen = indicies.length;
+
+        proofFlags = new bool[](BUFFER_SIZE);
+        uint256 proofFlagsLen;
+
+        proof = new bytes32[](BUFFER_SIZE);
+        uint256 proofLen;
+
+        while (stackPos < stackLen && stack[stackPos] > 0) {
+            uint256 j = stack[stackPos++];
+
+            uint256 s = j % 2 == 0 ? j - 1 : j + 1;
+            uint256 p = (j - 1) / 2;
+
+            if (s == stack[stackPos]) {
+                proofFlags[proofFlagsLen++] = true;
+                stackPos++;
+            } else {
+                proofFlags[proofFlagsLen++] = false;
+                proof[proofLen++] = tree[s];
+            }
+
+            stack[stackLen++] = p;
+        }
+
+        assembly ("memory-safe") {
+            mstore(proofFlags, proofFlagsLen)
+            mstore(proof, proofLen)
+        }
     }
 
     function pushLeaf(bytes memory leafBytes) external {
@@ -37,39 +84,34 @@ contract MerkleTree {
     }
 
     function _buildTree() internal {
-        treeHeight = _ceilLog2(leaves.length);
-        tree = new bytes32[][](treeHeight + 1);
-        tree[0] = leaves;
+        delete tree;
 
-        while (tree[0].length < 2 ** treeHeight) {
-            tree[0].push(this.hashLeaf(bytes.concat(bytes32(0))));
+        if (leaves.length == 1) {
+            tree.push(leaves[0]);
+            return;
         }
 
-        for (uint256 i = 1; i <= treeHeight; i++) {
-            uint256 previousLevelLength = tree[i - 1].length;
-            bytes32[] memory currentLevel = new bytes32[](
-                previousLevelLength / 2
-            );
+        for (uint256 i = 0; i < 2 * leaves.length - 1; ++i) {
+            tree.push(bytes32(0));
+        }
 
-            for (uint256 j = 0; j < previousLevelLength; j += 2) {
-                currentLevel[j / 2] = _hashPair(
-                    tree[i - 1][j],
-                    tree[i - 1][j + 1]
-                );
+        for (uint256 i = 0; i < leaves.length; ++i) {
+            tree[tree.length - 1 - i] = leaves[i];
+        }
+
+        for (uint256 i = tree.length - 1 - leaves.length; ; --i) {
+            tree[i] = _hashPair(tree[2 * i + 1], tree[2 * i + 2]);
+
+            if (i == 0) {
+                break;
             }
-
-            tree[i] = currentLevel;
         }
     }
 
-    function _ceilLog2(uint256 _x) private pure returns (uint256 y) {
-        // To avoid a leaf to become a root
-        if (_x == 1) return 1;
-
-        require(_x != 0);
-        y = (_x & (_x - 1)) == 0 ? 0 : 1;
-        while (_x > 1) {
-            _x >>= 1;
+    function _log2(uint256 x) private pure returns (uint256 y) {
+        require(x != 0);
+        while (x > 1) {
+            x >>= 1;
             y += 1;
         }
         return y;

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -43,4 +43,6 @@ interface ILidoLocator {
     function withdrawalQueue() external view returns (address);
 
     function withdrawalVault() external view returns (address);
+
+    function triggerableWithdrawalsGateway() external view returns (address);
 }

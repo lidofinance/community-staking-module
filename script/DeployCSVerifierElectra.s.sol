@@ -1,7 +1,7 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// Usage: forge script --private-key=$PRIVATE_KEY ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Holesky|Mainnet|DevNet]
+// Usage: forge script --private-key=$PRIVATE_KEY ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Mainnet|Hoodi|DevNet]
 
 pragma solidity 0.8.24;
 
@@ -9,6 +9,7 @@ import { Script } from "forge-std/Script.sol";
 import { console2 as console } from "forge-std/console2.sol";
 
 import { CSVerifier } from "../src/CSVerifier.sol";
+import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { JsonObj, Json } from "./utils/Json.sol";
@@ -25,6 +26,7 @@ struct Config {
     Slot firstSupportedSlot;
     Slot pivotSlot;
     uint64 slotsPerEpoch;
+    address admin;
     string chainName;
 }
 
@@ -51,6 +53,7 @@ GIndex constant FIRST_VALIDATOR_ELECTRA = GIndex.wrap(
 );
 
 abstract contract DeployCSVerifier is Script {
+    CSVerifier internal verifier;
     Config internal config;
     string internal artifactDir;
 
@@ -58,19 +61,24 @@ abstract contract DeployCSVerifier is Script {
         artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/latest/"));
 
         vm.startBroadcast();
-        CSVerifier verifier = new CSVerifier({
-            withdrawalAddress: config.withdrawalVault,
-            module: config.module,
-            slotsPerEpoch: config.slotsPerEpoch,
-            gIFirstWithdrawalPrev: config.gIFirstWithdrawalPrev,
-            gIFirstWithdrawalCurr: config.gIFirstWithdrawalCurr,
-            gIFirstValidatorPrev: config.gIFirstValidatorPrev,
-            gIFirstValidatorCurr: config.gIFirstValidatorCurr,
-            gIHistoricalSummariesPrev: config.gIHistoricalSummariesPrev,
-            gIHistoricalSummariesCurr: config.gIHistoricalSummariesCurr,
-            firstSupportedSlot: config.firstSupportedSlot,
-            pivotSlot: config.pivotSlot
-        });
+        {
+            verifier = new CSVerifier({
+                withdrawalAddress: config.withdrawalVault,
+                module: config.module,
+                slotsPerEpoch: config.slotsPerEpoch,
+                gindices: ICSVerifier.GIndices({
+                    gIFirstWithdrawalPrev: config.gIFirstWithdrawalPrev,
+                    gIFirstWithdrawalCurr: config.gIFirstWithdrawalCurr,
+                    gIFirstValidatorPrev: config.gIFirstValidatorPrev,
+                    gIFirstValidatorCurr: config.gIFirstValidatorCurr,
+                    gIHistoricalSummariesPrev: config.gIHistoricalSummariesPrev,
+                    gIHistoricalSummariesCurr: config.gIHistoricalSummariesCurr
+                }),
+                firstSupportedSlot: config.firstSupportedSlot,
+                pivotSlot: config.pivotSlot,
+                admin: config.admin
+            });
+        }
         vm.stopBroadcast();
 
         JsonObj memory deployJson = Json.newObj();
@@ -104,8 +112,9 @@ contract DeployCSVerifierHolesky is DeployCSVerifier {
             gIFirstValidatorCurr: FIRST_VALIDATOR_ELECTRA,
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
-            firstSupportedSlot: Slot.wrap(950272), // 29_696 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L38
+            firstSupportedSlot: Slot.wrap(950272), // 269_568 * 32, @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L52
             pivotSlot: Slot.wrap(3710976), // 115_968 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L42
+            admin: 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d, // Aragon Agent
             chainName: "holesky"
         });
     }
@@ -125,6 +134,7 @@ contract DeployCSVerifierHoodi is DeployCSVerifier {
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(0), // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L37
             pivotSlot: Slot.wrap(65536), // 2048 * 32, @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L41
+            admin: 0x0534aA41907c9631fae990960bCC72d75fA7cfeD,
             chainName: "hoodi"
         });
     }
@@ -142,8 +152,9 @@ contract DeployCSVerifierMainnet is DeployCSVerifier {
             gIFirstValidatorCurr: FIRST_VALIDATOR_ELECTRA,
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
-            firstSupportedSlot: Slot.wrap(8626176), // 269_568 * 32, @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L52
+            firstSupportedSlot: Slot.wrap(8626176), // 29_696 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L38
             pivotSlot: Slot.wrap(11649024), // 364032 * 32 https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7600.md#activation
+            admin: 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c, // Aragon Agent
             chainName: "mainnet"
         });
     }
@@ -165,6 +176,7 @@ contract DeployCSVerifierDevNet is DeployCSVerifier {
             pivotSlot: Slot.wrap(
                 uint64(vm.envUint("DEVNET_ELECTRA_EPOCH")) * 32
             ),
+            admin: 0x0534aA41907c9631fae990960bCC72d75fA7cfeD,
             chainName: "devnet"
         });
     }

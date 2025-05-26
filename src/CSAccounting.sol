@@ -1,20 +1,21 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
-
-import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 import { CSBondCore } from "./abstract/CSBondCore.sol";
 import { CSBondCurve } from "./abstract/CSBondCurve.sol";
 import { CSBondLock } from "./abstract/CSBondLock.sol";
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
-import { ICSModule } from "./interfaces/ICSModule.sol";
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
+import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
+
+import { IStakingModule } from "./interfaces/IStakingModule.sol";
+import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
-import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
-import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 /// @author vgorkavenko
 /// @notice This contract stores the Node Operators' bonds in the form of stETH shares,
@@ -30,88 +31,70 @@ contract CSAccounting is
 {
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
-    bytes32 public constant ACCOUNTING_MANAGER_ROLE =
-        keccak256("ACCOUNTING_MANAGER_ROLE");
     bytes32 public constant MANAGE_BOND_CURVES_ROLE =
         keccak256("MANAGE_BOND_CURVES_ROLE");
     bytes32 public constant SET_BOND_CURVE_ROLE =
         keccak256("SET_BOND_CURVE_ROLE");
-    bytes32 public constant RESET_BOND_CURVE_ROLE =
-        keccak256("RESET_BOND_CURVE_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
-    ICSModule public immutable CSM;
-    ICSFeeDistributor public feeDistributor;
+    ICSModule public immutable MODULE;
+    ICSFeeDistributor public immutable FEE_DISTRIBUTOR;
+    /// @dev DEPRECATED
+    /// @custom:oz-renamed-from feeDistributor
+    ICSFeeDistributor internal _feeDistributorOld;
     address public chargePenaltyRecipient;
 
-    event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
-    event ChargePenaltyRecipientSet(address chargePenaltyRecipient);
+    modifier onlyModule() {
+        if (msg.sender != address(MODULE)) {
+            revert SenderIsNotModule();
+        }
 
-    error SenderIsNotCSM();
-    error ZeroModuleAddress();
-    error ZeroAdminAddress();
-    error ZeroFeeDistributorAddress();
-    error ZeroChargePenaltyRecipientAddress();
-    error NodeOperatorDoesNotExist();
-    error ElRewardsVaultReceiveFailed();
-
-    modifier onlyCSM() {
-        if (msg.sender != address(CSM)) revert SenderIsNotCSM();
         _;
     }
 
     /// @param lidoLocator Lido locator contract address
-    /// @param communityStakingModule Community Staking Module contract address
-    /// @param maxCurveLength Max number of the points in the bond curves
-    /// @param minBondLockRetentionPeriod Min time in seconds for the bondLock retention period
-    /// @param maxBondLockRetentionPeriod Max time in seconds for the bondLock retention period
+    /// @param module Community Staking Module contract address
+    /// @param minBondLockPeriod Min time in seconds for the bondLock period
+    /// @param maxBondLockPeriod Max time in seconds for the bondLock period
     constructor(
         address lidoLocator,
-        address communityStakingModule,
-        uint256 maxCurveLength,
-        uint256 minBondLockRetentionPeriod,
-        uint256 maxBondLockRetentionPeriod
-    )
-        CSBondCore(lidoLocator)
-        CSBondCurve(maxCurveLength)
-        CSBondLock(minBondLockRetentionPeriod, maxBondLockRetentionPeriod)
-    {
-        if (communityStakingModule == address(0)) {
+        address module,
+        address _feeDistributor,
+        uint256 minBondLockPeriod,
+        uint256 maxBondLockPeriod
+    ) CSBondCore(lidoLocator) CSBondLock(minBondLockPeriod, maxBondLockPeriod) {
+        if (module == address(0)) {
             revert ZeroModuleAddress();
         }
-        CSM = ICSModule(communityStakingModule);
+        if (_feeDistributor == address(0)) {
+            revert ZeroFeeDistributorAddress();
+        }
+
+        MODULE = ICSModule(module);
+        FEE_DISTRIBUTOR = ICSFeeDistributor(_feeDistributor);
 
         _disableInitializers();
     }
 
     /// @param bondCurve Initial bond curve
     /// @param admin Admin role member address
-    /// @param _feeDistributor Fee Distributor contract address
-    /// @param bondLockRetentionPeriod Retention period for locked bond in seconds
+    /// @param bondLockPeriod Bond lock period in seconds
     /// @param _chargePenaltyRecipient Recipient of the charge penalty type
     function initialize(
-        uint256[] calldata bondCurve,
+        BondCurveIntervalInput[] calldata bondCurve,
         address admin,
-        address _feeDistributor,
-        uint256 bondLockRetentionPeriod,
+        uint256 bondLockPeriod,
         address _chargePenaltyRecipient
-    ) external initializer {
+    ) external reinitializer(2) {
         __AccessControlEnumerable_init();
         __CSBondCurve_init(bondCurve);
-        __CSBondLock_init(bondLockRetentionPeriod);
+        __CSBondLock_init(bondLockPeriod);
 
         if (admin == address(0)) {
             revert ZeroAdminAddress();
         }
-        if (_feeDistributor == address(0)) {
-            revert ZeroFeeDistributorAddress();
-        }
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(SET_BOND_CURVE_ROLE, address(CSM));
-        _grantRole(RESET_BOND_CURVE_ROLE, address(CSM));
-
-        feeDistributor = ICSFeeDistributor(_feeDistributor);
 
         _setChargePenaltyRecipient(_chargePenaltyRecipient);
 
@@ -120,299 +103,264 @@ contract CSAccounting is
         LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
     }
 
-    /// @notice Resume reward claims and deposits
+    function finalizeUpgradeV2(
+        BondCurveIntervalInput[][] calldata bondCurvesInputs
+    ) external reinitializer(2) {
+        assembly ("memory-safe") {
+            sstore(_feeDistributorOld.slot, 0x00)
+        }
+
+        // NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
+        if (bondCurvesInputs.length != _getLegacyBondCurvesLength()) {
+            revert InvalidBondCurvesLength();
+        }
+
+        // NOTE: Re-init `CSBondCurve` due to the new format. Contains a check that the first added curve id is `DEFAULT_BOND_CURVE_ID`
+        __CSBondCurve_init(bondCurvesInputs[0]);
+        for (uint256 i = 1; i < bondCurvesInputs.length; ++i) {
+            _addBondCurve(bondCurvesInputs[i]);
+        }
+    }
+
+    /// @inheritdoc ICSAccounting
     function resume() external onlyRole(RESUME_ROLE) {
         _resume();
     }
 
-    /// @notice Pause reward claims and deposits for `duration` seconds
-    /// @dev Must be called together with `CSModule.pauseFor`
-    /// @dev Passing MAX_UINT_256 as `duration` pauses indefinitely
-    /// @param duration Duration of the pause in seconds
+    /// @inheritdoc ICSAccounting
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
     }
 
-    /// @notice Set charge recipient address
-    /// @param _chargePenaltyRecipient Charge recipient address
+    /// @inheritdoc ICSAccounting
     function setChargePenaltyRecipient(
         address _chargePenaltyRecipient
-    ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setChargePenaltyRecipient(_chargePenaltyRecipient);
     }
 
-    /// @notice Set bond lock retention period
-    /// @param retention Period in seconds to retain bond lock
-    function setLockedBondRetentionPeriod(
-        uint256 retention
-    ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
-        CSBondLock._setBondLockRetentionPeriod(retention);
+    /// @inheritdoc ICSAccounting
+    function setBondLockPeriod(
+        uint256 period
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        CSBondLock._setBondLockPeriod(period);
     }
 
-    /// @notice Add a new bond curve
-    /// @param bondCurve Bond curve definition to add
-    /// @return id Id of the added curve
+    /// @inheritdoc ICSAccounting
     function addBondCurve(
-        uint256[] calldata bondCurve
+        BondCurveIntervalInput[] calldata bondCurve
     ) external onlyRole(MANAGE_BOND_CURVES_ROLE) returns (uint256 id) {
         id = CSBondCurve._addBondCurve(bondCurve);
     }
 
-    /// @notice Update existing bond curve
-    /// @dev If the curve is updated to a curve with higher values for any point,
-    ///      Extensive checks should be performed to avoid inconsistency in the keys accounting
-    /// @param curveId Bond curve ID to update
-    /// @param bondCurve Bond curve definition
+    /// @inheritdoc ICSAccounting
     function updateBondCurve(
         uint256 curveId,
-        uint256[] calldata bondCurve
+        BondCurveIntervalInput[] calldata bondCurve
     ) external onlyRole(MANAGE_BOND_CURVES_ROLE) {
         CSBondCurve._updateBondCurve(curveId, bondCurve);
     }
 
-    /// @notice Set the bond curve for the given Node Operator
-    /// @dev If called externally, the `normalizeQueue` method from CSModule.sol should be called after
-    ///      to ensure key pointers consistency
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param curveId ID of the bond curve to set
+    /// @inheritdoc ICSAccounting
     function setBondCurve(
         uint256 nodeOperatorId,
         uint256 curveId
     ) external onlyRole(SET_BOND_CURVE_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
         CSBondCurve._setBondCurve(nodeOperatorId, curveId);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
-    /// @notice Reset bond curve to the default one for the given Node Operator
-    /// @dev If called externally, the `normalizeQueue` method from CSModule.sol should be called after
-    ///      to ensure key pointers consistency
-    /// @param nodeOperatorId ID of the Node Operator
-    function resetBondCurve(
-        uint256 nodeOperatorId
-    ) external onlyRole(RESET_BOND_CURVE_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        CSBondCurve._resetBondCurve(nodeOperatorId);
-    }
-
-    /// @notice Stake user's ETH with Lido and deposit stETH to the bond
-    /// @dev Called by CSM exclusively
-    /// @param from Address to stake ETH and deposit stETH from
-    /// @param nodeOperatorId ID of the Node Operator
+    /// @inheritdoc ICSAccounting
     function depositETH(
         address from,
         uint256 nodeOperatorId
-    ) external payable whenResumed onlyCSM {
+    ) external payable whenResumed onlyModule {
         CSBondCore._depositETH(from, nodeOperatorId);
     }
 
-    /// @notice Deposit user's stETH to the bond for the given Node Operator
-    /// @dev Called by CSM exclusively
-    /// @param from Address to deposit stETH from
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param stETHAmount Amount of stETH to deposit
-    /// @param permit stETH permit for the contract
+    /// @inheritdoc ICSAccounting
+    function depositETH(uint256 nodeOperatorId) external payable whenResumed {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        CSBondCore._depositETH(msg.sender, nodeOperatorId);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
+    }
+
+    /// @inheritdoc ICSAccounting
     function depositStETH(
         address from,
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         PermitInput calldata permit
-    ) external whenResumed onlyCSM {
-        // @dev for some reason foundry coverage consider this if as not fully covered. Check tests to see it is covered indeed
-        // preventing revert for already used permit or avoid permit usage in case of value == 0
-        if (
-            permit.value > 0 &&
-            LIDO.allowance(from, address(this)) < permit.value
-        ) {
-            // solhint-disable-next-line func-named-parameters
-            LIDO.permit(
-                from,
-                address(this),
-                permit.value,
-                permit.deadline,
-                permit.v,
-                permit.r,
-                permit.s
-            );
-        }
-
+    ) external whenResumed onlyModule {
+        _unwrapStETHPermitIfRequired(from, permit);
         CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
     }
 
-    /// @notice Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
-    /// @dev Called by CSM exclusively
-    /// @param from Address to unwrap wstETH from
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param wstETHAmount Amount of wstETH to deposit
-    /// @param permit wstETH permit for the contract
+    /// @inheritdoc ICSAccounting
+    function depositStETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        PermitInput calldata permit
+    ) external whenResumed {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _unwrapStETHPermitIfRequired(msg.sender, permit);
+        CSBondCore._depositStETH(msg.sender, nodeOperatorId, stETHAmount);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
+    }
+
+    /// @inheritdoc ICSAccounting
     function depositWstETH(
         address from,
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         PermitInput calldata permit
-    ) external whenResumed onlyCSM {
-        // @dev for some reason foundry coverage consider this if as not fully covered. Check tests to see it is covered indeed
-        // preventing revert for already used permit or avoid permit usage in case of value == 0
-        if (
-            permit.value > 0 &&
-            WSTETH.allowance(from, address(this)) < permit.value
-        ) {
-            // solhint-disable-next-line func-named-parameters
-            WSTETH.permit(
-                from,
-                address(this),
-                permit.value,
-                permit.deadline,
-                permit.v,
-                permit.r,
-                permit.s
-            );
-        }
-
+    ) external whenResumed onlyModule {
+        _unwrapWstETHPermitIfRequired(from, permit);
         CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
 
-    /// @notice Claim full reward (fee + bond) in stETH for the given Node Operator with desirable value.
-    ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
-    /// @dev Called by CSM exclusively
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param stETHAmount Amount of stETH to claim
-    /// @param rewardAddress Reward address of the node operator
-    /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
-    /// @param rewardsProof Merkle proof of the rewards
-    /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
-    /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
+    /// @inheritdoc ICSAccounting
+    function depositWstETH(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount,
+        PermitInput calldata permit
+    ) external whenResumed {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _unwrapWstETHPermitIfRequired(msg.sender, permit);
+        CSBondCore._depositWstETH(msg.sender, nodeOperatorId, wstETHAmount);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
+    }
+
+    /// @inheritdoc ICSAccounting
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
-        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external whenResumed onlyCSM {
+    ) external whenResumed returns (uint256 claimedShares) {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(no);
+
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        CSBondCore._claimStETH(nodeOperatorId, stETHAmount, rewardAddress);
+        claimedShares = CSBondCore._claimStETH(
+            nodeOperatorId,
+            stETHAmount,
+            no.rewardAddress
+        );
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
-    /// @notice Claim full reward (fee + bond) in wstETH for the given Node Operator available for this moment.
-    ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
-    /// @dev Called by CSM exclusively
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param wstETHAmount Amount of wstETH to claim
-    /// @param rewardAddress Reward address of the node operator
-    /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
-    /// @param rewardsProof Merkle proof of the rewards
-    /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
-    /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
+    /// @inheritdoc ICSAccounting
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
-        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external whenResumed onlyCSM {
+    ) external whenResumed returns (uint256 claimedWstETH) {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(no);
+
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        CSBondCore._claimWstETH(nodeOperatorId, wstETHAmount, rewardAddress);
+        claimedWstETH = CSBondCore._claimWstETH(
+            nodeOperatorId,
+            wstETHAmount,
+            no.rewardAddress
+        );
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
-    /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node Operator available for this moment.
-    ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
-    /// @dev Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`
-    /// @dev Called by CSM exclusively
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param stEthAmount Amount of ETH to request
-    /// @param rewardAddress Reward address of the node operator
-    /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
-    /// @param rewardsProof Merkle proof of the rewards
-    /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
-    /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
+    /// @inheritdoc ICSAccounting
     function claimRewardsUnstETH(
         uint256 nodeOperatorId,
-        uint256 stEthAmount,
-        address rewardAddress,
+        uint256 stETHAmount,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external whenResumed onlyCSM {
+    ) external whenResumed returns (uint256 requestId) {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(no);
+
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        CSBondCore._claimUnstETH(nodeOperatorId, stEthAmount, rewardAddress);
+        requestId = CSBondCore._claimUnstETH(
+            nodeOperatorId,
+            stETHAmount,
+            no.rewardAddress
+        );
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
-    /// @notice Lock bond in ETH for the given Node Operator
-    /// @dev Called by CSM exclusively
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param amount Amount to lock in ETH (stETH)
+    /// @inheritdoc ICSAccounting
     function lockBondETH(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyCSM {
+    ) external onlyModule {
         CSBondLock._lock(nodeOperatorId, amount);
     }
 
-    /// @notice Release locked bond in ETH for the given Node Operator
-    /// @dev Called by CSM exclusively
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param amount Amount to release in ETH (stETH)
+    /// @inheritdoc ICSAccounting
     function releaseLockedBondETH(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyCSM {
+    ) external onlyModule {
         CSBondLock._reduceAmount(nodeOperatorId, amount);
     }
 
-    /// @notice Compensate locked bond ETH for the given Node Operator
-    //// @dev Called by CSM exclusively
-    /// @param nodeOperatorId ID of the Node Operator
+    /// @inheritdoc ICSAccounting
     function compensateLockedBondETH(
         uint256 nodeOperatorId
-    ) external payable onlyCSM {
+    ) external payable onlyModule {
         (bool success, ) = LIDO_LOCATOR.elRewardsVault().call{
             value: msg.value
         }("");
-        if (!success) revert ElRewardsVaultReceiveFailed();
+        if (!success) {
+            revert ElRewardsVaultReceiveFailed();
+        }
+
         CSBondLock._reduceAmount(nodeOperatorId, msg.value);
         emit BondLockCompensated(nodeOperatorId, msg.value);
     }
 
-    /// @notice Settle locked bond ETH for the given Node Operator
-    /// @dev Called by CSM exclusively
-    /// @param nodeOperatorId ID of the Node Operator
-    function settleLockedBondETH(uint256 nodeOperatorId) external onlyCSM {
+    /// @inheritdoc ICSAccounting
+    function settleLockedBondETH(
+        uint256 nodeOperatorId
+    ) external onlyModule returns (bool applied) {
+        applied = false;
+
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
             CSBondCore._burn(nodeOperatorId, lockedAmount);
             // reduce all locked bond even if bond isn't covered lock fully
             CSBondLock._remove(nodeOperatorId);
+            applied = true;
         }
     }
 
-    /// @notice Penalize bond by burning stETH shares of the given Node Operator
-    /// @dev Called by CSM exclusively
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param amount Amount to penalize in ETH (stETH)
-    function penalize(uint256 nodeOperatorId, uint256 amount) external onlyCSM {
+    /// @inheritdoc ICSAccounting
+    function penalize(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external onlyModule {
         CSBondCore._burn(nodeOperatorId, amount);
     }
 
-    /// @notice Charge fee from bond by transferring stETH shares of the given Node Operator to the charge recipient
-    /// @dev Called by CSM exclusively
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param amount Amount to charge in ETH (stETH)
+    /// @inheritdoc ICSAccounting
     function chargeFee(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyCSM {
+    ) external onlyModule {
         CSBondCore._charge(nodeOperatorId, amount, chargePenaltyRecipient);
     }
 
-    /// @notice Pull fees from CSFeeDistributor to the Node Operator's bond
-    /// @dev Permissionless method. Can be called before penalty application to ensure that rewards are also penalized
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
-    /// @param rewardsProof Merkle proof of the rewards
+    /// @inheritdoc ICSAccounting
     function pullFeeRewards(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
@@ -420,11 +368,10 @@ contract CSAccounting is
     ) external {
         _onlyExistingNodeOperator(nodeOperatorId);
         _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
-    /// @notice Recover ERC20 tokens from the contract
-    /// @param token Address of the ERC20 token to recover
-    /// @param amount Amount of the ERC20 token to recover
+    /// @inheritdoc AssetRecoverer
     function recoverERC20(address token, uint256 amount) external override {
         _onlyRecoverer();
         if (token == address(LIDO)) {
@@ -441,142 +388,123 @@ contract CSAccounting is
         AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
     }
 
-    /// @notice Service method to update allowance to Burner in case it has changed
+    /// @inheritdoc ICSAccounting
     function renewBurnerAllowance() external {
         LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
     }
 
-    /// @notice Get current and required bond amounts in ETH (stETH) for the given Node Operator
-    /// @dev To calculate excess bond amount subtract `required` from `current` value.
-    ///      To calculate missed bond amount subtract `current` from `required` value
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return current Current bond amount in ETH
-    /// @return required Required bond amount in ETH
+    /// @inheritdoc ICSAccounting
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
+    }
+
+    /// @inheritdoc ICSAccounting
     function getBondSummary(
         uint256 nodeOperatorId
-    ) public view returns (uint256 current, uint256 required) {
-        unchecked {
-            current = CSBondCore.getBond(nodeOperatorId);
-            // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
-            required =
-                CSBondCurve.getBondAmountByKeysCount(
-                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
-                    CSBondCurve.getBondCurve(nodeOperatorId)
-                ) +
-                CSBondLock.getActualLockedBond(nodeOperatorId);
-        }
+    ) external view returns (uint256 current, uint256 required) {
+        current = CSBondCore.getBond(nodeOperatorId);
+        required = _getRequiredBond(nodeOperatorId, 0);
     }
 
-    /// @notice Get current and required bond amounts in stETH shares for the given Node Operator
-    /// @dev To calculate excess bond amount subtract `required` from `current` value.
-    ///      To calculate missed bond amount subtract `current` from `required` value
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return current Current bond amount in stETH shares
-    /// @return required Required bond amount in stETH shares
-    function getBondSummaryShares(
-        uint256 nodeOperatorId
-    ) public view returns (uint256 current, uint256 required) {
-        unchecked {
-            current = CSBondCore.getBondShares(nodeOperatorId);
-            // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
-            required = _sharesByEth(
-                CSBondCurve.getBondAmountByKeysCount(
-                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
-                    CSBondCurve.getBondCurve(nodeOperatorId)
-                ) + CSBondLock.getActualLockedBond(nodeOperatorId)
-            );
-        }
-    }
-
-    /// @notice Get the number of the unbonded keys
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return Unbonded keys count
+    /// @inheritdoc ICSAccounting
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
-    ) public view returns (uint256) {
+    ) external view returns (uint256) {
         return
             _getUnbondedKeysCount({
                 nodeOperatorId: nodeOperatorId,
-                accountLockedBond: true
+                includeLockedBond: true
             });
     }
 
-    /// @notice Get the number of the unbonded keys to be ejected using a forcedTargetLimit
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return Unbonded keys count
+    /// @inheritdoc ICSAccounting
     function getUnbondedKeysCountToEject(
         uint256 nodeOperatorId
-    ) public view returns (uint256) {
+    ) external view returns (uint256) {
         return
             _getUnbondedKeysCount({
                 nodeOperatorId: nodeOperatorId,
-                accountLockedBond: false
+                includeLockedBond: false
             });
     }
 
-    /// @notice Get the required bond in ETH (inc. missed and excess) for the given Node Operator to upload new deposit data
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param additionalKeys Number of new keys to add
-    /// @return Required bond amount in ETH
-    function getRequiredBondForNextKeys(
-        uint256 nodeOperatorId,
-        uint256 additionalKeys
-    ) public view returns (uint256) {
-        uint256 current = CSBondCore.getBond(nodeOperatorId);
-        uint256 requiredForNewTotalKeys = CSBondCurve.getBondAmountByKeysCount(
-            CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) +
-                additionalKeys,
-            CSBondCurve.getBondCurve(nodeOperatorId)
-        );
-        uint256 totalRequired = requiredForNewTotalKeys +
-            CSBondLock.getActualLockedBond(nodeOperatorId);
-
-        unchecked {
-            return totalRequired > current ? totalRequired - current : 0;
-        }
-    }
-
-    /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the default bond curve
-    /// @param keysCount Keys count to calculate the required bond amount
-    /// @param curveId Id of the curve to perform calculations against
-    /// @return wstETH amount required for the `keysCount`
+    /// @inheritdoc ICSAccounting
     function getBondAmountByKeysCountWstETH(
         uint256 keysCount,
         uint256 curveId
-    ) public view returns (uint256) {
+    ) external view returns (uint256) {
         return
             _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(keysCount, curveId)
             );
     }
 
-    /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the custom bond curve
-    /// @param keysCount Keys count to calculate the required bond amount
-    /// @param curve Bond curve definition.
-    ///              Use CSBondCurve.getBondCurve(id) method to get the definition for the exiting curve
-    /// @return wstETH amount required for the `keysCount`
-    function getBondAmountByKeysCountWstETH(
-        uint256 keysCount,
-        BondCurve memory curve
-    ) public view returns (uint256) {
-        return
-            _sharesByEth(
-                CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
-            );
-    }
-
-    /// @notice Get the required bond in wstETH (inc. missed and excess) for the given Node Operator to upload new keys
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param additionalKeys Number of new keys to add
-    /// @return Required bond in wstETH
+    /// @inheritdoc ICSAccounting
     function getRequiredBondForNextKeysWstETH(
         uint256 nodeOperatorId,
         uint256 additionalKeys
-    ) public view returns (uint256) {
+    ) external view returns (uint256) {
         return
             _sharesByEth(
                 getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
             );
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getClaimableBondShares(
+        uint256 nodeOperatorId
+    ) external view returns (uint256) {
+        return _getClaimableBondShares(nodeOperatorId);
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getClaimableRewardsAndBondShares(
+        uint256 nodeOperatorId,
+        uint256 cumulativeFeeShares,
+        bytes32[] calldata rewardsProof
+    ) external view returns (uint256 claimableShares) {
+        uint256 feesToDistribute = FEE_DISTRIBUTOR.getFeesToDistribute(
+            nodeOperatorId,
+            cumulativeFeeShares,
+            rewardsProof
+        );
+
+        (uint256 current, uint256 required) = getBondSummaryShares(
+            nodeOperatorId
+        );
+        current = current + feesToDistribute;
+
+        return current > required ? current - required : 0;
+    }
+
+    /// @dev TODO: Remove in the next major release
+    /// @inheritdoc ICSAccounting
+    function feeDistributor() external view returns (ICSFeeDistributor) {
+        return FEE_DISTRIBUTOR;
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getBondSummaryShares(
+        uint256 nodeOperatorId
+    ) public view returns (uint256 current, uint256 required) {
+        current = CSBondCore.getBondShares(nodeOperatorId);
+        required = _getRequiredBondShares(nodeOperatorId, 0);
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getRequiredBondForNextKeys(
+        uint256 nodeOperatorId,
+        uint256 additionalKeys
+    ) public view returns (uint256) {
+        uint256 current = CSBondCore.getBond(nodeOperatorId);
+        uint256 totalRequired = _getRequiredBond(
+            nodeOperatorId,
+            additionalKeys
+        );
+
+        unchecked {
+            return totalRequired > current ? totalRequired - current : 0;
+        }
     }
 
     function _pullFeeRewards(
@@ -584,7 +512,7 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) internal {
-        uint256 distributed = feeDistributor.distributeFees(
+        uint256 distributed = FEE_DISTRIBUTOR.distributeFees(
             nodeOperatorId,
             cumulativeFeeShares,
             rewardsProof
@@ -592,47 +520,115 @@ contract CSAccounting is
         CSBondCore._increaseBond(nodeOperatorId, distributed);
     }
 
+    function _unwrapStETHPermitIfRequired(
+        address from,
+        PermitInput calldata permit
+    ) internal {
+        if (
+            permit.value > 0 &&
+            LIDO.allowance(from, address(this)) < permit.value
+        ) {
+            LIDO.permit({
+                owner: from,
+                spender: address(this),
+                value: permit.value,
+                deadline: permit.deadline,
+                v: permit.v,
+                r: permit.r,
+                s: permit.s
+            });
+        }
+    }
+
+    function _unwrapWstETHPermitIfRequired(
+        address from,
+        PermitInput calldata permit
+    ) internal {
+        if (
+            permit.value > 0 &&
+            WSTETH.allowance(from, address(this)) < permit.value
+        ) {
+            WSTETH.permit({
+                owner: from,
+                spender: address(this),
+                value: permit.value,
+                deadline: permit.deadline,
+                v: permit.v,
+                r: permit.r,
+                s: permit.s
+            });
+        }
+    }
+
     /// @dev Overrides the original implementation to account for a locked bond and withdrawn validators
     function _getClaimableBondShares(
         uint256 nodeOperatorId
     ) internal view override returns (uint256) {
         unchecked {
-            uint256 current = CSBondCore.getBondShares(nodeOperatorId);
-            uint256 required = _sharesByEth(
-                CSBondCurve.getBondAmountByKeysCount(
-                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
-                    CSBondCurve.getBondCurve(nodeOperatorId)
-                ) + CSBondLock.getActualLockedBond(nodeOperatorId)
-            );
-            return current > required ? current - required : 0;
+            (
+                uint256 currentShares,
+                uint256 requiredShares
+            ) = getBondSummaryShares(nodeOperatorId);
+            return
+                currentShares > requiredShares
+                    ? currentShares - requiredShares
+                    : 0;
         }
     }
 
-    /// @dev Unbonded stands for the amount of the keys not fully covered with the bond
+    function _getRequiredBond(
+        uint256 nodeOperatorId,
+        uint256 additionalKeys
+    ) internal view returns (uint256) {
+        uint256 curveId = CSBondCurve.getBondCurveId(nodeOperatorId);
+        uint256 nonWithdrawnKeys = MODULE.getNodeOperatorNonWithdrawnKeys(
+            nodeOperatorId
+        );
+        uint256 requiredBondForKeys = CSBondCurve.getBondAmountByKeysCount(
+            nonWithdrawnKeys + additionalKeys,
+            curveId
+        );
+        uint256 actualLockedBond = CSBondLock.getActualLockedBond(
+            nodeOperatorId
+        );
+
+        return requiredBondForKeys + actualLockedBond;
+    }
+
+    function _getRequiredBondShares(
+        uint256 nodeOperatorId,
+        uint256 additionalKeys
+    ) internal view returns (uint256) {
+        return _sharesByEth(_getRequiredBond(nodeOperatorId, additionalKeys));
+    }
+
+    /// @dev Unbonded stands for the amount of keys not fully covered with bond
     function _getUnbondedKeysCount(
         uint256 nodeOperatorId,
-        bool accountLockedBond
+        bool includeLockedBond
     ) internal view returns (uint256) {
-        uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
+        uint256 nonWithdrawnKeys = MODULE.getNodeOperatorNonWithdrawnKeys(
             nodeOperatorId
         );
         unchecked {
-            /// 10 wei added to account for possible stETH rounding errors
-            /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
-            /// Should be sufficient for ~ 40 years
-            uint256 currentBond = CSBondCore._ethByShares(
-                getBondShares(nodeOperatorId)
-            ) + 10 wei;
-            if (accountLockedBond) {
+            uint256 currentBond = CSBondCore.getBond(nodeOperatorId);
+            if (includeLockedBond) {
                 uint256 lockedBond = CSBondLock.getActualLockedBond(
                     nodeOperatorId
                 );
-                if (currentBond <= lockedBond) return nonWithdrawnKeys;
+                // We use strict condition here since in rare case of equality the outcome of the function will not change
+                if (lockedBond > currentBond) {
+                    return nonWithdrawnKeys;
+                }
+
                 currentBond -= lockedBond;
             }
+            // 10 wei is added to account for possible stETH rounding errors
+            // https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
+            // Should be sufficient for ~ 40 years
             uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
-                currentBond,
-                CSBondCurve.getBondCurve(nodeOperatorId)
+                currentBond + 10 wei,
+                CSBondCurve.getBondCurveId(nodeOperatorId)
             );
             return
                 nonWithdrawnKeys > bondedKeys
@@ -646,8 +642,28 @@ contract CSAccounting is
     }
 
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
-        if (nodeOperatorId < CSM.getNodeOperatorsCount()) return;
+        if (
+            nodeOperatorId <
+            IStakingModule(address(MODULE)).getNodeOperatorsCount()
+        ) {
+            return;
+        }
+
         revert NodeOperatorDoesNotExist();
+    }
+
+    function _onlyNodeOperatorManagerOrRewardAddresses(
+        NodeOperatorManagementProperties memory no
+    ) internal view {
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+
+        if (no.managerAddress == msg.sender || no.rewardAddress == msg.sender) {
+            return;
+        }
+
+        revert SenderIsNotEligible();
     }
 
     function _setChargePenaltyRecipient(

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 // Backported from lidofinance/core except for removed functions
 // Source: https://github.com/lidofinance/core/blob/0d4231ee8a5289248e49e96747d6b95fa5b0afcc/test/0.8.9/unstructuredStorage.t.sol
@@ -15,7 +15,7 @@ contract ExposedUnstructuredStorageTest is Test {
         unstructuredStorage = new ExposedUnstructuredStorage();
     }
 
-    function test_getStorageAddress_Uninitialized() public {
+    function test_getStorageAddress_Uninitialized() public view {
         bytes32 position = keccak256("FOO");
         assertEq(unstructuredStorage.getStorageAddress(position), address(0));
     }
@@ -25,11 +25,13 @@ contract ExposedUnstructuredStorageTest is Test {
      * forge-config: default.fuzz.runs = 2048
      * forge-config: default.fuzz.max-test-rejects = 0
      */
-    function testFuzz_getStorageAddress_Uninitialized(bytes32 position) public {
+    function testFuzz_getStorageAddress_Uninitialized(
+        bytes32 position
+    ) public view {
         assertEq(unstructuredStorage.getStorageAddress(position), address(0));
     }
 
-    function test_getStorageUint256_Uninitialized() public {
+    function test_getStorageUint256_Uninitialized() public view {
         bytes32 position = keccak256("FOO");
         uint256 data;
         assertEq(unstructuredStorage.getStorageUint256(position), data);
@@ -40,7 +42,9 @@ contract ExposedUnstructuredStorageTest is Test {
      * forge-config: default.fuzz.runs = 2048
      * forge-config: default.fuzz.max-test-rejects = 0
      */
-    function testFuzz_getStorageUint256_Uninitialized(bytes32 position) public {
+    function testFuzz_getStorageUint256_Uninitialized(
+        bytes32 position
+    ) public view {
         uint256 data;
         assertEq(unstructuredStorage.getStorageUint256(position), data);
     }

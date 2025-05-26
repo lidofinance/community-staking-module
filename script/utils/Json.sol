@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -42,6 +42,14 @@ library Json {
         bytes memory value
     ) internal {
         obj.str = vm.serializeBytes(obj.ref, key, value);
+    }
+
+    function set(
+        JsonObj memory obj,
+        string memory key,
+        string memory value
+    ) internal {
+        obj.str = vm.serializeString(obj.ref, key, value);
     }
 
     function _incrementId() private returns (uint256 count) {

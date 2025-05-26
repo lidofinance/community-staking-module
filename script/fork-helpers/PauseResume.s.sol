@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -25,13 +25,6 @@ contract PauseResume is Script, DeploymentFixtures, ForkHelpersCommon {
         vm.startBroadcast(accountingAdmin);
         _;
         vm.stopBroadcast();
-    }
-
-    function publicRelease() external broadcastCSMAdmin {
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), csmAdmin);
-        csm.activatePublicRelease();
-
-        assertTrue(csm.publicRelease());
     }
 
     function pauseCSM() external broadcastCSMAdmin {

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -58,7 +58,9 @@ contract PausableUntil {
 
     function _pauseFor(uint256 duration) internal {
         _checkResumed();
-        if (duration == 0) revert ZeroPauseDuration();
+        if (duration == 0) {
+            revert ZeroPauseDuration();
+        }
 
         uint256 resumeSince;
         if (duration == PAUSE_INFINITELY) {
@@ -71,8 +73,9 @@ contract PausableUntil {
 
     function _pauseUntil(uint256 pauseUntilInclusive) internal {
         _checkResumed();
-        if (pauseUntilInclusive < block.timestamp)
+        if (pauseUntilInclusive < block.timestamp) {
             revert PauseUntilMustBeInFuture();
+        }
 
         uint256 resumeSince;
         if (pauseUntilInclusive != PAUSE_INFINITELY) {

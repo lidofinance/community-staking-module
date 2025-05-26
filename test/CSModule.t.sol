@@ -1,30 +1,40 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/interfaces/IStakingModule.sol";
-import "../src/CSModule.sol";
-import "../src/CSAccounting.sol";
-import "./helpers/Fixtures.sol";
-import "./helpers/mocks/StETHMock.sol";
-import "./helpers/mocks/LidoLocatorMock.sol";
-import "./helpers/mocks/LidoMock.sol";
-import "./helpers/mocks/WstETHMock.sol";
-import "./helpers/Utilities.sol";
-import "../src/CSEarlyAdoption.sol";
-import "./helpers/MerkleTree.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
+import { CSModule } from "../src/CSModule.sol";
+import { CSAccounting } from "../src/CSAccounting.sol";
+import { CSBondLock } from "../src/abstract/CSBondLock.sol";
+import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
+import { Fixtures } from "./helpers/Fixtures.sol";
+import { StETHMock } from "./helpers/mocks/StETHMock.sol";
+import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
+import { LidoMock } from "./helpers/mocks/LidoMock.sol";
+import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
+import { CSParametersRegistryMock } from "./helpers/mocks/CSParametersRegistryMock.sol";
+import { Utilities } from "./helpers/Utilities.sol";
+import { console } from "forge-std/console.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
-import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 import { Batch, IQueueLib } from "../src/lib/QueueLib.sol";
 import { SigningKeys } from "../src/lib/SigningKeys.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { INOAddresses } from "../src/lib/NOAddresses.sol";
 import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
+import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "../src/interfaces/ICSModule.sol";
+import { ICSExitPenalties, ExitPenaltyInfo, MarkedUint248 } from "../src/interfaces/ICSExitPenalties.sol";
+import { ExitPenaltiesMock } from "./helpers/mocks/ExitPenaltiesMock.sol";
+import { CSAccountingMock } from "./helpers/mocks/CSAccountingMock.sol";
+import { Stub } from "./helpers/mocks/Stub.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     using Strings for uint256;
+    using Strings for uint128;
 
     struct BatchInfo {
         uint256 nodeOperatorId;
@@ -32,23 +42,21 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     }
 
     uint256 public constant BOND_SIZE = 2 ether;
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
 
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
     CSModule public csm;
-    CSAccounting public accounting;
-    CSEarlyAdoption public earlyAdoption;
+    CSAccountingMock public accounting;
     Stub public feeDistributor;
+    CSParametersRegistryMock public parametersRegistry;
+    ExitPenaltiesMock public exitPenalties;
 
     address internal admin;
     address internal stranger;
     address internal strangerNumberTwo;
     address internal nodeOperator;
     address internal testChargePenaltyRecipient;
-
-    MerkleTree internal merkleTree;
 
     struct NodeOperatorSummary {
         uint256 targetLimitMode;
@@ -70,7 +78,6 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     modifier assertInvariants() {
         _;
         vm.pauseGasMetering();
-        assertCSMEarlyAdoptionMaxKeys(csm);
         assertCSMEnqueuedCount(csm);
         assertCSMKeys(csm);
         vm.resumeGasMetering();
@@ -85,13 +92,19 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     }
 
     function createNodeOperator(
+        bool extendedManagerPermissions
+    ) internal returns (uint256) {
+        return createNodeOperator(nodeOperator, extendedManagerPermissions);
+    }
+
+    function createNodeOperator(
         address managerAddress,
         uint256 keysCount
-    ) internal returns (uint256) {
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        return createNodeOperator(managerAddress, keysCount, keys, signatures);
+    ) internal returns (uint256 nodeOperatorId) {
+        nodeOperatorId = createNodeOperator(managerAddress, false);
+        if (keysCount > 0) {
+            uploadMoreKeys(nodeOperatorId, keysCount);
+        }
     }
 
     function createNodeOperator(
@@ -99,58 +112,52 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         uint256 keysCount,
         bytes memory keys,
         bytes memory signatures
-    ) internal returns (uint256) {
-        vm.deal(managerAddress, keysCount * BOND_SIZE);
-        vm.prank(managerAddress);
-        csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-        return csm.getNodeOperatorsCount() - 1;
+    ) internal returns (uint256 nodeOperatorId) {
+        nodeOperatorId = createNodeOperator(managerAddress, false);
+        uploadMoreKeys(nodeOperatorId, keysCount, keys, signatures);
     }
 
     function createNodeOperator(
+        address managerAddress,
         bool extendedManagerPermissions
     ) internal returns (uint256) {
-        vm.deal(nodeOperator, BOND_SIZE);
-        vm.prank(nodeOperator);
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(
-            1,
-            keys,
-            signatures,
+        vm.prank(csm.getRoleMember(csm.CREATE_NODE_OPERATOR_ROLE(), 0));
+        csm.createNodeOperator(
+            managerAddress,
             NodeOperatorManagementProperties({
                 managerAddress: address(0),
                 rewardAddress: address(0),
                 extendedManagerPermissions: extendedManagerPermissions
             }),
-            new bytes32[](0),
             address(0)
         );
         return csm.getNodeOperatorsCount() - 1;
+    }
+
+    function uploadMoreKeys(
+        uint256 noId,
+        uint256 keysCount,
+        bytes memory keys,
+        bytes memory signatures
+    ) internal {
+        uint256 amount = accounting.getRequiredBondForNextKeys(noId, keysCount);
+        address managerAddress = csm.getNodeOperator(noId).managerAddress;
+        vm.deal(managerAddress, amount);
+        vm.prank(managerAddress);
+        csm.addValidatorKeysETH{ value: amount }(
+            managerAddress,
+            noId,
+            keysCount,
+            keys,
+            signatures
+        );
     }
 
     function uploadMoreKeys(uint256 noId, uint256 keysCount) internal {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        uint256 amount = accounting.getRequiredBondForNextKeys(noId, keysCount);
-        vm.deal(nodeOperator, amount);
-        vm.prank(nodeOperator);
-        csm.addValidatorKeysETH{ value: amount }(
-            noId,
-            keysCount,
-            keys,
-            signatures
-        );
+        uploadMoreKeys(noId, keysCount, keys, signatures);
     }
 
     function unvetKeys(uint256 noId, uint256 to) internal {
@@ -167,24 +174,37 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
-    function setStuck(uint256 noId, uint256 to) internal {
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(uint64(noId))),
-            bytes.concat(bytes16(uint128(to)))
+    function withdrawKey(uint256 noId, uint256 /* keyIndex */) internal {
+        ValidatorWithdrawalInfo[]
+            memory withdrawalsInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalsInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            0,
+            csm.DEPOSIT_SIZE(),
+            false
         );
+        csm.submitWithdrawals(withdrawalsInfo);
     }
 
     // Checks that the queue is in the expected state starting from its head.
-    function _assertQueueState(BatchInfo[] memory exp) internal {
-        (uint128 curr, ) = csm.depositQueue(); // queue.head
+    function _assertQueueState(
+        uint256 priority,
+        BatchInfo[] memory exp
+    ) internal view {
+        (uint128 curr, ) = csm.depositQueuePointers(priority); // queue.head
 
         for (uint256 i = 0; i < exp.length; ++i) {
             BatchInfo memory b = exp[i];
-            Batch item = csm.depositQueueItem(curr);
+            Batch item = csm.depositQueueItem(priority, curr);
 
             assertFalse(
                 item.isNil(),
-                string.concat("unexpected end of queue at index ", i.toString())
+                string.concat(
+                    "unexpected end of queue with priority=",
+                    priority.toString(),
+                    " at index ",
+                    i.toString()
+                )
             );
 
             curr = item.next();
@@ -195,26 +215,85 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
                 noId,
                 b.nodeOperatorId,
                 string.concat(
-                    "unexpected `nodeOperatorId` at index ",
+                    "unexpected `nodeOperatorId` at queue with priority=",
+                    priority.toString(),
+                    " at index ",
                     i.toString()
                 )
             );
             assertEq(
                 keysInBatch,
                 b.count,
-                string.concat("unexpected `count` at index ", i.toString())
+                string.concat(
+                    "unexpected `count` at queue with priority=",
+                    priority.toString(),
+                    " at index ",
+                    i.toString()
+                )
             );
         }
 
         assertTrue(
-            csm.depositQueueItem(curr).isNil(),
-            "unexpected tail of queue"
+            csm.depositQueueItem(priority, curr).isNil(),
+            string.concat(
+                "unexpected tail of queue with priority=",
+                priority.toString()
+            )
         );
     }
 
-    function _assertQueueIsEmpty() internal {
-        (uint128 curr, ) = csm.depositQueue(); // queue.head
-        assertTrue(csm.depositQueueItem(curr).isNil(), "queue should be empty");
+    function _assertQueueIsEmpty() internal view {
+        for (uint256 p = 0; p <= csm.QUEUE_LOWEST_PRIORITY(); ++p) {
+            (uint128 curr, ) = csm.depositQueuePointers(p); // queue.head
+            assertTrue(
+                csm.depositQueueItem(p, curr).isNil(),
+                string.concat(
+                    "queue with priority=",
+                    p.toString(),
+                    " is not empty"
+                )
+            );
+        }
+    }
+
+    function _printQueue() internal view {
+        for (uint256 p = 0; p <= csm.QUEUE_LOWEST_PRIORITY(); ++p) {
+            (uint128 curr, ) = csm.depositQueuePointers(p);
+
+            for (;;) {
+                Batch item = csm.depositQueueItem(p, curr);
+                if (item.isNil()) {
+                    break;
+                }
+
+                uint256 noId = item.noId();
+                uint256 keysInBatch = item.keys();
+
+                console.log(
+                    string.concat(
+                        "queue.priority=",
+                        p.toString(),
+                        "[",
+                        curr.toString(),
+                        "]={noId:",
+                        noId.toString(),
+                        ",count:",
+                        keysInBatch.toString(),
+                        "}"
+                    )
+                );
+
+                curr = item.next();
+            }
+        }
+    }
+
+    function _isQueueDirty(uint256 maxItems) internal returns (bool) {
+        // XXX: Mimic a **eth_call** to avoid state changes.
+        uint256 snapshot = vm.snapshotState();
+        (uint256 toRemove, ) = csm.cleanDepositQueue(maxItems);
+        vm.revertToState(snapshot);
+        return toRemove > 0;
     }
 
     function getNodeOperatorSummary(
@@ -261,18 +340,19 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
             });
     }
 
-    // amount can not be lower than EL_REWARDS_STEALING_FINE
+    // amount can not be lower than EL_REWARDS_STEALING_ADDITIONAL_FINE
     function penalize(uint256 noId, uint256 amount) public {
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
-            amount - csm.EL_REWARDS_STEALING_FINE()
+            amount -
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
         csm.settleELRewardsStealingPenalty(UintArr(noId));
     }
 }
 
-contract CSMCommonNoPublicRelease is CSMFixtures {
+contract CSMCommon is CSMFixtures {
     function setUp() public virtual {
         nodeOperator = nextAddress("NODE_OPERATOR");
         stranger = nextAddress("STRANGER");
@@ -283,67 +363,40 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         (locator, wstETH, stETH, , ) = initLido();
 
         feeDistributor = new Stub();
+        parametersRegistry = new CSParametersRegistryMock();
+        exitPenalties = new ExitPenaltiesMock();
+
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: BOND_SIZE
+        });
+        accounting = new CSAccountingMock(
+            BOND_SIZE,
+            address(wstETH),
+            address(stETH)
+        );
+        accounting.setFeeDistributor(address(feeDistributor));
 
         csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = BOND_SIZE;
-        accounting = new CSAccounting(
-            address(locator),
-            address(csm),
-            10,
-            4 weeks,
-            365 days
-        );
 
-        _enableInitializers(address(accounting));
-
-        accounting.initialize(
-            curve,
-            admin,
-            address(feeDistributor),
-            8 weeks,
-            testChargePenaltyRecipient
-        );
-
-        merkleTree = new MerkleTree();
-        merkleTree.pushLeaf(abi.encode(nodeOperator));
-
-        uint256[] memory earlyAdoptionCurve = new uint256[](1);
-        earlyAdoptionCurve[0] = BOND_SIZE / 2;
-
-        vm.startPrank(admin);
-        accounting.grantRole(
-            accounting.MANAGE_BOND_CURVES_ROLE(),
-            address(this)
-        );
-        vm.stopPrank();
-
-        uint256 curveId = accounting.addBondCurve(earlyAdoptionCurve);
-        earlyAdoption = new CSEarlyAdoption(
-            merkleTree.root(),
-            curveId,
-            address(csm)
-        );
+        accounting.setCSM(address(csm));
 
         _enableInitializers(address(csm));
-        csm.initialize({
-            _accounting: address(accounting),
-            _earlyAdoption: address(earlyAdoption),
-            _keyRemovalCharge: 0.05 ether,
-            admin: admin
-        });
+        csm.initialize({ admin: admin });
 
         vm.startPrank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
         csm.grantRole(csm.PAUSE_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+        csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
         csm.grantRole(
             csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
@@ -354,95 +407,9 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             address(this)
         );
         csm.grantRole(csm.VERIFIER_ROLE(), address(this));
-        accounting.grantRole(
-            accounting.MANAGE_BOND_CURVES_ROLE(),
-            address(this)
-        );
         vm.stopPrank();
 
         csm.resume();
-    }
-}
-
-contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
-    function setUp() public virtual {
-        nodeOperator = nextAddress("NODE_OPERATOR");
-        stranger = nextAddress("STRANGER");
-        strangerNumberTwo = nextAddress("STRANGER_TWO");
-        admin = nextAddress("ADMIN");
-        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
-
-        (locator, wstETH, stETH, , ) = initLido();
-
-        feeDistributor = new Stub();
-
-        csm = new CSModule({
-            moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
-        });
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = BOND_SIZE;
-        accounting = new CSAccounting(
-            address(locator),
-            address(csm),
-            10,
-            4 weeks,
-            365 days
-        );
-
-        _enableInitializers(address(accounting));
-
-        accounting.initialize(
-            curve,
-            admin,
-            address(feeDistributor),
-            8 weeks,
-            testChargePenaltyRecipient
-        );
-
-        merkleTree = new MerkleTree();
-        merkleTree.pushLeaf(abi.encode(nodeOperator));
-
-        _enableInitializers(address(csm));
-        csm.initialize({
-            _accounting: address(accounting),
-            _earlyAdoption: address(0),
-            _keyRemovalCharge: 0.05 ether,
-            admin: admin
-        });
-
-        vm.startPrank(admin);
-        csm.grantRole(csm.PAUSE_ROLE(), address(this));
-        csm.grantRole(csm.RESUME_ROLE(), address(this));
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
-        csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
-        csm.grantRole(
-            csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
-            address(this)
-        );
-        csm.grantRole(
-            csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
-            address(this)
-        );
-        csm.grantRole(csm.VERIFIER_ROLE(), address(this));
-        accounting.grantRole(
-            accounting.MANAGE_BOND_CURVES_ROLE(),
-            address(this)
-        );
-        vm.stopPrank();
-
-        csm.resume();
-    }
-}
-
-contract CSMCommon is CSMCommonNoPublicRelease {
-    function setUp() public virtual override {
-        super.setUp();
-        csm.activatePublicRelease();
     }
 }
 
@@ -459,64 +426,37 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, , ) = initLido();
 
         feeDistributor = new Stub();
+        parametersRegistry = new CSParametersRegistryMock();
+        exitPenalties = new ExitPenaltiesMock();
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: BOND_SIZE
+        });
+        accounting = new CSAccountingMock(
+            BOND_SIZE,
+            address(wstETH),
+            address(stETH)
+        );
+        accounting.setFeeDistributor(address(feeDistributor));
+
         csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
 
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = BOND_SIZE;
-        accounting = new CSAccounting(
-            address(locator),
-            address(csm),
-            10,
-            4 weeks,
-            365 days
-        );
-
-        _enableInitializers(address(accounting));
-        accounting.initialize(
-            curve,
-            admin,
-            address(feeDistributor),
-            8 weeks,
-            testChargePenaltyRecipient
-        );
-
-        merkleTree = new MerkleTree();
-        merkleTree.pushLeaf(abi.encode(nodeOperator));
-
-        uint256[] memory earlyAdoptionCurve = new uint256[](1);
-        earlyAdoptionCurve[0] = BOND_SIZE / 2;
-
-        vm.startPrank(admin);
-        accounting.grantRole(
-            accounting.MANAGE_BOND_CURVES_ROLE(),
-            address(this)
-        );
-        vm.stopPrank();
-
-        uint256 curveId = accounting.addBondCurve(earlyAdoptionCurve);
-        earlyAdoption = new CSEarlyAdoption(
-            merkleTree.root(),
-            curveId,
-            address(csm)
-        );
+        accounting.setCSM(address(csm));
 
         _enableInitializers(address(csm));
-        csm.initialize({
-            _accounting: address(accounting),
-            _earlyAdoption: address(earlyAdoption),
-            _keyRemovalCharge: 0.05 ether,
-            admin: admin
-        });
+        csm.initialize({ admin: admin });
 
         vm.startPrank(admin);
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+        csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), admin);
         csm.grantRole(csm.RESUME_ROLE(), admin);
         csm.grantRole(csm.VERIFIER_ROLE(), address(this));
         csm.resume();
@@ -555,122 +495,134 @@ contract CsmFuzz is CSMCommon {
 }
 
 contract CsmInitialize is CSMCommon {
+    using stdStorage for StdStorage;
+
     function test_constructor() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
         assertEq(csm.getType(), "community-staking-module");
-        assertEq(csm.EL_REWARDS_STEALING_FINE(), 0.1 ether);
-        assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
+        assertEq(
+            address(csm.PARAMETERS_REGISTRY()),
+            address(parametersRegistry)
+        );
+        assertEq(address(csm.ACCOUNTING()), address(accounting));
+        assertEq(address(csm.accounting()), address(accounting));
+        assertEq(address(csm.EXIT_PENALTIES()), address(exitPenalties));
     }
 
     function test_constructor_RevertWhen_ZeroLocator() public {
-        vm.expectRevert(CSModule.ZeroLocatorAddress.selector);
+        vm.expectRevert(ICSModule.ZeroLocatorAddress.selector);
         new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(0)
+            lidoLocator: address(0),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
+        });
+    }
+
+    function test_constructor_RevertWhen_ZeroParametersRegistryAddress()
+        public
+    {
+        vm.expectRevert(ICSModule.ZeroParametersRegistryAddress.selector);
+        new CSModule({
+            moduleType: "community-staking-module",
+            lidoLocator: address(locator),
+            parametersRegistry: address(0),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
+        });
+    }
+
+    function test_constructor_RevertWhen_ZeroAccountingAddress() public {
+        vm.expectRevert(ICSModule.ZeroAccountingAddress.selector);
+        new CSModule({
+            moduleType: "community-staking-module",
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(0),
+            exitPenalties: address(exitPenalties)
+        });
+    }
+
+    function test_constructor_RevertWhen_ZeroExitPenaltiesAddress() public {
+        vm.expectRevert(ICSModule.ZeroExitPenaltiesAddress.selector);
+        new CSModule({
+            moduleType: "community-staking-module",
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(0)
         });
     }
 
     function test_constructor_RevertWhen_InitOnImpl() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        csm.initialize({
-            _accounting: address(accounting),
-            _earlyAdoption: address(1337),
-            _keyRemovalCharge: 0.05 ether,
-            admin: address(this)
-        });
+        csm.initialize({ admin: address(this) });
     }
 
     function test_initialize() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
-        });
-
-        _enableInitializers(address(csm));
-        csm.initialize({
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
             _accounting: address(accounting),
-            _earlyAdoption: address(1337),
-            _keyRemovalCharge: 0.05 ether,
-            admin: address(this)
-        });
-        assertEq(csm.getType(), "community-staking-module");
-        assertEq(csm.EL_REWARDS_STEALING_FINE(), 0.1 ether);
-        assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
-        assertEq(address(csm.LIDO_LOCATOR()), address(locator));
-        assertEq(address(csm.accounting()), address(accounting));
-        assertEq(address(csm.earlyAdoption()), address(1337));
-        assertEq(csm.keyRemovalCharge(), 0.05 ether);
-        assertTrue(csm.isPaused());
-    }
-
-    function test_initialize_RevertWhen_ZeroAccountingAddress() public {
-        CSModule csm = new CSModule({
-            moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            exitPenalties: address(exitPenalties)
         });
 
         _enableInitializers(address(csm));
-        vm.expectRevert(CSModule.ZeroAccountingAddress.selector);
-        csm.initialize({
-            _accounting: address(0),
-            _earlyAdoption: address(1337),
-            _keyRemovalCharge: 0.05 ether,
-            admin: address(this)
-        });
+        csm.initialize({ admin: address(this) });
+        assertTrue(csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), address(this)));
+        assertEq(csm.getRoleMemberCount(csm.DEFAULT_ADMIN_ROLE()), 1);
+        assertTrue(csm.isPaused());
+        assertEq(csm.getInitializedVersion(), 2);
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
 
         _enableInitializers(address(csm));
-        vm.expectRevert(CSModule.ZeroAdminAddress.selector);
-        csm.initialize({
-            _accounting: address(154),
-            _earlyAdoption: address(1337),
-            _keyRemovalCharge: 0.05 ether,
-            admin: address(0)
+        vm.expectRevert(ICSModule.ZeroAdminAddress.selector);
+        csm.initialize({ admin: address(0) });
+    }
+
+    function test_finalizeUpgradeV2() public {
+        CSModule csm = new CSModule({
+            moduleType: "community-staking-module",
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
+        _enableInitializers(address(csm));
+
+        csm.finalizeUpgradeV2();
+        assertEq(csm.getInitializedVersion(), 2);
     }
 }
 
 contract CSMPauseTest is CSMCommon {
-    function test_notPausedByDefault() public {
+    function test_notPausedByDefault() public view {
         assertFalse(csm.isPaused());
     }
 
@@ -680,13 +632,13 @@ contract CSMPauseTest is CSMCommon {
         assertEq(csm.getResumeSinceTimestamp(), block.timestamp + 1 days);
     }
 
-    function test_pauseFor_indefinetily() public {
+    function test_pauseFor_indefinitely() public {
         csm.pauseFor(type(uint256).max);
         assertTrue(csm.isPaused());
         assertEq(csm.getResumeSinceTimestamp(), type(uint256).max);
     }
 
-    function test_pauseFor_revertWhen_ZeroPauseDuration() public {
+    function test_pauseFor_RevertWhen_ZeroPauseDuration() public {
         vm.expectRevert(PausableUntil.ZeroPauseDuration.selector);
         csm.pauseFor(0);
     }
@@ -720,82 +672,16 @@ contract CSMPauseTest is CSMCommon {
 }
 
 contract CSMPauseAffectingTest is CSMCommon {
-    function test_addNodeOperatorETH_RevertWhen_Paused() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
+    function test_createNodeOperator_RevertWhen_Paused() public {
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorETH(
-            keysCount,
-            keys,
-            signatures,
+        csm.createNodeOperator(
+            nodeOperator,
             NodeOperatorManagementProperties({
                 managerAddress: address(0),
                 rewardAddress: address(0),
                 extendedManagerPermissions: false
             }),
-            new bytes32[](0),
-            address(0)
-        );
-    }
-
-    function test_addNodeOperatorStETH_RevertWhen_Paused() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        csm.pauseFor(1 days);
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorStETH(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-    }
-
-    function test_addNodeOperatorWstETH_RevertWhen_Paused() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        csm.pauseFor(1 days);
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorWstETH(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
             address(0)
         );
     }
@@ -807,7 +693,13 @@ contract CSMPauseAffectingTest is CSMCommon {
 
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addValidatorKeysETH(noId, keysCount, keys, signatures);
+        csm.addValidatorKeysETH(
+            nodeOperator,
+            noId,
+            keysCount,
+            keys,
+            signatures
+        );
     }
 
     function test_addValidatorKeysStETH_RevertWhen_Paused() public {
@@ -818,6 +710,7 @@ contract CSMPauseAffectingTest is CSMCommon {
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         csm.addValidatorKeysStETH(
+            nodeOperator,
             noId,
             keysCount,
             keys,
@@ -840,6 +733,7 @@ contract CSMPauseAffectingTest is CSMCommon {
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         csm.addValidatorKeysWstETH(
+            nodeOperator,
             noId,
             keysCount,
             keys,
@@ -855,520 +749,138 @@ contract CSMPauseAffectingTest is CSMCommon {
     }
 }
 
-contract CSMAddNodeOperatorETH is CSMCommon {
-    function test_AddNodeOperatorETH() public assertInvariants {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE);
+contract CSMCreateNodeOperator is CSMCommon {
+    function test_createNodeOperator() public assertInvariants {
         uint256 nonce = csm.getNonce();
+        vm.expectEmit(address(csm));
+        emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator, false);
 
-        {
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit IStakingModule.SigningKeyAdded(0, keys);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
-        }
-
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(
-            keysCount,
-            keys,
-            signatures,
+        uint256 nodeOperatorId = csm.createNodeOperator(
+            nodeOperator,
             NodeOperatorManagementProperties({
                 managerAddress: address(0),
                 rewardAddress: address(0),
                 extendedManagerPermissions: false
             }),
-            new bytes32[](0),
             address(0)
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
+        assertEq(nodeOperatorId, 0);
     }
 
-    function test_AddNodeOperatorETH_withMoreEthThanRequired()
+    function test_createNodeOperator_withCustomAddresses()
         public
         assertInvariants
     {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 deposit = BOND_SIZE + 1 ether;
-        vm.deal(nodeOperator, deposit);
-        uint256 nonce = csm.getNonce();
-
-        {
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit IStakingModule.SigningKeyAdded(0, keys);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
-        }
-
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: deposit }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-        assertEq(csm.getNodeOperatorsCount(), 1);
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_AddNodeOperatorETH_withCustomAddresses()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE);
-
         address manager = address(154);
         address reward = address(42);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, manager, reward);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(
-            keysCount,
-            keys,
-            signatures,
+        vm.expectEmit(address(csm));
+        emit ICSModule.NodeOperatorAdded(0, manager, reward, false);
+        csm.createNodeOperator(
+            nodeOperator,
             NodeOperatorManagementProperties({
                 managerAddress: manager,
                 rewardAddress: reward,
                 extendedManagerPermissions: false
             }),
-            new bytes32[](0),
             address(0)
         );
 
         NodeOperator memory no = csm.getNodeOperator(0);
         assertEq(no.managerAddress, manager);
         assertEq(no.rewardAddress, reward);
+        assertEq(no.extendedManagerPermissions, false);
     }
 
-    function test_AddNodeOperatorETH_withReferrer() public assertInvariants {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE);
-
-        {
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.ReferrerSet(0, address(154));
-        }
-
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(154)
-        );
-    }
-
-    function test_AddNodeOperatorETH_RevertWhen_InvalidAmount()
+    function test_createNodeOperator_withExtendedManagerPermissions()
         public
         assertInvariants
     {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE - 1);
-
-        vm.expectRevert(CSModule.InvalidAmount.selector);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE - 1 ether }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(154)
-        );
-    }
-}
-
-contract CSMAddNodeOperatorStETH is CSMCommon {
-    function test_AddNodeOperatorStETH() public assertInvariants {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.prank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-
-        uint256 nonce = csm.getNonce();
-
-        {
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit IStakingModule.SigningKeyAdded(0, keys);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
-        }
-
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH(
-            1,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: BOND_SIZE,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-        assertEq(csm.getNodeOperatorsCount(), 1);
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_AddNodeOperatorStETH_withCustomAddresses()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.prank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-
         address manager = address(154);
         address reward = address(42);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, manager, reward);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH(
-            1,
-            keys,
-            signatures,
+        vm.expectEmit(address(csm));
+        emit ICSModule.NodeOperatorAdded(0, manager, reward, true);
+        csm.createNodeOperator(
+            nodeOperator,
             NodeOperatorManagementProperties({
                 managerAddress: manager,
                 rewardAddress: reward,
-                extendedManagerPermissions: false
+                extendedManagerPermissions: true
             }),
-            ICSAccounting.PermitInput({
-                value: BOND_SIZE,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
             address(0)
         );
 
         NodeOperator memory no = csm.getNodeOperator(0);
         assertEq(no.managerAddress, manager);
         assertEq(no.rewardAddress, reward);
+        assertEq(no.extendedManagerPermissions, true);
     }
 
-    function test_AddNodeOperatorStETH_withReferrer() public assertInvariants {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.prank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-
+    function test_createNodeOperator_withReferrer() public assertInvariants {
         {
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.ReferrerSet(0, address(154));
-        }
-
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH(
-            1,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: BOND_SIZE,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(154)
-        );
-    }
-
-    function test_AddNodeOperatorStETH_withPermit() public assertInvariants {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.prank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-
-        uint256 nonce = csm.getNonce();
-
-        {
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(stETH));
-            emit StETHMock.Approval(
+            vm.expectEmit(address(csm));
+            emit ICSModule.NodeOperatorAdded(
+                0,
                 nodeOperator,
-                address(accounting),
-                BOND_SIZE
+                nodeOperator,
+                false
             );
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
+            vm.expectEmit(address(csm));
+            emit ICSModule.ReferrerSet(0, address(154));
         }
-
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH(
-            1,
-            keys,
-            signatures,
+        csm.createNodeOperator(
+            nodeOperator,
             NodeOperatorManagementProperties({
                 managerAddress: address(0),
                 rewardAddress: address(0),
                 extendedManagerPermissions: false
             }),
-            ICSAccounting.PermitInput({
-                value: BOND_SIZE,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-        assertEq(csm.getNodeOperatorsCount(), 1);
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-}
-
-contract CSMAddNodeOperatorWstETH is CSMCommon {
-    function test_AddNodeOperatorWstETH() public assertInvariants {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        wstETH.wrap(BOND_SIZE + 1 wei);
-        uint256 nonce = csm.getNonce();
-
-        {
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit IStakingModule.SigningKeyAdded(0, keys);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
-        }
-
-        csm.addNodeOperatorWstETH(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-        assertEq(csm.getNodeOperatorsCount(), 1);
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_AddNodeOperatorWstETH_withCustomAddresses()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        wstETH.wrap(BOND_SIZE + 1 wei);
-
-        address manager = address(154);
-        address reward = address(42);
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, manager, reward);
-        csm.addNodeOperatorWstETH(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: manager,
-                rewardAddress: reward,
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-
-        NodeOperator memory no = csm.getNodeOperator(0);
-        assertEq(no.managerAddress, manager);
-        assertEq(no.rewardAddress, reward);
-    }
-
-    function test_AddNodeOperatorWstETH_withReferrer() public assertInvariants {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        wstETH.wrap(BOND_SIZE + 1 wei);
-
-        {
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.ReferrerSet(0, address(154));
-        }
-
-        csm.addNodeOperatorWstETH(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
             address(154)
         );
     }
 
-    function test_AddNodeOperatorWstETH_withPermit() public assertInvariants {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(BOND_SIZE);
-        uint256 nonce = csm.getNonce();
-
-        {
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(wstETH));
-            emit WstETHMock.Approval(
-                nodeOperator,
-                address(accounting),
-                wstETHAmount
-            );
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
-        }
-
-        csm.addNodeOperatorWstETH(
-            1,
-            keys,
-            signatures,
+    function test_createNodeOperator_RevertWhen_ZeroSenderAddress() public {
+        vm.expectRevert(ICSModule.ZeroSenderAddress.selector);
+        csm.createNodeOperator(
+            address(0),
             NodeOperatorManagementProperties({
                 managerAddress: address(0),
                 rewardAddress: address(0),
                 extendedManagerPermissions: false
             }),
-            ICSAccounting.PermitInput({
-                value: wstETHAmount,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
             address(0)
         );
-        assertEq(csm.getNodeOperatorsCount(), 1);
-        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_createNodeOperator_multipleInSameTx() public {
+        address manager = nextAddress("MANAGER");
+        address referrer = nextAddress("REFERRER");
+        NodeOperatorManagementProperties
+            memory props = NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            });
+        uint256 nonceBefore = csm.getNonce();
+        uint256 countBefore = csm.getNodeOperatorsCount();
+
+        // Act: create two node operators in the same transaction
+        uint256 id1 = csm.createNodeOperator(manager, props, referrer);
+        uint256 id2 = csm.createNodeOperator(manager, props, referrer);
+
+        // Assert: both created, ids are sequential, nonce incremented twice
+        assertEq(id1, countBefore);
+        assertEq(id2, countBefore + 1);
+        assertEq(csm.getNodeOperatorsCount(), countBefore + 2);
+        assertEq(csm.getNonce(), nonceBefore + 2);
+        // Check events and referrer
+        NodeOperator memory no1 = csm.getNodeOperator(id1);
+        assertEq(no1.managerAddress, manager);
+        NodeOperator memory no2 = csm.getNodeOperator(id2);
+        assertEq(no2.managerAddress, manager);
     }
 }
 
@@ -1388,12 +900,15 @@ contract CSMAddValidatorKeys is CSMCommon {
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
         uint256 nonce = csm.getNonce();
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         }
         csm.addValidatorKeysWstETH(
+            nodeOperator,
             noId,
             1,
             keys,
@@ -1407,6 +922,180 @@ contract CSMAddValidatorKeys is CSMCommon {
             })
         );
         assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysWstETH_keysLimit_withdrawnKeys()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        parametersRegistry.setKeysLimit(0, 1);
+
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        withdrawKey(noId, 0);
+
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysWstETH_withTargetLimitSet()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator();
+
+        csm.updateTargetValidatorsLimits({
+            nodeOperatorId: noId,
+            targetLimitMode: 1,
+            targetLimit: 0
+        });
+
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        uint256 nonce = csm.getNonce();
+
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 0);
+    }
+
+    function test_AddValidatorKeysWstETH_createNodeOperatorRole()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator(0);
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        vm.stopPrank();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        uint256 nonce = csm.getNonce();
+
+        vm.prank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        vm.prank(stranger);
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysWstETH_createNodeOperatorRole_MultipleOperators()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        uint256[] memory ids = new uint256[](3);
+        for (uint256 i; i < ids.length; i++) {
+            vm.prank(stranger);
+            ids[i] = createNodeOperator(0);
+        }
+        shuffle(ids);
+
+        for (uint256 i; i < ids.length; i++) {
+            for (uint256 j; j < 3; j++) {
+                uint256 toWrap = BOND_SIZE + 2 wei;
+                vm.deal(nodeOperator, toWrap);
+                vm.startPrank(nodeOperator);
+                stETH.submit{ value: toWrap }(address(0));
+                stETH.approve(address(wstETH), UINT256_MAX);
+                wstETH.wrap(toWrap);
+                vm.stopPrank();
+                (bytes memory keys, bytes memory signatures) = keysSignatures(
+                    1,
+                    1
+                );
+                uint256 nonce = csm.getNonce();
+
+                vm.prank(stranger);
+                csm.addValidatorKeysWstETH(
+                    nodeOperator,
+                    ids[i],
+                    1,
+                    keys,
+                    signatures,
+                    ICSAccounting.PermitInput({
+                        value: 0,
+                        deadline: 0,
+                        v: 0,
+                        r: 0,
+                        s: 0
+                    })
+                );
+                assertEq(csm.getNonce(), nonce + 1);
+            }
+        }
     }
 
     function test_AddValidatorKeysWstETH_withPermit()
@@ -1425,18 +1114,13 @@ contract CSMAddValidatorKeys is CSMCommon {
         uint256 wstETHAmount = wstETH.wrap(toWrap);
         uint256 nonce = csm.getNonce();
         {
-            vm.expectEmit(true, true, true, true, address(wstETH));
-            emit WstETHMock.Approval(
-                nodeOperator,
-                address(accounting),
-                wstETHAmount
-            );
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysWstETH(
+            nodeOperator,
             noId,
             1,
             keys,
@@ -1467,12 +1151,15 @@ contract CSMAddValidatorKeys is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         }
         csm.addValidatorKeysStETH(
+            nodeOperator,
             noId,
             1,
             keys,
@@ -1486,6 +1173,168 @@ contract CSMAddValidatorKeys is CSMCommon {
             })
         );
         assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysStETH_keysLimit_withdrawnKeys()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        parametersRegistry.setKeysLimit(0, 1);
+
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        withdrawKey(noId, 0);
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: BOND_SIZE,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysStETH_withTargetLimitSet()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator();
+
+        csm.updateTargetValidatorsLimits({
+            nodeOperatorId: noId,
+            targetLimitMode: 1,
+            targetLimit: 0
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        uint256 nonce = csm.getNonce();
+
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: BOND_SIZE,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 0);
+    }
+
+    function test_AddValidatorKeysStETH_createNodeOperatorRole()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator(0);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.prank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        uint256 nonce = csm.getNonce();
+        vm.prank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        vm.prank(stranger);
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: BOND_SIZE,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysStETH_createNodeOperatorRole_MultipleOperators()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        uint256[] memory ids = new uint256[](3);
+        for (uint256 i; i < ids.length; i++) {
+            vm.prank(stranger);
+            ids[i] = createNodeOperator(0);
+        }
+        shuffle(ids);
+
+        for (uint256 i; i < ids.length; i++) {
+            for (uint256 j; j < 3; j++) {
+                (bytes memory keys, bytes memory signatures) = keysSignatures(
+                    1,
+                    1
+                );
+                vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+                vm.prank(nodeOperator);
+                stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+                uint256 nonce = csm.getNonce();
+
+                vm.prank(stranger);
+                csm.addValidatorKeysStETH(
+                    nodeOperator,
+                    ids[i],
+                    1,
+                    keys,
+                    signatures,
+                    ICSAccounting.PermitInput({
+                        value: BOND_SIZE,
+                        deadline: 0,
+                        v: 0,
+                        r: 0,
+                        s: 0
+                    })
+                );
+                assertEq(csm.getNonce(), nonce + 1);
+            }
+        }
     }
 
     function test_AddValidatorKeysStETH_withPermit()
@@ -1503,19 +1352,14 @@ contract CSMAddValidatorKeys is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         {
-            vm.expectEmit(true, true, true, true, address(stETH));
-            emit StETHMock.Approval(
-                nodeOperator,
-                address(accounting),
-                required
-            );
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         vm.prank(nodeOperator);
         csm.addValidatorKeysStETH(
+            nodeOperator,
             noId,
             1,
             keys,
@@ -1544,15 +1388,153 @@ contract CSMAddValidatorKeys is CSMCommon {
         vm.deal(nodeOperator, required);
         uint256 nonce = csm.getNonce();
 
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
+        }
+        vm.prank(nodeOperator);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysETH_keysLimit_withdrawnKeys()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        parametersRegistry.setKeysLimit(0, 1);
+
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        withdrawKey(noId, 0);
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(nodeOperator, required);
+
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
+        vm.prank(nodeOperator);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
+    }
+
+    function test_AddValidatorKeysETH_withTargetLimitSet()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator();
+
+        csm.updateTargetValidatorsLimits({
+            nodeOperatorId: noId,
+            targetLimitMode: 1,
+            targetLimit: 0
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(nodeOperator, required);
+        uint256 nonce = csm.getNonce();
+
         vm.prank(nodeOperator);
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
-        csm.addValidatorKeysETH{ value: required }(noId, 1, keys, signatures);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
         assertEq(csm.getNonce(), nonce + 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 0);
+    }
+
+    function test_AddValidatorKeysETH_createNodeOperatorRole() public {
+        uint256 noId = createNodeOperator(0);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(stranger, required);
+        uint256 nonce = csm.getNonce();
+        vm.startPrank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.prank(stranger);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysETH_createNodeOperatorRole_MultipleOperators()
+        public
+    {
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        uint256[] memory ids = new uint256[](3);
+        for (uint256 i; i < ids.length; i++) {
+            vm.prank(stranger);
+            ids[i] = createNodeOperator(0);
+        }
+        shuffle(ids);
+
+        for (uint256 i; i < ids.length; i++) {
+            for (uint256 j; j < 3; j++) {
+                (bytes memory keys, bytes memory signatures) = keysSignatures(
+                    1,
+                    1
+                );
+                uint256 required = accounting.getRequiredBondForNextKeys(
+                    ids[i],
+                    1
+                );
+                vm.deal(stranger, required);
+                uint256 nonce = csm.getNonce();
+
+                vm.prank(stranger);
+                csm.addValidatorKeysETH{ value: required }(
+                    nodeOperator,
+                    ids[i],
+                    1,
+                    keys,
+                    signatures
+                );
+                assertEq(csm.getNonce(), nonce + 1);
+            }
+        }
     }
 
     function test_AddValidatorKeysETH_withMoreEthThanRequired()
@@ -1570,320 +1552,79 @@ contract CSMAddValidatorKeys is CSMCommon {
 
         vm.prank(nodeOperator);
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
-        csm.addValidatorKeysETH{ value: deposit }(noId, 1, keys, signatures);
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_AddValidatorKeysETH_RevertWhen_InvalidAmount()
-        public
-        assertInvariants
-        brutalizeMemory
-    {
-        uint256 noId = createNodeOperator();
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
-
-        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
-        vm.deal(nodeOperator, required - 1 ether);
-
-        vm.expectRevert(CSModule.InvalidAmount.selector);
-        vm.prank(nodeOperator);
-        csm.addValidatorKeysETH{ value: required - 1 ether }(
+        csm.addValidatorKeysETH{ value: deposit }(
+            nodeOperator,
             noId,
             1,
             keys,
             signatures
         );
-    }
-}
-
-contract CSMAddNodeOperatorNegative is CSMCommon {
-    function test_addNodeOperatorETH_RevertWhen_NoKeys()
-        public
-        assertInvariants
-    {
-        vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
-        csm.addNodeOperatorETH(
-            0,
-            new bytes(0),
-            new bytes(0),
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-    }
-
-    function test_AddNodeOperatorETH_RevertWhen_KeysAndSigsLengthMismatch()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, ) = keysSignatures(keysCount);
-        vm.deal(nodeOperator, BOND_SIZE);
-
-        vm.expectRevert(SigningKeys.InvalidLength.selector);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(
-            keysCount,
-            keys,
-            new bytes(0),
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(154)
-        );
-    }
-
-    function test_AddNodeOperatorETH_RevertWhen_ZeroKey()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (
-            bytes memory keys,
-            bytes memory signatures
-        ) = keysSignaturesWithZeroKey(keysCount, 0);
-        vm.deal(nodeOperator, BOND_SIZE);
-
-        vm.expectRevert(SigningKeys.EmptyKey.selector);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(154)
-        );
-    }
-
-    function test_AddNodeOperatorStETH_RevertWhen_NoKeys()
-        public
-        assertInvariants
-    {
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-
-        vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
-        csm.addNodeOperatorStETH(
-            0,
-            new bytes(0),
-            new bytes(0),
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(154)
-        );
-    }
-
-    function test_AddNodeOperatorStETH_RevertWhen_KeysAndSigsLengthMismatch()
-        public
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, ) = keysSignatures(keysCount);
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.prank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-
-        vm.expectRevert(SigningKeys.InvalidLength.selector);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH(
-            keysCount,
-            keys,
-            new bytes(0),
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: BOND_SIZE,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(154)
-        );
-    }
-
-    function test_AddNodeOperatorStETH_RevertWhen_ZeroKey()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (
-            bytes memory keys,
-            bytes memory signatures
-        ) = keysSignaturesWithZeroKey(keysCount, 0);
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.prank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-
-        vm.expectRevert(SigningKeys.EmptyKey.selector);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: BOND_SIZE,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(154)
-        );
-    }
-
-    function test_AddNodeOperatorWstETH_RevertWhen_NoKeys()
-        public
-        assertInvariants
-    {
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        wstETH.wrap(BOND_SIZE + 1 wei);
-
-        vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
-        csm.addNodeOperatorWstETH(
-            0,
-            new bytes(0),
-            new bytes(0),
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(154)
-        );
-    }
-
-    function test_AddNodeOperatorWstETH_RevertWhen_KeysAndSigsLengthMismatch()
-        public
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, ) = keysSignatures(keysCount);
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        wstETH.wrap(BOND_SIZE + 1 wei);
-
-        vm.expectRevert(SigningKeys.InvalidLength.selector);
-        csm.addNodeOperatorWstETH(
-            keysCount,
-            keys,
-            new bytes(0),
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(154)
-        );
-    }
-
-    function test_AddNodeOperatorWstETH_RevertWhen_ZeroKey()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (
-            bytes memory keys,
-            bytes memory signatures
-        ) = keysSignaturesWithZeroKey(keysCount, 0);
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        wstETH.wrap(BOND_SIZE + 1 wei);
-
-        vm.expectRevert(SigningKeys.EmptyKey.selector);
-        csm.addNodeOperatorWstETH(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            new bytes32[](0),
-            address(154)
-        );
+        assertEq(csm.getNonce(), nonce + 1);
     }
 }
 
 contract CSMAddValidatorKeysNegative is CSMCommon {
+    function beforeTestSetup(
+        bytes4 /* testSelector */
+    ) public pure returns (bytes[] memory beforeTestCalldata) {
+        beforeTestCalldata = new bytes[](1);
+        beforeTestCalldata[0] = abi.encodePacked(this.beforeEach.selector);
+    }
+
+    function beforeEach() external {
+        createNodeOperator();
+    }
+
+    function test_AddValidatorKeysETH_RevertWhen_SenderIsNotEligible() public {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(stranger, required);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysETH{ value: required }(
+            stranger,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0)
+        );
+    }
+
+    function test_AddValidatorKeysETH_RevertWhen_CannotAddKeys() public {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(stranger, required);
+        vm.startPrank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.expectRevert(ICSModule.CannotAddKeys.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0)
+        );
+    }
+
     function test_AddValidatorKeysETH_RevertWhen_NoKeys()
         public
         assertInvariants
     {
-        uint256 noId = createNodeOperator();
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
         uint256 required = accounting.getRequiredBondForNextKeys(0, 0);
         vm.deal(nodeOperator, required);
         vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
         vm.prank(nodeOperator);
         csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
             noId,
             0,
             new bytes(0),
@@ -1894,8 +1635,8 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
     function test_AddValidatorKeysETH_RevertWhen_KeysAndSigsLengthMismatch()
         public
     {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
         uint16 keysCount = 1;
-        uint256 noId = createNodeOperator();
         (bytes memory keys, ) = keysSignatures(keysCount);
 
         uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
@@ -1904,6 +1645,7 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         vm.expectRevert(SigningKeys.InvalidLength.selector);
         vm.prank(nodeOperator);
         csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
             noId,
             keysCount,
             keys,
@@ -1915,8 +1657,8 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         public
         assertInvariants
     {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
         uint16 keysCount = 1;
-        uint256 noId = createNodeOperator();
         (
             bytes memory keys,
             bytes memory signatures
@@ -1928,6 +1670,7 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         vm.expectRevert(SigningKeys.EmptyKey.selector);
         vm.prank(nodeOperator);
         csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
             noId,
             keysCount,
             keys,
@@ -1935,18 +1678,94 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         );
     }
 
-    function test_AddValidatorKeysStETH_RevertWhen_NoKeys()
+    function test_AddValidatorKeysETH_RevertWhen_KeysLimitExceeded()
         public
         assertInvariants
     {
         uint256 noId = createNodeOperator();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(nodeOperator, required);
+
+        parametersRegistry.setKeysLimit(0, 1);
+
+        vm.expectRevert(ICSModule.KeysLimitExceeded.selector);
+        vm.prank(nodeOperator);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
+    }
+
+    function test_AddValidatorKeysStETH_RevertWhen_SenderIsNotEligible()
+        public
+    {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.prank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysStETH(
+            stranger,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysStETH_RevertWhen_CannotAddKeys() public {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.prank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        vm.startPrank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.expectRevert(ICSModule.CannotAddKeys.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysStETH_RevertWhen_NoKeys()
+        public
+        assertInvariants
+    {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
 
         vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
         csm.addValidatorKeysStETH(
+            nodeOperator,
             noId,
             0,
             new bytes(0),
@@ -1964,8 +1783,8 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
     function test_AddValidatorKeysStETH_RevertWhen_KeysAndSigsLengthMismatch()
         public
     {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
         uint16 keysCount = 1;
-        uint256 noId = createNodeOperator();
         (bytes memory keys, ) = keysSignatures(keysCount);
 
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
@@ -1974,6 +1793,7 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
 
         vm.expectRevert(SigningKeys.InvalidLength.selector);
         csm.addValidatorKeysStETH(
+            nodeOperator,
             noId,
             keysCount,
             keys,
@@ -1992,8 +1812,8 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         public
         assertInvariants
     {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
         uint16 keysCount = 1;
-        uint256 noId = createNodeOperator();
         (
             bytes memory keys,
             bytes memory signatures
@@ -2005,6 +1825,7 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
 
         vm.expectRevert(SigningKeys.EmptyKey.selector);
         csm.addValidatorKeysStETH(
+            nodeOperator,
             noId,
             keysCount,
             keys,
@@ -2019,11 +1840,123 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         );
     }
 
-    function test_AddValidatorKeysWstETH_RevertWhen_NoKeys()
+    function test_AddValidatorKeysETH_RevertWhen_InvalidAmount()
         public
         assertInvariants
     {
         uint256 noId = createNodeOperator();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(nodeOperator, required - 1 ether);
+
+        vm.expectRevert(ICSModule.InvalidAmount.selector);
+        vm.prank(nodeOperator);
+        csm.addValidatorKeysETH{ value: required - 1 ether }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
+    }
+
+    function test_AddValidatorKeysStETH_RevertWhen_KeysLimitExceeded()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+
+        parametersRegistry.setKeysLimit(0, 1);
+
+        vm.expectRevert(ICSModule.KeysLimitExceeded.selector);
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: BOND_SIZE,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysWstETH_RevertWhen_SenderIsNotEligible()
+        public
+    {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        vm.stopPrank();
+
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysWstETH(
+            stranger,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysWstETH_RevertWhen_CannotAddKeys() public {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        vm.stopPrank();
+        vm.startPrank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.expectRevert(ICSModule.CannotAddKeys.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysWstETH_RevertWhen_NoKeys()
+        public
+        assertInvariants
+    {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
         uint256 toWrap = BOND_SIZE + 1 wei;
         vm.deal(nodeOperator, toWrap);
         vm.startPrank(nodeOperator);
@@ -2033,6 +1966,7 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
 
         vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
         csm.addValidatorKeysWstETH(
+            nodeOperator,
             noId,
             0,
             new bytes(0),
@@ -2050,8 +1984,8 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
     function test_AddValidatorKeysWstETH_RevertWhen_KeysAndSigsLengthMismatch()
         public
     {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
         uint16 keysCount = 1;
-        uint256 noId = createNodeOperator();
         uint256 toWrap = BOND_SIZE + 1 wei;
         vm.deal(nodeOperator, toWrap);
         vm.startPrank(nodeOperator);
@@ -2062,6 +1996,7 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
 
         vm.expectRevert(SigningKeys.InvalidLength.selector);
         csm.addValidatorKeysWstETH(
+            nodeOperator,
             noId,
             keysCount,
             keys,
@@ -2080,8 +2015,8 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         public
         assertInvariants
     {
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
         uint16 keysCount = 1;
-        uint256 noId = createNodeOperator();
         uint256 toWrap = BOND_SIZE + 1 wei;
         vm.deal(nodeOperator, toWrap);
         vm.startPrank(nodeOperator);
@@ -2095,6 +2030,7 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
 
         vm.expectRevert(SigningKeys.EmptyKey.selector);
         csm.addValidatorKeysWstETH(
+            nodeOperator,
             noId,
             keysCount,
             keys,
@@ -2108,115 +2044,29 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
             })
         );
     }
-}
 
-contract CSMDepositETH is CSMCommon {
-    function test_DepositETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(noId);
-        vm.deal(nodeOperator, 32 ether);
-        uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
-
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(noId);
-
-        assertEq(
-            nodeOperator.balance,
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(noId),
-            sharesToDeposit + preShares,
-            "bond shares should be equal to deposited shares + pre shares"
-        );
-    }
-
-    function test_DepositETH_NotExistingNodeOperator() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        vm.deal(nodeOperator, 32 ether);
-
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(noId + 1);
-    }
-
-    function test_DepositETH_NonceShouldChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(0);
-
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_DepositETH_NonceShouldNotChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(noId);
-
-        assertEq(csm.getNonce(), nonce);
-    }
-}
-
-contract CSMDepositStETH is CSMCommon {
-    function test_DepositStETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(noId);
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
-        csm.depositStETH(
-            noId,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            stETH.balanceOf(nodeOperator),
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(noId),
-            sharesToDeposit + preShares,
-            "bond shares should be equal to deposited shares + pre shares"
-        );
-    }
-
-    function test_DepositStETH_NotExistingNodeOperator()
+    function test_AddValidatorKeysWstETH_RevertWhen_KeysLimitExceeded()
         public
         assertInvariants
     {
         uint256 noId = createNodeOperator();
-        vm.deal(nodeOperator, 32 ether);
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.depositStETH(
-            noId + 1,
-            32 ether,
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        parametersRegistry.setKeysLimit(0, 1);
+
+        vm.expectRevert(ICSModule.KeysLimitExceeded.selector);
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -2225,255 +2075,6 @@ contract CSMDepositStETH is CSMCommon {
                 s: 0
             })
         );
-    }
-
-    function test_DepositStETH_withPermit() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(noId);
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
-
-        vm.expectEmit(true, true, true, true, address(stETH));
-        emit StETHMock.Approval(nodeOperator, address(accounting), 32 ether);
-
-        csm.depositStETH(
-            noId,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            stETH.balanceOf(nodeOperator),
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(noId),
-            sharesToDeposit + preShares,
-            "bond shares should be equal to deposited shares + pre shares"
-        );
-    }
-
-    function test_DepositStETH_NonceShouldChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        csm.depositStETH(
-            0,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_DepositStETH_NonceShouldNotChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        csm.depositStETH(
-            noId,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(csm.getNonce(), nonce);
-    }
-}
-
-contract CSMDepositWstETH is CSMCommon {
-    function test_DepositWstETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(noId);
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
-            wstETH.getStETHByWstETH(wstETHAmount)
-        );
-
-        csm.depositWstETH(
-            noId,
-            wstETHAmount,
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            wstETH.balanceOf(nodeOperator),
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(noId),
-            sharesToDeposit + preShares,
-            "bond shares should be equal to deposited shares + pre shares"
-        );
-    }
-
-    function test_DepositWstETH_NotExistingNodeOperator()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.depositWstETH(
-            noId + 1,
-            wstETHAmount,
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
-
-    function test_DepositWstETH_withPermit() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(noId);
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
-            wstETH.getStETHByWstETH(wstETHAmount)
-        );
-
-        vm.expectEmit(true, true, true, true, address(wstETH));
-        emit WstETHMock.Approval(nodeOperator, address(accounting), 32 ether);
-
-        csm.depositWstETH(
-            noId,
-            wstETHAmount,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            wstETH.balanceOf(nodeOperator),
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(noId),
-            sharesToDeposit + preShares,
-            "bond shares should be equal to deposited shares + pre shares"
-        );
-    }
-
-    function test_DepositWstETH_NonceShouldChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-
-        csm.depositWstETH(
-            0,
-            wstETHAmount,
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_DepositWstETH_NonceShouldNotChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-
-        csm.depositWstETH(
-            noId,
-            wstETHAmount,
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(csm.getNonce(), nonce);
     }
 }
 
@@ -2481,27 +2082,12 @@ contract CSMObtainDepositData is CSMCommon {
     // TODO: test with near to real values
 
     function test_obtainDepositData() public assertInvariants {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
-        );
+        uint256 nodeOperatorId = createNodeOperator(1);
+        (bytes memory keys, bytes memory signatures) = csm
+            .getSigningKeysWithSignatures(nodeOperatorId, 0, 1);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositableSigningKeysCountChanged(0, 0);
+        vm.expectEmit(address(csm));
+        emit ICSModule.DepositableSigningKeysCountChanged(nodeOperatorId, 0);
         (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
             .obtainDepositData(1, "");
         assertEq(obtainedKeys, keys);
@@ -2516,29 +2102,23 @@ contract CSMObtainDepositData is CSMCommon {
         uint256 secondId = createNodeOperator(3);
         uint256 thirdId = createNodeOperator(1);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositableSigningKeysCountChanged(firstId, 0);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositableSigningKeysCountChanged(secondId, 0);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositableSigningKeysCountChanged(thirdId, 0);
+        vm.expectEmit(address(csm));
+        emit ICSModule.DepositableSigningKeysCountChanged(firstId, 0);
+        vm.expectEmit(address(csm));
+        emit ICSModule.DepositableSigningKeysCountChanged(secondId, 0);
+        vm.expectEmit(address(csm));
+        emit ICSModule.DepositableSigningKeysCountChanged(thirdId, 0);
         csm.obtainDepositData(6, "");
     }
 
     function test_obtainDepositData_counters() public assertInvariants {
         uint256 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 noId = createNodeOperator(
-            nodeOperator,
-            keysCount,
-            keys,
-            signatures
-        );
+        uint256 noId = createNodeOperator(keysCount);
+        (bytes memory keys, bytes memory signatures) = csm
+            .getSigningKeysWithSignatures(noId, 0, keysCount);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositedSigningKeysCountChanged(noId, keysCount);
+        vm.expectEmit(address(csm));
+        emit ICSModule.DepositedSigningKeysCountChanged(noId, keysCount);
         (bytes memory depositedKeys, bytes memory depositedSignatures) = csm
             .obtainDepositData(keysCount, "");
 
@@ -2590,8 +2170,8 @@ contract CSMObtainDepositData is CSMCommon {
     {
         uint256 noId = createNodeOperator(7);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositedSigningKeysCountChanged(noId, 3);
+        vm.expectEmit(address(csm));
+        emit ICSModule.DepositedSigningKeysCountChanged(noId, 3);
         csm.obtainDepositData(3, "");
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -2604,7 +2184,7 @@ contract CSMObtainDepositData is CSMCommon {
         public
         assertInvariants
     {
-        vm.expectRevert(CSModule.NotEnoughKeys.selector);
+        vm.expectRevert(ICSModule.NotEnoughKeys.selector);
         csm.obtainDepositData(1, "");
     }
 
@@ -2675,246 +2255,6 @@ contract CSMObtainDepositData is CSMCommon {
     }
 }
 
-contract CSMClaimRewards is CSMCommon {
-    function test_claimRewardsStETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        uint256 amount = 1 ether;
-
-        vm.deal(nodeOperator, amount);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: amount }(noId);
-
-        uint256 noSharesBefore = stETH.sharesOf(nodeOperator);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.claimRewardsStETH.selector,
-                noId,
-                UINT256_MAX,
-                nodeOperator,
-                0,
-                new bytes32[](0)
-            ),
-            1
-        );
-        vm.prank(nodeOperator);
-        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
-
-        uint256 noSharesAfter = stETH.sharesOf(nodeOperator);
-
-        assertEq(
-            noSharesAfter,
-            noSharesBefore + stETH.getSharesByPooledEth(amount)
-        );
-        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
-            noId
-        );
-        assertEq(current, required, "NO bond shares should be equal required");
-    }
-
-    function test_claimRewardsStETH_fromRewardAddress()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        address rewardAddress = nextAddress("rewardAddress");
-        csm.obtainDepositData(1, "");
-
-        vm.deal(nodeOperator, 1 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 1 ether }(noId);
-
-        vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
-
-        vm.startPrank(rewardAddress);
-        csm.confirmNodeOperatorRewardAddressChange(noId);
-
-        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_claimRewardsStETH_RevertWhen_NoNodeOperator()
-        public
-        assertInvariants
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.claimRewardsStETH(0, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_claimRewardsStETH_RevertWhen_NotEligible()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
-        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_claimRewardsWstETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        uint256 amount = 1 ether;
-
-        vm.deal(nodeOperator, amount);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: amount }(noId);
-
-        uint256 noWstEthBefore = wstETH.balanceOf(nodeOperator);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.claimRewardsWstETH.selector,
-                noId,
-                UINT256_MAX,
-                nodeOperator,
-                0,
-                new bytes32[](0)
-            ),
-            1
-        );
-        vm.prank(nodeOperator);
-        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-
-        uint256 noWstEthAfter = wstETH.balanceOf(nodeOperator);
-        // This triple conversion reflects the internal logic
-        // ETH -> stETH -> wstETH
-        assertEq(
-            noWstEthAfter,
-            noWstEthBefore +
-                stETH.getSharesByPooledEth(
-                    stETH.getPooledEthByShares(
-                        stETH.getSharesByPooledEth(amount)
-                    )
-                )
-        );
-
-        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
-            noId
-        );
-        // Approx due to wstETH claim mechanics shares -> stETH -> wstETH
-        assertApproxEqAbs(
-            current,
-            required,
-            1 wei,
-            "NO bond shares should be equal required"
-        );
-    }
-
-    function test_claimRewardsWstETH_fromRewardAddress()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        address rewardAddress = nextAddress("rewardAddress");
-        csm.obtainDepositData(1, "");
-
-        vm.deal(nodeOperator, 1 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 1 ether }(noId);
-
-        vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
-
-        vm.startPrank(rewardAddress);
-        csm.confirmNodeOperatorRewardAddressChange(noId);
-        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_claimRewardsWstETH_RevertWhen_NoNodeOperator()
-        public
-        assertInvariants
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.claimRewardsWstETH(0, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_claimRewardsWstETH_RevertWhen_NotEligible()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
-        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_requestRewardsETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        vm.deal(nodeOperator, 1 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 1 ether }(noId);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.claimRewardsUnstETH.selector,
-                noId,
-                UINT256_MAX,
-                nodeOperator,
-                0,
-                new bytes32[](0)
-            ),
-            1
-        );
-        vm.prank(nodeOperator);
-        csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-
-        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
-            noId
-        );
-        // Approx due to unstETH claim mechanics shares -> stETH -> unstETH
-        assertApproxEqAbs(
-            current,
-            required,
-            1 wei,
-            "NO bond shares should be equal required"
-        );
-    }
-
-    function test_requestRewardsETH_fromRewardAddress()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        address rewardAddress = nextAddress("rewardAddress");
-        csm.obtainDepositData(1, "");
-
-        vm.deal(nodeOperator, 1 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 1 ether }(noId);
-
-        vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
-
-        vm.startPrank(rewardAddress);
-        csm.confirmNodeOperatorRewardAddressChange(noId);
-        csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_requestRewardsETH_RevertWhen_NoNodeOperator()
-        public
-        assertInvariants
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.claimRewardsUnstETH(0, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_requestRewardsETH_RevertWhen_NotEligible()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
-        csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-}
-
 contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
     function test_proposeNodeOperatorManagerAddressChange() public {
         uint256 noId = createNodeOperator();
@@ -2922,7 +2262,7 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
 
-        vm.expectEmit(true, true, true, true, address(csm));
+        vm.expectEmit(address(csm));
         emit INOAddresses.NodeOperatorManagerAddressChangeProposed(
             noId,
             address(0),
@@ -2943,7 +2283,7 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
 
-        vm.expectEmit(true, true, true, true, address(csm));
+        vm.expectEmit(address(csm));
         emit INOAddresses.NodeOperatorManagerAddressChangeProposed(
             noId,
             stranger,
@@ -3002,7 +2342,7 @@ contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
 
-        vm.expectEmit(true, true, true, true, address(csm));
+        vm.expectEmit(address(csm));
         emit INOAddresses.NodeOperatorManagerAddressChanged(
             noId,
             nodeOperator,
@@ -3052,7 +2392,7 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
 
-        vm.expectEmit(true, true, true, true, address(csm));
+        vm.expectEmit(address(csm));
         emit INOAddresses.NodeOperatorRewardAddressChangeProposed(
             noId,
             address(0),
@@ -3073,7 +2413,7 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
 
-        vm.expectEmit(true, true, true, true, address(csm));
+        vm.expectEmit(address(csm));
         emit INOAddresses.NodeOperatorRewardAddressChangeProposed(
             noId,
             stranger,
@@ -3132,7 +2472,7 @@ contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
 
-        vm.expectEmit(true, true, true, true, address(csm));
+        vm.expectEmit(address(csm));
         emit INOAddresses.NodeOperatorRewardAddressChanged(
             noId,
             nodeOperator,
@@ -3184,7 +2524,7 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
         vm.prank(stranger);
         csm.confirmNodeOperatorRewardAddressChange(noId);
 
-        vm.expectEmit(true, true, true, true, address(csm));
+        vm.expectEmit(address(csm));
         emit INOAddresses.NodeOperatorManagerAddressChanged(
             noId,
             nodeOperator,
@@ -3258,7 +2598,7 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
     function test_changeNodeOperatorRewardAddress() public {
         uint256 noId = createNodeOperator(true);
 
-        vm.expectEmit(true, true, true, true, address(csm));
+        vm.expectEmit(address(csm));
         emit INOAddresses.NodeOperatorRewardAddressChanged(
             noId,
             nodeOperator,
@@ -3300,7 +2640,7 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator(true);
-        vm.expectRevert(ICSModule.ZeroRewardAddress.selector);
+        vm.expectRevert(INOAddresses.ZeroRewardAddress.selector);
         vm.prank(nodeOperator);
         csm.changeNodeOperatorRewardAddress(noId, address(0));
     }
@@ -3338,39 +2678,14 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
     }
 }
 
-contract CsmOnWithdrawalCredentialsChanged is CSMCommon {
-    function test_onWithdrawalCredentialsChanged() public assertInvariants {
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.KeyRemovalChargeSet(0 ether);
-        csm.onWithdrawalCredentialsChanged();
-
-        assertEq(csm.keyRemovalCharge(), 0 ether);
-    }
-}
-
 contract CsmVetKeys is CSMCommon {
-    function test_vetKeys_OnCreateOperator() public assertInvariants {
-        uint256 noId = 0;
-        uint256 keys = 7;
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(noId, keys);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit IQueueLib.BatchEnqueued(noId, keys);
-        createNodeOperator(keys);
-
-        BatchInfo[] memory exp = new BatchInfo[](1);
-        exp[0] = BatchInfo({ nodeOperatorId: noId, count: keys });
-        _assertQueueState(exp);
-    }
-
     function test_vetKeys_OnUploadKeys() public assertInvariants {
         uint256 noId = createNodeOperator(2);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(noId, 3);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 1);
+        vm.expectEmit(address(csm));
+        emit ICSModule.VettedSigningKeysCountChanged(noId, 3);
+        vm.expectEmit(address(csm));
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         uploadMoreKeys(noId, 1);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -3379,12 +2694,13 @@ contract CsmVetKeys is CSMCommon {
         BatchInfo[] memory exp = new BatchInfo[](2);
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
         exp[1] = BatchInfo({ nodeOperatorId: noId, count: 1 });
-        _assertQueueState(exp);
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
     }
 
     function test_vetKeys_Counters() public assertInvariants {
+        uint256 noId = createNodeOperator(false);
         uint256 nonce = csm.getNonce();
-        uint256 noId = createNodeOperator(1);
+        uploadMoreKeys(noId, 1);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedKeys, 1);
@@ -3400,8 +2716,8 @@ contract CsmVetKeys is CSMCommon {
         no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedKeys, 4);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(noId, 5); // 7 - 2 removed at the next step.
+        vm.expectEmit(address(csm));
+        emit ICSModule.VettedSigningKeysCountChanged(noId, 5); // 7 - 2 removed at the next step.
 
         vm.prank(nodeOperator);
         csm.removeKeys(noId, 4, 2); // Remove keys 4 and 5.
@@ -3413,14 +2729,6 @@ contract CsmVetKeys is CSMCommon {
 
 contract CsmQueueOps is CSMCommon {
     uint256 internal constant LOOKUP_DEPTH = 150; // derived from maxDepositsPerBlock
-
-    function _isQueueDirty(uint256 maxItems) internal returns (bool) {
-        // XXX: Mimic a **eth_call** to avoid state changes.
-        uint256 snapshot = vm.snapshot();
-        (uint256 toRemove, ) = csm.cleanDepositQueue(maxItems);
-        vm.revertTo(snapshot);
-        return toRemove > 0;
-    }
 
     function test_emptyQueueIsClean() public assertInvariants {
         bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
@@ -3468,9 +2776,12 @@ contract CsmQueueOps is CSMCommon {
         assertEq(toRemove, 0, "queue should be clean");
     }
 
-    function test_cleanup_RevertWhen_zeroDepth() public assertInvariants {
-        vm.expectRevert(IQueueLib.QueueLookupNoLimit.selector);
-        csm.cleanDepositQueue(0);
+    function test_cleanup_zeroMaxItems() public assertInvariants {
+        (uint256 removed, uint256 lastRemovedAtDepth) = csm.cleanDepositQueue(
+            0
+        );
+        assertEq(removed, 0, "should not remove any batches");
+        assertEq(lastRemovedAtDepth, 0, "lastRemovedAtDepth should be 0");
     }
 
     function test_cleanup_WhenMultipleInvalidBatchesInRow()
@@ -3497,7 +2808,7 @@ contract CsmQueueOps is CSMCommon {
         BatchInfo[] memory exp = new BatchInfo[](2);
         exp[0] = BatchInfo({ nodeOperatorId: 0, count: 3 });
         exp[1] = BatchInfo({ nodeOperatorId: 1, count: 5 });
-        _assertQueueState(exp);
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
 
         (toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
         assertEq(toRemove, 0, "queue should be clean");
@@ -3532,7 +2843,7 @@ contract CsmQueueOps is CSMCommon {
         // Items marked with * below are supposed to be removed.
         // (0;3) (1;5) *(2;1) (3;4) (4;2) *(1;2) (3;2) (4;2)
 
-        uint256 snapshot = vm.snapshot();
+        uint256 snapshot = vm.snapshotState();
 
         {
             (uint256 toRemove, uint256 toVisit) = csm.cleanDepositQueue({
@@ -3542,7 +2853,7 @@ contract CsmQueueOps is CSMCommon {
             assertEq(toVisit, 6, "toVisit != 6");
         }
 
-        vm.revertTo(snapshot);
+        vm.revertToState(snapshot);
 
         {
             (uint256 toRemove, uint256 toVisit) = csm.cleanDepositQueue({
@@ -3553,14 +2864,25 @@ contract CsmQueueOps is CSMCommon {
         }
     }
 
-    function test_normalizeQueue_NothingToDo() public assertInvariants {
-        // `normalizeQueue` will be called on creating a node operator and uploading a key.
+    function test_updateDepositableValidatorsCount_NothingToDo()
+        public
+        assertInvariants
+    {
+        // `updateDepositableValidatorsCount` will be called on creating a node operator and uploading a key.
         uint256 noId = createNodeOperator();
 
+        (, , uint256 depositableBefore) = csm.getStakingModuleSummary();
+        uint256 nonceBefore = csm.getNonce();
+
         vm.recordLogs();
-        vm.prank(nodeOperator);
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
+
+        (, , uint256 depositableAfter) = csm.getStakingModuleSummary();
+        uint256 nonceAfter = csm.getNonce();
         Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        assertEq(depositableBefore, depositableAfter);
+        assertEq(nonceBefore, nonceAfter);
         assertEq(logs.length, 0);
     }
 
@@ -3575,8 +2897,8 @@ contract CsmQueueOps is CSMCommon {
         });
         csm.cleanDepositQueue(1);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 7);
+        vm.expectEmit(address(csm));
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 7);
 
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
@@ -3598,9 +2920,436 @@ contract CsmQueueOps is CSMCommon {
         csm.obtainDepositData(2, "");
         csm.cleanDepositQueue(1);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 1);
-        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            0,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+}
+
+contract CsmPriorityQueue is CSMCommon {
+    uint256 constant LOOKUP_DEPTH = 150;
+
+    uint32 constant PRIORITY_QUEUE = 0;
+    uint32 constant MAX_DEPOSITS = 10;
+
+    uint32 REGULAR_QUEUE;
+
+    function setUp() public override {
+        super.setUp();
+        // Just to make sure we configured defaults properly and check things properly.
+        assertNotEq(PRIORITY_QUEUE, csm.QUEUE_LOWEST_PRIORITY());
+        assertNotEq(PRIORITY_QUEUE, csm.QUEUE_LEGACY_PRIORITY());
+        REGULAR_QUEUE = uint32(csm.QUEUE_LOWEST_PRIORITY());
+    }
+
+    function test_enqueueToPriorityQueue_LessThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 8);
+
+            uploadMoreKeys(noId, 8);
+        }
+
+        _assertQueueEmpty(REGULAR_QUEUE);
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_MoreThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 10);
+
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 5);
+
+            uploadMoreKeys(noId, 15);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 5 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_AlreadyEnqueuedLessThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uploadMoreKeys(noId, 8);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 2);
+
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 10);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](2);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_AlreadyEnqueuedMoreThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uploadMoreKeys(noId, 12);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 12);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](2);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 12 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_EnqueuedWithDepositedLessThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uploadMoreKeys(noId, 8);
+        csm.obtainDepositData(3, ""); // no.enqueuedCount == 5
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 2);
+
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 10);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](2);
+
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 5 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_EnqueuedWithDepositedMoreThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uploadMoreKeys(noId, 12);
+        csm.obtainDepositData(3, ""); // no.enqueuedCount == 9
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 12);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 7 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](2);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 12 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_migrateToPriorityQueue_EnqueuedLessThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 8);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uint256 initialNonce = csm.getNonce(); // Capture initial nonce
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 8);
+
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        uint256 updatedNonce = csm.getNonce(); // Capture updated nonce
+        assertEq(
+            updatedNonce,
+            initialNonce + 1,
+            "Module nonce should increment by 1"
+        ); // Assert increment
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_migrateToPriorityQueue_EnqueuedMoreThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 10);
+
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 15 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_migrateToPriorityQueue_DepositedLessThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        csm.obtainDepositData(8, "");
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 2);
+
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 7 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_migrateToPriorityQueue_DepositedMoreThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        csm.obtainDepositData(12, "");
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 3 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfPriorityQueueAlreadyUsedViaMigrate()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        csm.migrateToPriorityQueue(noId);
+
+        {
+            vm.expectRevert(ICSModule.PriorityQueueAlreadyUsed.selector);
+            csm.migrateToPriorityQueue(noId);
+        }
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfPriorityQueueAlreadyUsedViaAddKeys()
+        public
+    {
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        {
+            vm.expectRevert(ICSModule.PriorityQueueAlreadyUsed.selector);
+            csm.migrateToPriorityQueue(noId);
+        }
+    }
+
+    function test_queueCleanupWorksAcrossQueues() public {
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uint256 noId = createNodeOperator(0);
+
+        uploadMoreKeys(noId, 2);
+        uploadMoreKeys(noId, 10);
+        uploadMoreKeys(noId, 10);
+        // [2] [8] | ... | [2] [10]
+
+        unvetKeys({ noId: noId, to: 2 });
+
+        (uint256 toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        assertEq(toRemove, 3, "should remove 3 batches");
+
+        bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
+        assertFalse(isDirty, "queue should be clean");
+    }
+
+    function test_queueCleanupReturnsCorrectDepth() public {
+        uint256 noIdOne = createNodeOperator(0);
+        uint256 noIdTwo = createNodeOperator(0);
+
+        _enablePriorityQueue(0, 10);
+        uploadMoreKeys(noIdOne, 2);
+        uploadMoreKeys(noIdOne, 10);
+        uploadMoreKeys(noIdOne, 10);
+
+        _enablePriorityQueue(1, 10);
+        uploadMoreKeys(noIdTwo, 2);
+        uploadMoreKeys(noIdTwo, 8);
+        uploadMoreKeys(noIdTwo, 2);
+
+        unvetKeys({ noId: noIdTwo, to: 2 });
+
+        // [0,2] [0,8] | [1,2] [1,8] | ... | [0,2] [0,10] [1,2]
+        //     1     2       3     4             5      6     7
+        //                         ^                          ^ removed
+
+        uint256 snapshot;
+
+        {
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(3);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 0, "should remove 0 batch(es)");
+            assertEq(lastRemovedAtDepth, 0, "the depth should be 0");
+        }
+
+        {
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(4);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 1, "should remove 1 batch(es)");
+            assertEq(lastRemovedAtDepth, 4, "the depth should be 4");
+        }
+
+        {
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(7);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 2, "should remove 2 batch(es)");
+            assertEq(lastRemovedAtDepth, 7, "the depth should be 7");
+        }
+
+        {
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(100_500);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 2, "should remove 2 batch(es)");
+            assertEq(lastRemovedAtDepth, 7, "the depth should be 7");
+        }
+    }
+
+    function _enablePriorityQueue(
+        uint32 priority,
+        uint32 maxDeposits
+    ) internal {
+        parametersRegistry.setQueueConfig({
+            curveId: 0,
+            priority: priority,
+            maxDeposits: maxDeposits
+        });
+    }
+
+    function _assertQueueEmpty(uint32 priority) private view {
+        _assertQueueState(priority, new BatchInfo[](0));
     }
 }
 
@@ -3612,10 +3361,10 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         uint256 noId = createNodeOperator(3);
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(noId, 1);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountDecreased(noId);
+        vm.expectEmit(address(csm));
+        emit ICSModule.VettedSigningKeysCountChanged(noId, 1);
+        vm.expectEmit(address(csm));
+        emit ICSModule.VettedSigningKeysCountDecreased(noId);
         unvetKeys({ noId: noId, to: 1 });
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -3634,18 +3383,18 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         uint256 newVettedFirst = 5;
         uint256 newVettedSecond = 3;
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(firstNoId, newVettedFirst);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountDecreased(firstNoId);
+        vm.expectEmit(address(csm));
+        emit ICSModule.VettedSigningKeysCountChanged(firstNoId, newVettedFirst);
+        vm.expectEmit(address(csm));
+        emit ICSModule.VettedSigningKeysCountDecreased(firstNoId);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(
+        vm.expectEmit(address(csm));
+        emit ICSModule.VettedSigningKeysCountChanged(
             secondNoId,
             newVettedSecond
         );
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountDecreased(secondNoId);
+        vm.expectEmit(address(csm));
+        emit ICSModule.VettedSigningKeysCountDecreased(secondNoId);
 
         csm.decreaseVettedSigningKeysCount(
             bytes.concat(bytes8(uint64(firstNoId)), bytes8(uint64(secondNoId))),
@@ -3689,7 +3438,7 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 10;
 
-        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
+        vm.expectRevert(ICSModule.InvalidVetKeysPointer.selector);
         unvetKeys(noId, newVetted);
     }
 
@@ -3699,7 +3448,7 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 15;
 
-        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
+        vm.expectRevert(ICSModule.InvalidVetKeysPointer.selector);
         unvetKeys(noId, newVetted);
     }
 
@@ -3710,7 +3459,7 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         csm.obtainDepositData(5, "");
         uint256 newVetted = 4;
 
-        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
+        vm.expectRevert(ICSModule.InvalidVetKeysPointer.selector);
         unvetKeys(noId, newVetted);
     }
 
@@ -3759,7 +3508,7 @@ contract CsmGetSigningKeys is CSMCommon {
             signatures: randomBytes(96)
         });
 
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.getSigningKeys({
             nodeOperatorId: noId,
             startIndex: 0,
@@ -3800,7 +3549,7 @@ contract CsmGetSigningKeys is CSMCommon {
         assertInvariants
         brutalizeMemory
     {
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.getSigningKeys(0, 0, 1);
     }
 }
@@ -3847,7 +3596,7 @@ contract CsmGetSigningKeysWithSignatures is CSMCommon {
             signatures: signatures
         });
 
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.getSigningKeysWithSignatures({
             nodeOperatorId: noId,
             startIndex: 0,
@@ -3900,7 +3649,7 @@ contract CsmGetSigningKeysWithSignatures is CSMCommon {
         assertInvariants
         brutalizeMemory
     {
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.getSigningKeysWithSignatures(0, 0, 1);
     }
 }
@@ -3924,11 +3673,11 @@ contract CsmRemoveKeys is CSMCommon {
 
         // at the beginning
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyRemoved(noId, key0);
 
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 4);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 4);
         }
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
         /*
@@ -3940,11 +3689,11 @@ contract CsmRemoveKeys is CSMCommon {
 
         // in between
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyRemoved(noId, key1);
 
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 3);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 3);
         }
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 1, keysCount: 1 });
         /*
@@ -3955,11 +3704,11 @@ contract CsmRemoveKeys is CSMCommon {
 
         // at the end
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyRemoved(noId, key2);
 
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 2, keysCount: 1 });
         /*
@@ -3994,13 +3743,13 @@ contract CsmRemoveKeys is CSMCommon {
 
         {
             // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyRemoved(noId, key1);
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyRemoved(noId, key0);
 
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 3);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 3);
         }
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 2 });
@@ -4036,13 +3785,13 @@ contract CsmRemoveKeys is CSMCommon {
 
         {
             // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyRemoved(noId, key2);
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyRemoved(noId, key1);
 
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 3);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 3);
         }
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 1, keysCount: 2 });
@@ -4078,13 +3827,13 @@ contract CsmRemoveKeys is CSMCommon {
 
         {
             // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyRemoved(noId, key4);
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyRemoved(noId, key3);
 
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 3);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 3);
         }
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 3, keysCount: 2 });
@@ -4113,8 +3862,8 @@ contract CsmRemoveKeys is CSMCommon {
         });
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 0);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 0);
         }
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 5 });
@@ -4143,7 +3892,9 @@ contract CSMRemoveKeysChargeFee is CSMCommon {
     function test_removeKeys_chargeFee() public assertInvariants {
         uint256 noId = createNodeOperator(3);
 
-        uint256 amountToCharge = csm.keyRemovalCharge() * 2;
+        uint256 amountToCharge = csm.PARAMETERS_REGISTRY().getKeyRemovalCharge(
+            0
+        ) * 2;
 
         vm.expectCall(
             address(accounting),
@@ -4155,19 +3906,16 @@ contract CSMRemoveKeysChargeFee is CSMCommon {
             1
         );
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.KeyRemovalChargeApplied(noId);
+        vm.expectEmit(address(csm));
+        emit ICSModule.KeyRemovalChargeApplied(noId);
 
         vm.prank(nodeOperator);
         csm.removeKeys(noId, 1, 2);
     }
 
     function test_removeKeys_withNoFee() public assertInvariants {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
         vm.prank(admin);
-        csm.grantRole(role, admin);
-        vm.prank(admin);
-        csm.setKeyRemovalCharge(0);
+        csm.PARAMETERS_REGISTRY().setKeyRemovalCharge(0, 0);
 
         uint256 noId = createNodeOperator(3);
 
@@ -4180,7 +3928,7 @@ contract CSMRemoveKeysChargeFee is CSMCommon {
         for (uint256 i = 0; i < entries.length; i++) {
             assertNotEq(
                 entries[i].topics[0],
-                CSModule.KeyRemovalChargeApplied.selector
+                ICSModule.KeyRemovalChargeApplied.selector
             );
         }
     }
@@ -4219,7 +3967,7 @@ contract CSMRemoveKeysReverts is CSMCommon {
 
         csm.obtainDepositData(1, "");
 
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 
@@ -4230,7 +3978,7 @@ contract CSMRemoveKeysReverts is CSMCommon {
         });
 
         vm.prank(stranger);
-        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 
@@ -4258,13 +4006,25 @@ contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
     {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(3, "");
-        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            0,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+
+        csm.submitWithdrawals(withdrawalInfo);
         uint256 keys = csm.getNodeOperatorNonWithdrawnKeys(noId);
         assertEq(keys, 2);
     }
 
     function test_getNodeOperatorNonWithdrawnKeys_ZeroWhenNoNodeOperator()
         public
+        view
     {
         uint256 keys = csm.getNodeOperatorNonWithdrawnKeys(0);
         assertEq(keys, 0);
@@ -4927,8 +4687,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 1, 1);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 1, 1);
         csm.updateTargetValidatorsLimits(noId, 1, 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -4939,14 +4699,10 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
     {
         uint256 noId = createNodeOperator();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 1, 1);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 1, 1);
         csm.updateTargetValidatorsLimits(noId, 1, 1);
-
-        vm.recordLogs();
         csm.updateTargetValidatorsLimits(noId, 1, 1);
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-        assertEq(entries.length, 0);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(summary.targetLimitMode, 1);
@@ -4958,8 +4714,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         assertInvariants
     {
         uint256 noId = createNodeOperator();
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 1, 0);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 1, 0);
         csm.updateTargetValidatorsLimits(noId, 1, 0);
     }
 
@@ -4970,13 +4726,9 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 0);
-
-        vm.recordLogs();
-        csm.updateTargetValidatorsLimits(noId, 0, 8);
-        assertEq(vm.getRecordedLogs().length, 0);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.targetLimit, 0);
@@ -4989,8 +4741,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 0, 10);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 1, 10);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 1, 10);
         csm.updateTargetValidatorsLimits(noId, 1, 10);
     }
 
@@ -5001,8 +4753,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 0, 10);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 2, 10);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 2, 10);
         csm.updateTargetValidatorsLimits(noId, 2, 10);
     }
 
@@ -5013,8 +4765,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 1, 10);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 10);
     }
 
@@ -5025,8 +4777,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 1, 10);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 0);
     }
 
@@ -5037,8 +4789,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 10);
     }
 
@@ -5049,8 +4801,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 0);
     }
 
@@ -5060,8 +4812,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 1, 5);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 1, 5);
         csm.updateTargetValidatorsLimits(noId, 1, 5);
     }
 
@@ -5071,8 +4823,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 1, 10);
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 2, 5);
+        vm.expectEmit(address(csm));
+        emit ICSModule.TargetValidatorsCountChanged(noId, 2, 5);
         csm.updateTargetValidatorsLimits(noId, 2, 5);
     }
 
@@ -5097,7 +4849,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         public
     {
         createNodeOperator(1);
-        vm.expectRevert(CSModule.InvalidInput.selector);
+        vm.expectRevert(ICSModule.InvalidInput.selector);
         csm.updateTargetValidatorsLimits(0, 1, uint256(type(uint32).max) + 1);
     }
 
@@ -5105,126 +4857,8 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         public
     {
         createNodeOperator(1);
-        vm.expectRevert(CSModule.InvalidInput.selector);
+        vm.expectRevert(ICSModule.InvalidInput.selector);
         csm.updateTargetValidatorsLimits(0, 3, 1);
-    }
-}
-
-contract CsmUpdateStuckValidatorsCount is CSMCommon {
-    function test_updateStuckValidatorsCount_NonZero() public assertInvariants {
-        uint256 noId = createNodeOperator(3);
-        csm.obtainDepositData(1, "");
-        uint256 nonce = csm.getNonce();
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.StuckSigningKeysCountChanged(noId, 1);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(
-            no.stuckValidatorsCount,
-            1,
-            "stuckValidatorsCount not increased"
-        );
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_updateStuckValidatorsCount_NonZero_UploadNewKeysAfter_DepositableShouldBeZero()
-        public
-    {
-        uint256 noId = createNodeOperator(3);
-        csm.obtainDepositData(1, "");
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.StuckSigningKeysCountChanged(noId, 1);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        uploadMoreKeys(noId, 1);
-
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(
-            no.stuckValidatorsCount,
-            1,
-            "stuckValidatorsCount not increased"
-        );
-        assertEq(
-            no.depositableValidatorsCount,
-            0,
-            "depositableValidatorsCount is not zero"
-        );
-    }
-
-    function test_updateStuckValidatorsCount_Unstuck() public assertInvariants {
-        uint256 noId = createNodeOperator(2);
-        csm.obtainDepositData(1, "");
-
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.StuckSigningKeysCountChanged(noId, 0);
-        emit IQueueLib.BatchEnqueued(noId, 1);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000000))
-        );
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(
-            no.stuckValidatorsCount,
-            0,
-            "stuckValidatorsCount should be zero"
-        );
-    }
-
-    function test_updateStuckValidatorsCount_RevertWhen_NoNodeOperator()
-        public
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-    }
-
-    function test_updateStuckValidatorsCount_RevertWhen_CountMoreThanDeposited()
-        public
-    {
-        createNodeOperator(3);
-        csm.obtainDepositData(1, "");
-
-        vm.expectRevert(CSModule.StuckKeysHigherThanNonExited.selector);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000002))
-        );
-    }
-
-    function test_updateStuckValidatorsCount_NoEventWhenStuckKeysCountSame()
-        public
-    {
-        createNodeOperator();
-        csm.obtainDepositData(1, "");
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        vm.recordLogs();
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        // One event is NonceChanged
-        assertEq(logs.length, 1);
     }
 }
 
@@ -5237,8 +4871,8 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
         csm.obtainDepositData(1, "");
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ExitedSigningKeysCountChanged(noId, 1);
+        vm.expectEmit(address(csm));
+        emit ICSModule.ExitedSigningKeysCountChanged(noId, 1);
         csm.updateExitedValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
@@ -5265,7 +4899,7 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
     {
         createNodeOperator(1);
 
-        vm.expectRevert(CSModule.ExitedKeysHigherThanTotalDeposited.selector);
+        vm.expectRevert(ICSModule.ExitedKeysHigherThanTotalDeposited.selector);
         csm.updateExitedValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
@@ -5283,7 +4917,7 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
 
-        vm.expectRevert(CSModule.ExitedKeysDecrease.selector);
+        vm.expectRevert(ICSModule.ExitedKeysDecrease.selector);
         csm.updateExitedValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000000))
@@ -5322,20 +4956,18 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         csm.obtainDepositData(5, "");
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.StuckSigningKeysCountChanged(noId, 1);
-        emit CSModule.ExitedSigningKeysCountChanged(noId, 1);
+        vm.expectEmit(address(csm));
+        emit ICSModule.ExitedSigningKeysCountChanged(noId, 1);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 1
         });
 
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalExitedKeys, 1, "totalExitedKeys not increased");
         assertEq(
             no.stuckValidatorsCount,
-            1,
+            0,
             "stuckValidatorsCount not increased"
         );
 
@@ -5348,8 +4980,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: 100500,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 1
         });
     }
 
@@ -5360,8 +4991,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         vm.prank(stranger);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: 100500,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 1
         });
     }
 
@@ -5370,25 +5000,10 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
     {
         uint256 noId = createNodeOperator(1);
 
-        vm.expectRevert(CSModule.ExitedKeysHigherThanTotalDeposited.selector);
+        vm.expectRevert(ICSModule.ExitedKeysHigherThanTotalDeposited.selector);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 100500,
-            stuckValidatorsKeysCount: 1
-        });
-    }
-
-    function test_unsafeUpdateValidatorsCount_RevertWhen_StuckCountMoreThanDeposited()
-        public
-    {
-        uint256 noId = createNodeOperator(1);
-        csm.obtainDepositData(1, "");
-
-        vm.expectRevert(CSModule.StuckKeysHigherThanNonExited.selector);
-        csm.unsafeUpdateValidatorsCount({
-            nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 100500
+            exitedValidatorsKeysCount: 100500
         });
     }
 
@@ -5403,8 +5018,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
 
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 0,
-            stuckValidatorsKeysCount: 0
+            exitedValidatorsKeysCount: 0
         });
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -5420,15 +5034,13 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
 
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 1
         });
 
         vm.recordLogs();
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 1
         });
         Vm.Log[] memory logs = vm.getRecordedLogs();
         // One event is NonceChanged
@@ -5444,8 +5056,8 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         uint256 noId = createNodeOperator();
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltyReported(
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltyReported(
             noId,
             blockhash(block.number),
             BOND_SIZE / 2
@@ -5457,8 +5069,15 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         );
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
-        assertEq(lockedBond, BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE());
+        assertEq(
+            lockedBond,
+            BOND_SIZE /
+                2 +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
+        );
         assertEq(csm.getNonce(), nonce + 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 0);
     }
 
     function test_reportELRewardsStealingPenalty_RevertWhen_NoNodeOperator()
@@ -5472,7 +5091,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.InvalidAmount.selector);
+        vm.expectRevert(ICSModule.InvalidAmount.selector);
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -5488,7 +5107,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
 
         vm.deal(nodeOperator, 32 ether);
         vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(0);
+        accounting.depositETH{ value: 32 ether }(0);
 
         uint256 nonce = csm.getNonce();
 
@@ -5499,6 +5118,43 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         );
 
         assertEq(csm.getNonce(), nonce);
+    }
+
+    function test_reportELRewardsStealingPenalty_EnqueueAfterUnlock()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator();
+        uint256 nonce = csm.getNonce();
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
+
+        uint256 lockedBond = accounting.getActualLockedBond(noId);
+        assertEq(
+            lockedBond,
+            BOND_SIZE /
+                2 +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 0);
+
+        createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        vm.warp(accounting.getBondLockPeriod() + 1);
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
+        csm.updateDepositableValidatorsCount(noId);
+
+        no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 1);
     }
 }
 
@@ -5517,14 +5173,18 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
 
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltyCancelled(
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltyCancelled(
             noId,
-            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE()
+            BOND_SIZE /
+                2 +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
         csm.cancelELRewardsStealingPenalty(
             noId,
-            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE()
+            BOND_SIZE /
+                2 +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
@@ -5546,12 +5206,15 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
 
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltyCancelled(noId, BOND_SIZE / 2);
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltyCancelled(noId, BOND_SIZE / 2);
         csm.cancelELRewardsStealingPenalty(noId, BOND_SIZE / 2);
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
-        assertEq(lockedBond, csm.EL_REWARDS_STEALING_FINE());
+        assertEq(
+            lockedBond,
+            csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
+        );
         // nonce should not change due to no changes in the depositable validators
         assertEq(csm.getNonce(), nonce);
     }
@@ -5576,17 +5239,13 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             amount
         );
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(noId);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltySettled(noId);
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs()
@@ -5609,37 +5268,21 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             BOND_SIZE
         );
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                secondNoId
-            ),
-            1
-        );
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                firstNoId
-            ),
-            1
-        );
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltySettled(firstNoId);
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(
             firstNoId
         );
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.until, 0);
 
         lock = accounting.getLockedBondInfo(secondNoId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_NoLock()
@@ -5650,15 +5293,11 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
 
-        expectNoCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_NoLock()
@@ -5671,32 +5310,18 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         idsToSettle[0] = firstNoId;
         idsToSettle[1] = secondNoId;
 
-        expectNoCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                firstNoId
-            )
-        );
-        expectNoCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                secondNoId
-            )
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory firstLock = accounting.getLockedBondInfo(
             firstNoId
         );
         assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.retentionUntil, 0);
+        assertEq(firstLock.until, 0);
         CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
             secondNoId
         );
         assertEq(secondLock.amount, 0 ether);
-        assertEq(secondLock.retentionUntil, 0);
+        assertEq(secondLock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_oneWithNoLock()
@@ -5714,34 +5339,20 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             1 ether
         );
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
-        expectNoCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                firstNoId
-            )
-        );
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                secondNoId
-            )
-        );
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory firstLock = accounting.getLockedBondInfo(
             firstNoId
         );
         assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.retentionUntil, 0);
+        assertEq(firstLock.until, 0);
         CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
             secondNoId
         );
         assertEq(secondLock.amount, 0 ether);
-        assertEq(secondLock.retentionUntil, 0);
+        assertEq(secondLock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_withDuplicates() public {
@@ -5761,15 +5372,8 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             lockAmount
         );
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                secondNoId
-            )
-        );
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         uint256 bondBalanceAfter = accounting.getBond(secondNoId);
@@ -5778,10 +5382,12 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             secondNoId
         );
         assertEq(currentLock.amount, 0 ether);
-        assertEq(currentLock.retentionUntil, 0);
+        assertEq(currentLock.until, 0);
         assertEq(
             bondBalanceAfter,
-            bondBalanceBefore - lockAmount - csm.EL_REWARDS_STEALING_FINE()
+            bondBalanceBefore -
+                lockAmount -
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
     }
 
@@ -5798,11 +5404,9 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 }
 
 contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
-    function test_settleELRewardsStealingPenalty_RetentionPeriodIsExpired()
-        public
-    {
+    function test_settleELRewardsStealingPenalty_PeriodIsExpired() public {
         uint256 noId = createNodeOperator();
-        uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
+        uint256 period = accounting.getBondLockPeriod();
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         uint256 amount = 1 ether;
@@ -5813,12 +5417,8 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             amount
         );
 
-        vm.warp(block.timestamp + retentionPeriod + 1 seconds);
+        vm.warp(block.timestamp + period + 1 seconds);
 
-        expectNoCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         assertEq(accounting.getActualLockedBond(noId), 0);
@@ -5827,7 +5427,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
     function test_settleELRewardsStealingPenalty_multipleNOs_oneExpired()
         public
     {
-        uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
+        uint256 period = accounting.getBondLockPeriod();
         uint256 firstNoId = createNodeOperator(2);
         uint256 secondNoId = createNodeOperator(2);
         uint256[] memory idsToSettle = new uint256[](2);
@@ -5838,23 +5438,15 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             blockhash(block.number),
             1 ether
         );
-        vm.warp(block.timestamp + retentionPeriod + 1 seconds);
+        vm.warp(block.timestamp + period + 1 seconds);
         csm.reportELRewardsStealingPenalty(
             secondNoId,
             blockhash(block.number),
             BOND_SIZE
         );
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                secondNoId
-            ),
-            1 // called once for secondNoId
-        );
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         assertEq(accounting.getActualLockedBond(firstNoId), 0);
@@ -5863,93 +5455,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             secondNoId
         );
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
-    }
-
-    function test_settleELRewardsStealingPenalty_CurveReset_NoNewUnbonded()
-        public
-    {
-        uint256 noId = createNodeOperator();
-
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 2 ether;
-        curvePoints[1] = 3 ether;
-
-        uint256 curveId = accounting.addBondCurve(curvePoints);
-
-        vm.prank(address(csm));
-        accounting.setBondCurve(0, curveId);
-
-        uploadMoreKeys(0, 1);
-
-        vm.deal(nodeOperator, 3 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 3 ether }(0);
-
-        uint256 amount = 1 ether;
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            amount
-        );
-
-        uint256 nonce = csm.getNonce();
-        uint256 unbonded = accounting.getUnbondedKeysCount(noId);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.settleELRewardsStealingPenalty(idsToSettle);
-
-        assertEq(accounting.getBondCurveId(noId), 0);
-        assertEq(csm.getNonce(), nonce);
-        assertEq(accounting.getUnbondedKeysCount(noId), unbonded);
-    }
-
-    function test_settleELRewardsStealingPenalty_CurveReset_NewUnbonded()
-        public
-    {
-        uint256 noId = createNodeOperator();
-
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 2 ether;
-        curvePoints[1] = 3 ether;
-
-        uint256 curveId = accounting.addBondCurve(curvePoints);
-
-        vm.prank(address(csm));
-        accounting.setBondCurve(0, curveId);
-
-        uploadMoreKeys(0, 1);
-
-        vm.deal(nodeOperator, 2 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 2 ether }(0);
-
-        uint256 amount = 1 ether;
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            amount
-        );
-
-        uint256 nonce = csm.getNonce();
-        uint256 unbonded = accounting.getUnbondedKeysCount(noId);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.settleELRewardsStealingPenalty(idsToSettle);
-
-        assertEq(accounting.getBondCurveId(noId), 0);
-        assertEq(csm.getNonce(), nonce + 1);
-        assertEq(accounting.getUnbondedKeysCount(noId), unbonded + 1);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_NoBond()
@@ -5970,12 +5476,8 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             blockhash(block.number),
             amount
         );
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(noId);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltySettled(noId);
         csm.settleELRewardsStealingPenalty(idsToSettle);
     }
 }
@@ -5984,7 +5486,9 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     function test_compensateELRewardsStealingPenalty() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
-        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        uint256 fine = csm
+            .PARAMETERS_REGISTRY()
+            .getElRewardsStealingAdditionalFine(0);
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -5993,8 +5497,8 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
 
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltyCompensated(noId, amount + fine);
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltyCompensated(noId, amount + fine);
 
         vm.expectCall(
             address(accounting),
@@ -6018,7 +5522,9 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
-        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        uint256 fine = csm
+            .PARAMETERS_REGISTRY()
+            .getElRewardsStealingAdditionalFine(0);
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -6027,8 +5533,8 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
 
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltyCompensated(noId, amount);
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltyCompensated(noId, amount);
 
         vm.expectCall(
             address(accounting),
@@ -6051,7 +5557,9 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     {
         uint256 noId = createNodeOperator(2);
         uint256 amount = 1 ether;
-        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        uint256 fine = csm
+            .PARAMETERS_REGISTRY()
+            .getElRewardsStealingAdditionalFine(0);
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -6072,7 +5580,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
 
         BatchInfo[] memory exp = new BatchInfo[](1);
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 1 });
-        _assertQueueState(exp);
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
     }
 
     function test_compensateELRewardsStealingPenalty_RevertWhen_NoNodeOperator()
@@ -6086,52 +5594,101 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
         csm.compensateELRewardsStealingPenalty{ value: 1 ether }(noId);
     }
 }
 
-contract CsmSubmitWithdrawal is CSMCommon {
-    function test_submitWithdrawal() public assertInvariants {
+contract CsmSubmitWithdrawals is CSMCommon {
+    function test_submitWithdrawals() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
 
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.WithdrawalSubmitted(noId, keyIndex, DEPOSIT_SIZE, pubkey);
-        csm.submitWithdrawal(noId, keyIndex, DEPOSIT_SIZE, false);
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.WithdrawalSubmitted(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            pubkey
+        );
+        csm.submitWithdrawals(withdrawalInfo);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalWithdrawnKeys, 1);
         bool withdrawn = csm.isValidatorWithdrawn(noId, keyIndex);
         assertTrue(withdrawn);
 
-        // no changes in depositable keys or keys in general
-        assertEq(csm.getNonce(), nonce);
+        assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_submitWithdrawal_changeNonce() public assertInvariants {
+    function test_submitWithdrawals_slashed() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            true
+        );
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.WithdrawalSubmitted(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            pubkey
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        bool withdrawn = csm.isValidatorWithdrawn(noId, keyIndex);
+        assertTrue(withdrawn);
+    }
+
+    function test_submitWithdrawals_changeNonce() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
         (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
 
         uint256 nonce = csm.getNonce();
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.WithdrawalSubmitted(
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            DEPOSIT_SIZE - BOND_SIZE - 1 ether,
-            pubkey
-        );
-        csm.submitWithdrawal(
-            noId,
-            keyIndex,
-            DEPOSIT_SIZE - BOND_SIZE - 1 ether,
+            csm.DEPOSIT_SIZE() - BOND_SIZE - 1 ether,
             false
         );
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.WithdrawalSubmitted(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE() - BOND_SIZE - 1 ether,
+            pubkey
+        );
+        csm.submitWithdrawals(withdrawalInfo);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalWithdrawnKeys, 1);
@@ -6139,222 +5696,442 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_submitWithdrawal_lowExitBalance() public assertInvariants {
+    function test_submitWithdrawals_lowExitBalance() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE() - 1 ether,
+            false
+        );
 
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
         );
-        csm.submitWithdrawal(noId, keyIndex, depositSize - 1 ether, false);
+        csm.submitWithdrawals(withdrawalInfo);
     }
 
-    function test_submitWithdrawal_slashedReported() public assertInvariants {
+    function test_submitWithdrawals_exitDelayPenalty() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
-        csm.submitInitialSlashing(noId, 0);
-        assertTrue(csm.isValidatorSlashed(noId, keyIndex));
-
-        uint256 exitBalance = DEPOSIT_SIZE - csm.INITIAL_SLASHING_PENALTY();
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.penalize.selector,
-                noId,
-                0.05 ether
-            )
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(1 ether, true),
+                strikesPenalty: MarkedUint248(0, false),
+                withdrawalRequestFee: MarkedUint248(0, false)
+            })
         );
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether, true);
-    }
 
-    function test_submitWithdrawal_slashedIsNotReported()
-        public
-        assertInvariants
-    {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
 
-        assertFalse(csm.isValidatorSlashed(noId, keyIndex));
-
-        uint256 exitBalance = DEPOSIT_SIZE - csm.INITIAL_SLASHING_PENALTY();
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.penalize.selector,
-                noId,
-                csm.INITIAL_SLASHING_PENALTY() + 0.05 ether
-            )
-        );
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether, true);
-        assertTrue(csm.isValidatorSlashed(noId, keyIndex));
-    }
-
-    function test_submitWithdrawal_unbondedKeys() public assertInvariants {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator(2);
-        csm.obtainDepositData(1, "");
-        uint256 nonce = csm.getNonce();
-
-        csm.submitWithdrawal(noId, keyIndex, 1 ether, false);
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_submitWithdrawal_RevertWhen_NoNodeOperator()
-        public
-        assertInvariants
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.submitWithdrawal(0, 0, 0, false);
-    }
-
-    function test_submitWithdrawal_RevertWhen_InvalidKeyIndexOffset()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
-        csm.submitWithdrawal(noId, 0, 0, false);
-    }
-
-    function test_submitWithdrawal_RevertWhen_AlreadySubmitted()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-        uint256 depositSize = DEPOSIT_SIZE;
-
-        csm.submitWithdrawal(noId, 0, depositSize, false);
-        vm.expectRevert(CSModule.AlreadySubmitted.selector);
-        csm.submitWithdrawal(noId, 0, depositSize, false);
-    }
-}
-
-contract CsmSubmitInitialSlashing is CSMCommon {
-    function test_submitInitialSlashing() public assertInvariants {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator(2);
-        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
-        uint256 penaltyAmount = csm.INITIAL_SLASHING_PENALTY();
-        uint256 nonce = csm.getNonce();
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, keyIndex, pubkey);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.penalize.selector,
-                noId,
-                penaltyAmount
-            )
-        );
-        csm.submitInitialSlashing(noId, keyIndex);
-
-        bool slashed = csm.isValidatorSlashed(noId, keyIndex);
-        assertTrue(slashed);
-
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_submitInitialSlashing_Overbonded() public assertInvariants {
-        uint256 noId = createNodeOperator(2);
-        vm.deal(nodeOperator, 32 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(0);
-        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
-        uint256 penaltyAmount = csm.INITIAL_SLASHING_PENALTY();
-
-        uint256 nonce = csm.getNonce();
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, 0, pubkey);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.penalize.selector,
-                noId,
-                penaltyAmount
-            )
-        );
-        csm.submitInitialSlashing(noId, 0);
-
-        assertEq(csm.getNonce(), nonce);
-    }
-
-    function test_submitInitialSlashing_differentKeys()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator(2);
-        (bytes memory pubkeys, ) = csm.obtainDepositData(2, "");
-
-        bytes memory pubkey0 = slice(pubkeys, 0, 48);
-        bytes memory pubkey1 = slice(pubkeys, 48, 48);
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, 0, pubkey0);
-        csm.submitInitialSlashing(noId, 0);
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, 1, pubkey1);
-        csm.submitInitialSlashing(noId, 1);
-    }
-
-    function test_submitInitialSlashing_outOfBond() public assertInvariants {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        csm.reportELRewardsStealingPenalty(
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
-            blockhash(block.number),
-            DEPOSIT_SIZE - csm.INITIAL_SLASHING_PENALTY()
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            false
         );
-        csm.submitInitialSlashing(noId, keyIndex);
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+        );
+        csm.submitWithdrawals(withdrawalInfo);
     }
 
-    function test_submitInitialSlashing_RevertWhen_NoNodeOperator()
+    function test_submitWithdrawals_strikesPenalty() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(1 ether, true),
+                withdrawalRequestFee: MarkedUint248(0, false)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_allPenalties() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(1 ether, true),
+                strikesPenalty: MarkedUint248(1 ether, true),
+                withdrawalRequestFee: MarkedUint248(0, false)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE() - 1 ether,
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 3 ether)
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_chargeWithdrawalFee_DelayPenalty()
         public
         assertInvariants
     {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.submitInitialSlashing(0, 0);
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(1 ether, true),
+                strikesPenalty: MarkedUint248(0, false),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
     }
 
-    function test_submitInitialSlashing_RevertWhen_InvalidKeyIndexOffset()
+    function test_submitWithdrawals_chargeWithdrawalFee_StrikesPenalty()
         public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(1 ether, true),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_chargeWithdrawalFee_DelayAndStrikesPenalties()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(1 ether, true),
+                strikesPenalty: MarkedUint248(1 ether, true),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 2 ether)
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_chargeWithdrawalFee_zeroPenaltyValue()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, true),
+                strikesPenalty: MarkedUint248(0, true),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_dontChargeWithdrawalFee_noPenalties()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(0, false),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_dontChargeWithdrawalFee_exitBalancePenalty()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(0, false),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE() - 1 ether,
+            false
+        );
+
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_unbondedKeys() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator(2);
+        csm.obtainDepositData(1, "");
+        uint256 nonce = csm.getNonce();
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            1 ether,
+            false
+        );
+
+        csm.submitWithdrawals(withdrawalInfo);
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_submitWithdrawals_RevertWhen_NoNodeOperator()
+        public
+        assertInvariants
+    {
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(0, 0, 0, false);
+
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_RevertWhen_InvalidKeyIndexOffset()
+        public
+        assertInvariants
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
-        csm.submitInitialSlashing(noId, 0);
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(noId, 0, 0, false);
+
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
+        csm.submitWithdrawals(withdrawalInfo);
     }
 
-    function test_submitInitialSlashing_RevertWhen_AlreadySubmitted()
+    function test_submitWithdrawals_RevertWhen_AlreadyWithdrawn()
         public
         assertInvariants
     {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
-        csm.submitInitialSlashing(noId, 0);
-        vm.expectRevert(CSModule.AlreadySubmitted.selector);
-        csm.submitInitialSlashing(noId, 0);
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            0,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+
+        csm.submitWithdrawals(withdrawalInfo);
+        vm.expectRevert(ICSModule.AlreadyWithdrawn.selector);
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_nonceIncrementsOnceForManyWithdrawals()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator(3);
+        csm.obtainDepositData(3, "");
+        uint256 nonceBefore = csm.getNonce();
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](3);
+        for (uint256 i = 0; i < 3; ++i) {
+            withdrawalInfo[i] = ValidatorWithdrawalInfo(
+                noId,
+                i,
+                csm.DEPOSIT_SIZE(),
+                false
+            );
+        }
+        csm.submitWithdrawals(withdrawalInfo);
+        assertEq(
+            csm.getNonce(),
+            nonceBefore + 1,
+            "Module nonce should increment only once for batch withdrawals"
+        );
     }
 }
 
@@ -6429,16 +6206,15 @@ contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
         _enableInitializers(address(csm));
-        csm.initialize(address(154), address(42), 0.05 ether, actor);
+        csm.initialize(actor);
 
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
         assertTrue(csm.hasRole(role, stranger));
@@ -6451,13 +6227,12 @@ contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole_revert() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
         vm.startPrank(stranger);
@@ -6465,42 +6240,40 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.grantRole(role, stranger);
     }
 
-    function test_moduleManagerRole_setRemovalCharge() public {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
+    function test_createNodeOperatorRole() public {
+        bytes32 role = csm.CREATE_NODE_OPERATOR_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
         vm.prank(actor);
-        csm.setKeyRemovalCharge(0.1 ether);
+        csm.createNodeOperator(
+            nodeOperator,
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            address(0)
+        );
     }
 
-    function test_moduleManagerRole_setRemovalCharge_revert() public {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
+    function test_createNodeOperatorRole_revert() public {
+        bytes32 role = csm.CREATE_NODE_OPERATOR_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.setKeyRemovalCharge(0.1 ether);
-    }
-
-    function test_moduleManagerRole_activatePublicRelease() public {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.activatePublicRelease();
-    }
-
-    function test_moduleManagerRole_activatePublicRelease_revert() public {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.activatePublicRelease();
+        csm.createNodeOperator(
+            nodeOperator,
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            address(0)
+        );
     }
 
     function test_reportELRewardsStealingPenaltyRole() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE();
         vm.prank(admin);
@@ -6515,7 +6288,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_reportELRewardsStealingPenaltyRole_revert() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE();
 
@@ -6529,7 +6301,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_settleELRewardsStealingPenaltyRole() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE();
         vm.prank(admin);
@@ -6540,7 +6311,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_settleELRewardsStealingPenaltyRole_revert() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE();
 
@@ -6549,8 +6319,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.settleELRewardsStealingPenalty(UintArr(noId));
     }
 
-    function test_verifierRole_submitWithdrawal() public {
-        csm.activatePublicRelease();
+    function test_verifierRole_submitWithdrawals() public {
         uint256 noId = createNodeOperator();
         bytes32 role = csm.VERIFIER_ROLE();
 
@@ -6560,43 +6329,25 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.obtainDepositData(1, "");
         vm.stopPrank();
 
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(noId, 0, 1 ether, false);
+
         vm.prank(actor);
-        csm.submitWithdrawal(noId, 0, 1 ether, false);
+        csm.submitWithdrawals(withdrawalInfo);
     }
 
-    function test_verifierRole_submitWithdrawal_revert() public {
-        csm.activatePublicRelease();
+    function test_verifierRole_submitWithdrawals_revert() public {
         uint256 noId = createNodeOperator();
         bytes32 role = csm.VERIFIER_ROLE();
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(noId, 0, 1 ether, false);
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.submitWithdrawal(noId, 0, 1 ether, false);
-    }
-
-    function test_verifierRole_submitInitialSlashing() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.VERIFIER_ROLE();
-
-        vm.startPrank(admin);
-        csm.grantRole(role, actor);
-        csm.grantRole(csm.STAKING_ROUTER_ROLE(), admin);
-        csm.obtainDepositData(1, "");
-        vm.stopPrank();
-
-        vm.prank(actor);
-        csm.submitInitialSlashing(noId, 0);
-    }
-
-    function test_verifierRole_submitInitialSlashing_revert() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.VERIFIER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.submitInitialSlashing(noId, 0);
+        csm.submitWithdrawals(withdrawalInfo);
     }
 
     function test_recovererRole() public {
@@ -6635,23 +6386,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         csm.onRewardsMinted(0);
     }
 
-    function test_stakingRouterRole_updateStuckValidatorsCount() public {
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.updateStuckValidatorsCount("", "");
-    }
-
-    function test_stakingRouterRole_updateStuckValidatorsCount_revert() public {
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.updateStuckValidatorsCount("", "");
-    }
-
     function test_stakingRouterRole_updateExitedValidatorsCount() public {
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -6671,32 +6405,7 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         csm.updateExitedValidatorsCount("", "");
     }
 
-    function test_stakingRouterRole_updateRefundedValidatorsCount() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.expectRevert(CSModule.NotSupported.selector);
-        vm.prank(actor);
-        csm.updateRefundedValidatorsCount(noId, 0);
-    }
-
-    function test_stakingRouterRole_updateRefundedValidatorsCount_revert()
-        public
-    {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.updateRefundedValidatorsCount(noId, 0);
-    }
-
     function test_stakingRouterRole_updateTargetValidatorsLimits() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -6709,7 +6418,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     function test_stakingRouterRole_updateTargetValidatorsLimits_revert()
         public
     {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
@@ -6729,23 +6437,19 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         csm.onExitedAndStuckValidatorsCountsUpdated();
     }
 
-    function test_stakingRouterRole_onExitedAndStuckValidatorsCountsUpdated_revert()
-        public
-    {
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.onExitedAndStuckValidatorsCountsUpdated();
-    }
-
     function test_stakingRouterRole_onWithdrawalCredentialsChanged() public {
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
+        uint256 nonceBefore = csm.getNonce();
         vm.prank(actor);
         csm.onWithdrawalCredentialsChanged();
+        assertEq(
+            csm.getNonce(),
+            nonceBefore + 1,
+            "Module nonce should increment by 1"
+        );
     }
 
     function test_stakingRouterRole_onWithdrawalCredentialsChanged_revert()
@@ -6776,30 +6480,27 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_unsafeUpdateValidatorsCountRole() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
         vm.prank(actor);
-        csm.unsafeUpdateValidatorsCount(noId, 0, 0);
+        csm.unsafeUpdateValidatorsCount(noId, 0);
     }
 
     function test_stakingRouterRole_unsafeUpdateValidatorsCountRole_revert()
         public
     {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.unsafeUpdateValidatorsCount(noId, 0, 0);
+        csm.unsafeUpdateValidatorsCount(noId, 0);
     }
 
     function test_stakingRouterRole_unvetKeys() public {
-        csm.activatePublicRelease();
         createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -6810,342 +6511,12 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_unvetKeys_revert() public {
-        csm.activatePublicRelease();
         createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.decreaseVettedSigningKeysCount(new bytes(0), new bytes(0));
-    }
-}
-
-contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
-    function test_activatePublicRelease() public assertInvariants {
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.PublicRelease();
-        csm.activatePublicRelease();
-
-        assertTrue(csm.publicRelease());
-    }
-
-    function test_activatePublicRelease_RevertWhen_AlreadyActivated()
-        public
-        assertInvariants
-    {
-        csm.activatePublicRelease();
-
-        vm.expectRevert(CSModule.AlreadyActivated.selector);
-        csm.activatePublicRelease();
-    }
-
-    function test_addNodeOperatorETH_RevertWhen_NoPublicReleaseYet()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
-        csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-    }
-
-    function test_addNodeOperatorETH_WhenPublicRelease()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        csm.activatePublicRelease();
-
-        csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-    }
-}
-
-contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
-    function test_addNodeOperator_whenNoPublicRelease_earlyAdoptionProof()
-        public
-    {
-        bytes32[] memory proof = merkleTree.getProof(0);
-
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        vm.deal(nodeOperator, BOND_SIZE / 2);
-        vm.prank(nodeOperator);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof,
-            address(0)
-        );
-        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
-        assertEq(curve.points[0], BOND_SIZE / 2);
-    }
-
-    function test_addNodeOperator_whenNoPublicRelease_revertWhen_noEarlyAdoptionProof()
-        public
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        vm.deal(nodeOperator, BOND_SIZE / 2);
-        vm.prank(nodeOperator);
-        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
-        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-    }
-
-    function test_addNodeOperator_WhenPublicRelease_WithProof()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        csm.activatePublicRelease();
-
-        bytes32[] memory proof = merkleTree.getProof(0);
-        vm.deal(nodeOperator, BOND_SIZE / 2);
-        vm.prank(nodeOperator);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof,
-            address(0)
-        );
-        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
-        assertEq(curve.points[0], BOND_SIZE / 2);
-    }
-
-    function test_addNodeOperator_WhenPublicRelease_WithoutProof()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        csm.activatePublicRelease();
-
-        vm.deal(nodeOperator, BOND_SIZE);
-        vm.prank(nodeOperator);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-        csm.addNodeOperatorETH{ value: (BOND_SIZE) * keysCount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
-        assertEq(curve.points[0], BOND_SIZE);
-    }
-
-    function test_addNodeOperator_RevertWhen_MoreThanMaxSigningKeysLimit()
-        public
-    {
-        bytes32[] memory proof = merkleTree.getProof(0);
-
-        uint256 keysCount = csm
-            .MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE() + 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        vm.deal(nodeOperator, (BOND_SIZE / 2) * keysCount);
-        vm.prank(nodeOperator);
-        vm.expectRevert(CSModule.MaxSigningKeysCountExceeded.selector);
-        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof,
-            address(0)
-        );
-    }
-}
-
-contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
-    function test_addNodeOperator_whenNoPublicRelease_earlyAdoptionProof()
-        public
-    {
-        bytes32[] memory proof = merkleTree.getProof(0);
-
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        vm.deal(nodeOperator, BOND_SIZE / 2);
-        vm.prank(nodeOperator);
-        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
-        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof,
-            address(0)
-        );
-    }
-
-    function test_addNodeOperator_whenNoPublicRelease_revertWhen_noEarlyAdoptionProof()
-        public
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        vm.deal(nodeOperator, BOND_SIZE / 2);
-        vm.prank(nodeOperator);
-        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
-        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-    }
-
-    function test_addNodeOperator_WhenPublicRelease_WithProof()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        csm.activatePublicRelease();
-
-        bytes32[] memory proof = merkleTree.getProof(0);
-        vm.deal(nodeOperator, BOND_SIZE);
-        vm.prank(nodeOperator);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-        csm.addNodeOperatorETH{ value: (BOND_SIZE) * keysCount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof,
-            address(0)
-        );
-        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
-        assertEq(curve.points[0], BOND_SIZE);
-    }
-
-    function test_addNodeOperator_WhenPublicRelease_WithoutProof()
-        public
-        assertInvariants
-    {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        csm.activatePublicRelease();
-
-        vm.deal(nodeOperator, BOND_SIZE);
-        vm.prank(nodeOperator);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
-        csm.addNodeOperatorETH{ value: (BOND_SIZE) * keysCount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
-        );
-        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
-        assertEq(curve.points[0], BOND_SIZE);
     }
 }
 
@@ -7162,21 +6533,6 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 4);
     }
 
-    function test_depositableValidatorsCountChanges_OnStuck()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator(7);
-        createNodeOperator(2);
-        csm.obtainDepositData(4, "");
-        setStuck(noId, 2);
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
-        setStuck(noId, 0);
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
-    }
-
     function test_depositableValidatorsCountChanges_OnUnsafeUpdateExitedValidators()
         public
     {
@@ -7188,14 +6544,13 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 0
+            exitedValidatorsKeysCount: 1
         });
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
     }
 
-    function test_depositableValidatorsCountChanges_OnUnsafeUpdateStuckValidators()
+    function test_depositableValidatorsCountDoesntChange_OnUnsafeUpdateStuckValidators()
         public
     {
         uint256 noId = createNodeOperator(7);
@@ -7206,11 +6561,10 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 0,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 0
         });
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
+        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
     }
 
     function test_depositableValidatorsCountChanges_OnUnvetKeys()
@@ -7226,19 +6580,6 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_depositableValidatorsCountChanges_OnInitialSlashing()
-        public
-        assertInvariants
-    {
-        // 1 key becomes unbonded till withdrawal.
-        uint256 noId = createNodeOperator(2);
-        csm.obtainDepositData(1, "");
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 1);
-        csm.submitInitialSlashing(noId, 0); // The first key was slashed.
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 0);
-    }
-
     function test_depositableValidatorsCountChanges_OnWithdrawal()
         public
         assertInvariants
@@ -7249,12 +6590,29 @@ contract CSMDepositableValidatorsCount is CSMCommon {
 
         penalize(noId, BOND_SIZE * 3);
 
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](3);
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            0,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+        withdrawalInfo[1] = ValidatorWithdrawalInfo(
+            noId,
+            1,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+        withdrawalInfo[2] = ValidatorWithdrawalInfo(
+            noId,
+            2,
+            csm.DEPOSIT_SIZE() - BOND_SIZE,
+            false
+        ); // Large CL balance drop, that doesn't change the unbonded count.
+
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 1);
-        csm.submitWithdrawal(noId, 1, DEPOSIT_SIZE, false);
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 2);
-        csm.submitWithdrawal(noId, 2, DEPOSIT_SIZE - BOND_SIZE, false); // Large CL balance drop, that doesn't change the unbonded count.
+        csm.submitWithdrawals(withdrawalInfo);
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 2);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
     }
@@ -7311,15 +6669,11 @@ contract CSMDepositableValidatorsCount is CSMCommon {
 
 contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
     function updateToBetterCurve() public {
-        uint256[] memory newCurve = new uint256[](1);
-        newCurve[0] = BOND_SIZE - 0.5 ether;
-        accounting.updateBondCurve(0, newCurve);
+        accounting.updateBondCurve(0, 1.5 ether);
     }
 
     function updateToWorseCurve() public {
-        uint256[] memory newCurve = new uint256[](1);
-        newCurve[0] = BOND_SIZE + 0.5 ether;
-        accounting.updateBondCurve(0, newCurve);
+        accounting.updateBondCurve(0, 2.5 ether);
     }
 
     function test_depositedOnly_UpdateToBetterCurve() public assertInvariants {
@@ -7346,7 +6700,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys"
         );
 
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -7378,7 +6732,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys"
         );
 
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -7415,7 +6769,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys"
         );
 
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore,
@@ -7449,7 +6803,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys"
         );
 
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 2,
@@ -7492,7 +6846,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
         assertEq(accounting.getUnbondedKeysCount(noId), 0);
 
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -7535,7 +6889,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
         assertEq(accounting.getUnbondedKeysCount(noId), 2);
 
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -7584,7 +6938,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys after curve update"
         );
 
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore,
@@ -7633,7 +6987,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys after curve update"
         );
 
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 2,
@@ -7683,7 +7037,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys after curve update"
         );
 
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore,
@@ -7733,7 +7087,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys after curve update"
         );
 
-        csm.normalizeQueue(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 2,
@@ -7778,7 +7132,7 @@ contract CSMRecoverERC20 is CSMCommon {
         token.mint(address(csm), 1000);
 
         vm.prank(stranger);
-        vm.expectEmit(true, true, true, true, address(csm));
+        vm.expectEmit(address(csm));
         emit IAssetRecovererLib.ERC20Recovered(address(token), stranger, 1000);
         csm.recoverERC20(address(token), 1000);
 
@@ -7788,11 +7142,8 @@ contract CSMRecoverERC20 is CSMCommon {
 }
 
 contract CSMMisc is CSMCommon {
-    function test_updateRefundedValidatorsCount() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 refunded = 1;
-        vm.expectRevert(CSModule.NotSupported.selector);
-        csm.updateRefundedValidatorsCount(noId, refunded);
+    function test_getInitializedVersion() public view {
+        assertEq(csm.getInitializedVersion(), 2);
     }
 
     function test_getActiveNodeOperatorsCount_OneOperator()
@@ -7963,16 +7314,252 @@ contract CSMMisc is CSMCommon {
         assertEq(activeCount, 3);
     }
 
-    function test_setKeyRemovalCharge() public assertInvariants {
-        csm.setKeyRemovalCharge(0.05 ether);
-        assertEq(csm.keyRemovalCharge(), 0.05 ether);
+    function test_getNodeOperatorTotalDepositedKeys() public assertInvariants {
+        uint256 noId = createNodeOperator();
+
+        uint256 depositedCount = csm.getNodeOperatorTotalDepositedKeys(noId);
+        assertEq(depositedCount, 0);
+
+        csm.obtainDepositData(1, "");
+
+        depositedCount = csm.getNodeOperatorTotalDepositedKeys(noId);
+        assertEq(depositedCount, 1);
     }
 
-    function test_setKeyRemovalCharge_revertWhenMoreThanMax()
+    function test_getNodeOperatorManagementProperties()
         public
         assertInvariants
     {
-        vm.expectRevert(CSModule.InvalidInput.selector);
-        csm.setKeyRemovalCharge(1 ether);
+        address manager = nextAddress();
+        address reward = nextAddress();
+        bool extended = true;
+
+        uint256 noId = csm.createNodeOperator(
+            manager,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: extended
+            }),
+            address(0)
+        );
+
+        NodeOperatorManagementProperties memory props = csm
+            .getNodeOperatorManagementProperties(noId);
+        assertEq(props.managerAddress, manager);
+        assertEq(props.rewardAddress, reward);
+        assertEq(props.extendedManagerPermissions, extended);
+    }
+
+    function test_getNodeOperatorOwner() public assertInvariants {
+        address manager = nextAddress();
+        address reward = nextAddress();
+        bool extended = false;
+
+        uint256 noId = csm.createNodeOperator(
+            manager,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: extended
+            }),
+            address(0)
+        );
+
+        assertEq(csm.getNodeOperatorOwner(noId), reward);
+    }
+
+    function test_getNodeOperatorOwner_ExtendedPermissions()
+        public
+        assertInvariants
+    {
+        address manager = nextAddress();
+        address reward = nextAddress();
+        bool extended = true;
+
+        uint256 noId = csm.createNodeOperator(
+            manager,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: extended
+            }),
+            address(0)
+        );
+
+        assertEq(csm.getNodeOperatorOwner(noId), manager);
+    }
+}
+
+contract CSMExitDeadlineThreshold is CSMCommon {
+    function test_exitDeadlineThreshold() public assertInvariants {
+        uint256 noId = createNodeOperator();
+        uint256 exitDeadlineThreshold = csm.exitDeadlineThreshold(noId);
+        assertEq(exitDeadlineThreshold, parametersRegistry.allowedExitDelay());
+    }
+
+    function test_exitDeadlineThreshold_RevertWhenNoNodeOperator()
+        public
+        assertInvariants
+    {
+        uint256 noId = 0;
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        csm.exitDeadlineThreshold(noId);
+    }
+}
+
+contract CSMIsValidatorExitDelayPenaltyApplicable is CSMCommon {
+    function test_isValidatorExitDelayPenaltyApplicable_notApplicable() public {
+        uint256 noId = createNodeOperator();
+        uint256 eligibleToExit = csm.exitDeadlineThreshold(noId);
+        bytes memory publicKey = randomBytes(48);
+
+        exitPenalties.mock_isValidatorExitDelayPenaltyApplicable(false);
+
+        vm.expectCall(
+            address(exitPenalties),
+            abi.encodeWithSelector(
+                ICSExitPenalties.isValidatorExitDelayPenaltyApplicable.selector,
+                noId,
+                publicKey,
+                eligibleToExit
+            )
+        );
+        bool applicable = csm.isValidatorExitDelayPenaltyApplicable(
+            noId,
+            154,
+            publicKey,
+            eligibleToExit
+        );
+        assertFalse(applicable);
+    }
+
+    function test_isValidatorExitDelayPenaltyApplicable_applicable() public {
+        uint256 noId = createNodeOperator();
+        uint256 eligibleToExit = csm.exitDeadlineThreshold(noId) + 1;
+        bytes memory publicKey = randomBytes(48);
+
+        exitPenalties.mock_isValidatorExitDelayPenaltyApplicable(true);
+
+        vm.expectCall(
+            address(exitPenalties),
+            abi.encodeWithSelector(
+                ICSExitPenalties.isValidatorExitDelayPenaltyApplicable.selector,
+                noId,
+                publicKey,
+                eligibleToExit
+            )
+        );
+        bool applicable = csm.isValidatorExitDelayPenaltyApplicable(
+            noId,
+            154,
+            publicKey,
+            eligibleToExit
+        );
+        assertTrue(applicable);
+    }
+}
+
+contract CSMReportValidatorExitDelay is CSMCommon {
+    function test_reportValidatorExitDelay() public {
+        uint256 noId = createNodeOperator();
+        uint256 exitDeadlineThreshold = csm.exitDeadlineThreshold(noId);
+        bytes memory publicKey = randomBytes(48);
+
+        vm.expectCall(
+            address(exitPenalties),
+            abi.encodeWithSelector(
+                ICSExitPenalties.processExitDelayReport.selector,
+                noId,
+                publicKey,
+                exitDeadlineThreshold
+            )
+        );
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp,
+            publicKey,
+            exitDeadlineThreshold
+        );
+    }
+
+    function test_reportValidatorExitDelay_RevertWhen_noNodeOperator() public {
+        uint256 noId = 0;
+        bytes memory publicKey = randomBytes(48);
+        uint256 exitDelay = parametersRegistry.allowedExitDelay();
+
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp,
+            publicKey,
+            exitDelay
+        );
+    }
+}
+
+contract CSMOnValidatorExitTriggered is CSMCommon {
+    function test_onValidatorExitTriggered() public assertInvariants {
+        uint256 noId = createNodeOperator();
+        bytes memory publicKey = randomBytes(48);
+        uint256 paidFee = 0.1 ether;
+        uint256 exitType = 1;
+
+        vm.expectCall(
+            address(exitPenalties),
+            abi.encodeWithSelector(
+                ICSExitPenalties.processTriggeredExit.selector,
+                noId,
+                publicKey,
+                paidFee,
+                exitType
+            )
+        );
+        csm.onValidatorExitTriggered(noId, publicKey, paidFee, exitType);
+    }
+
+    function test_onValidatorExitTriggered_RevertWhen_noNodeOperator() public {
+        uint256 noId = 0;
+        bytes memory publicKey = randomBytes(48);
+        uint256 paidFee = 0.1 ether;
+        uint256 exitType = 1;
+
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        csm.onValidatorExitTriggered(noId, publicKey, paidFee, exitType);
+    }
+}
+
+contract CSMCreateNodeOperators is CSMCommon {
+    function createMultipleOperatorsWithKeysETH(
+        uint256 operators,
+        uint256 keysCount,
+        address managerAddress
+    ) external payable {
+        for (uint256 i; i < operators; i++) {
+            csm.createNodeOperator(
+                managerAddress,
+                NodeOperatorManagementProperties({
+                    managerAddress: address(0),
+                    rewardAddress: address(0),
+                    extendedManagerPermissions: false
+                }),
+                address(0)
+            );
+            uint256 noId = csm.getNodeOperatorsCount() - 1;
+            uint256 amount = csm.accounting().getRequiredBondForNextKeys(
+                noId,
+                keysCount
+            );
+            (bytes memory keys, bytes memory signatures) = keysSignatures(
+                keysCount
+            );
+            csm.addValidatorKeysETH{ value: amount }(
+                managerAddress,
+                noId,
+                keysCount,
+                keys,
+                signatures
+            );
+        }
     }
 }

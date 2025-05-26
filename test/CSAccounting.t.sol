@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -8,12 +8,14 @@ import "forge-std/Test.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 
 import { IBurner } from "../src/interfaces/IBurner.sol";
-import { ICSModule, NodeOperator } from "../src/interfaces/ICSModule.sol";
+import { ICSModule, NodeOperatorManagementProperties } from "../src/interfaces/ICSModule.sol";
 import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
 import { ICSFeeDistributor } from "../src/interfaces/ICSFeeDistributor.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
+import { ICSBondCore } from "../src/interfaces/ICSBondCore.sol";
+import { ICSBondLock } from "../src/interfaces/ICSBondLock.sol";
 
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSBondCore } from "../src/abstract/CSBondCore.sol";
@@ -96,6 +98,38 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
+    function mock_updateDepositableValidatorsCount() internal {
+        vm.mockCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            ),
+            ""
+        );
+    }
+
+    function mock_getNodeOperatorManagementProperties(
+        address managerAddress,
+        address rewardAddress,
+        bool extendedManagerPermissions
+    ) internal {
+        vm.mockCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                ICSModule.getNodeOperatorManagementProperties.selector,
+                0
+            ),
+            abi.encode(
+                NodeOperatorManagementProperties(
+                    managerAddress,
+                    rewardAddress,
+                    extendedManagerPermissions
+                )
+            )
+        );
+    }
+
     function addBond(uint256 nodeOperatorId, uint256 amount) internal {
         vm.deal(address(stakingModule), amount);
         vm.prank(address(stakingModule));
@@ -118,7 +152,7 @@ contract CSAccountingBaseConstructorTest is CSAccountingFixtures {
         (locator, wstETH, stETH, , ) = initLido();
 
         stakingModule = new Stub();
-        feeDistributor = new DistributorMock(address(stETH), address(0));
+        feeDistributor = new DistributorMock(address(stETH));
     }
 }
 
@@ -127,80 +161,88 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         accounting = new CSAccounting(
             address(locator),
             address(stakingModule),
-            10,
+            address(feeDistributor),
             4 weeks,
             365 days
         );
-        assertEq(address(accounting.CSM()), address(stakingModule));
+        assertEq(address(accounting.MODULE()), address(stakingModule));
+        assertEq(
+            address(accounting.FEE_DISTRIBUTOR()),
+            address(feeDistributor)
+        );
+        assertEq(address(accounting.feeDistributor()), address(feeDistributor));
     }
 
     function test_constructor_RevertWhen_InitOnImpl() public {
         accounting = new CSAccounting(
             address(locator),
             address(stakingModule),
-            10,
+            address(feeDistributor),
             4 weeks,
             365 days
         );
 
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = 2 ether;
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         accounting.initialize(
             curve,
             admin,
-            address(feeDistributor),
             8 weeks,
             testChargePenaltyRecipient
         );
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
-        vm.expectRevert(CSAccounting.ZeroModuleAddress.selector);
+        vm.expectRevert(ICSAccounting.ZeroModuleAddress.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
-            10,
+            address(feeDistributor),
             4 weeks,
             365 days
         );
     }
 
-    function test_constructor_RevertWhen_InvalidBondLockRetentionPeriod_MinMoreThanMax()
+    function test_constructor_RevertWhen_ZeroFeeDistributorAddress() public {
+        vm.expectRevert(ICSAccounting.ZeroFeeDistributorAddress.selector);
+        accounting = new CSAccounting(
+            address(locator),
+            address(stakingModule),
+            address(0),
+            4 weeks,
+            365 days
+        );
+    }
+
+    function test_constructor_RevertWhen_InvalidBondLockPeriod_MinMoreThanMax()
         public
     {
-        vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
+        vm.expectRevert(ICSBondLock.InvalidBondLockPeriod.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
-            10,
+            address(feeDistributor),
             4 weeks,
             2 weeks
         );
     }
 
-    function test_constructor_RevertWhen_InvalidBondLockRetentionPeriod_MaxTooBig()
+    function test_constructor_RevertWhen_InvalidBondLockPeriod_MaxTooBig()
         public
     {
-        vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
+        vm.expectRevert(ICSBondLock.InvalidBondLockPeriod.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
-            10,
+            address(feeDistributor),
             4 weeks,
             uint256(type(uint64).max) + 1
-        );
-    }
-
-    function test_constructor_RevertWhen_InvalidMaxBondCurveLength() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveMaxLength.selector);
-        accounting = new CSAccounting(
-            address(locator),
-            address(0),
-            0,
-            4 weeks,
-            365 days
         );
     }
 }
@@ -216,71 +258,62 @@ contract CSAccountingBaseInitTest is CSAccountingFixtures {
         (locator, wstETH, stETH, burner, ) = initLido();
 
         stakingModule = new Stub();
+        feeDistributor = new DistributorMock(address(stETH));
 
         accounting = new CSAccounting(
             address(locator),
             address(stakingModule),
-            10,
+            address(feeDistributor),
             4 weeks,
             365 days
         );
-        feeDistributor = new DistributorMock(
-            address(stETH),
-            address(accounting)
-        );
+
+        feeDistributor.setAccounting(address(accounting));
     }
 }
 
 contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_initialize_happyPath() public assertInvariants {
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = 2 ether;
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         _enableInitializers(address(accounting));
 
-        vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSBondCurve.BondCurveAdded(curve);
-        vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSBondLock.BondLockRetentionPeriodChanged(8 weeks);
-        vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSAccounting.ChargePenaltyRecipientSet(testChargePenaltyRecipient);
+        vm.expectEmit(address(accounting));
+        emit ICSBondCurve.BondCurveAdded(0, curve);
+        vm.expectEmit(address(accounting));
+        emit ICSBondLock.BondLockPeriodChanged(8 weeks);
+        vm.expectEmit(address(accounting));
+        emit ICSAccounting.ChargePenaltyRecipientSet(
+            testChargePenaltyRecipient
+        );
         accounting.initialize(
             curve,
             admin,
-            address(feeDistributor),
             8 weeks,
             testChargePenaltyRecipient
         );
 
-        assertEq(address(accounting.feeDistributor()), address(feeDistributor));
+        assertEq(accounting.getInitializedVersion(), 2);
     }
 
     function test_initialize_RevertWhen_zeroAdmin() public {
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = 2 ether;
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         _enableInitializers(address(accounting));
 
-        vm.expectRevert(CSAccounting.ZeroAdminAddress.selector);
+        vm.expectRevert(ICSAccounting.ZeroAdminAddress.selector);
         accounting.initialize(
             curve,
-            address(0),
-            address(feeDistributor),
-            8 weeks,
-            testChargePenaltyRecipient
-        );
-    }
-
-    function test_initialize_RevertWhen_zeroFeeDistributor() public {
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = 2 ether;
-
-        _enableInitializers(address(accounting));
-
-        vm.expectRevert(CSAccounting.ZeroFeeDistributorAddress.selector);
-        accounting.initialize(
-            curve,
-            admin,
             address(0),
             8 weeks,
             testChargePenaltyRecipient
@@ -288,21 +321,68 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     }
 
     function test_initialize_RevertWhen_zeroChargePenaltyRecipient() public {
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = 2 ether;
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         _enableInitializers(address(accounting));
 
         vm.expectRevert(
-            CSAccounting.ZeroChargePenaltyRecipientAddress.selector
+            ICSAccounting.ZeroChargePenaltyRecipientAddress.selector
         );
-        accounting.initialize(
-            curve,
-            admin,
-            address(feeDistributor),
-            8 weeks,
-            address(0)
+        accounting.initialize(curve, admin, 8 weeks, address(0));
+    }
+
+    function test_finalizeUpgradeV2_withLegacyCurves() public {
+        _enableInitializers(address(accounting));
+
+        bytes32 bondCurveStorageLocation = 0x8f22e270e477f5becb8793b61d439ab7ae990ed8eba045eb72061c0e6cfe1500;
+        vm.store(
+            address(accounting),
+            bondCurveStorageLocation,
+            bytes32(abi.encode(2))
         );
+
+        ICSBondCurve.BondCurveIntervalInput[][]
+            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](2);
+        bondCurves[0] = new ICSBondCurve.BondCurveIntervalInput[](2);
+        bondCurves[0][0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+        bondCurves[0][1] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 2,
+            trend: 1 ether
+        });
+
+        bondCurves[1] = new ICSBondCurve.BondCurveIntervalInput[](2);
+        bondCurves[1][0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+        bondCurves[1][1] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 2,
+            trend: 1 ether
+        });
+
+        accounting.finalizeUpgradeV2(bondCurves);
+
+        assertEq(accounting.getInitializedVersion(), 2);
+    }
+
+    function test_finalizeUpgradeV2_revertWhen_InvalidBondCurvesLength()
+        public
+    {
+        _enableInitializers(address(accounting));
+
+        ICSBondCurve.BondCurveIntervalInput[][]
+            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](1);
+
+        vm.expectRevert(ICSAccounting.InvalidBondCurvesLength.selector);
+        accounting.finalizeUpgradeV2(bondCurves);
     }
 }
 
@@ -317,35 +397,38 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
         (locator, wstETH, stETH, burner, ) = initLido();
 
         stakingModule = new Stub();
+        mock_updateDepositableValidatorsCount();
 
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = 2 ether;
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+
+        feeDistributor = new DistributorMock(address(stETH));
+
         accounting = new CSAccounting(
             address(locator),
             address(stakingModule),
-            10,
+            address(feeDistributor),
             4 weeks,
             365 days
         );
 
-        feeDistributor = new DistributorMock(
-            address(stETH),
-            address(accounting)
-        );
+        feeDistributor.setAccounting(address(accounting));
 
         _enableInitializers(address(accounting));
 
         accounting.initialize(
             curve,
             admin,
-            address(feeDistributor),
             8 weeks,
             testChargePenaltyRecipient
         );
 
         vm.startPrank(admin);
 
-        accounting.grantRole(accounting.ACCOUNTING_MANAGER_ROLE(), admin);
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
         accounting.grantRole(accounting.RESUME_ROLE(), admin);
         accounting.grantRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
@@ -355,7 +438,7 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
 }
 
 contract CSAccountingPauseTest is CSAccountingBaseTest {
-    function test_notPausedByDefault() public {
+    function test_notPausedByDefault() public view {
         assertFalse(accounting.isPaused());
     }
 
@@ -447,39 +530,21 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
     }
 
     function test_claimRewardsStETH_RevertWhen_Paused() public {
-        vm.prank(address(stakingModule));
+        vm.prank(address(user));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.claimRewardsStETH(
-            0,
-            1 ether,
-            address(0),
-            1 ether,
-            new bytes32[](1)
-        );
+        accounting.claimRewardsStETH(0, 1 ether, 1 ether, new bytes32[](1));
     }
 
     function test_claimRewardsWstETH_RevertWhen_Paused() public {
-        vm.prank(address(stakingModule));
+        vm.prank(address(user));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.claimRewardsWstETH(
-            0,
-            1 ether,
-            address(0),
-            1 ether,
-            new bytes32[](1)
-        );
+        accounting.claimRewardsWstETH(0, 1 ether, 1 ether, new bytes32[](1));
     }
 
     function test_claimRewardsUnstETH_RevertWhen_Paused() public {
-        vm.prank(address(stakingModule));
+        vm.prank(address(user));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.claimRewardsUnstETH(
-            0,
-            1 ether,
-            address(0),
-            1 ether,
-            new bytes32[](1)
-        );
+        accounting.claimRewardsUnstETH(0, 1 ether, 1 ether, new bytes32[](1));
     }
 }
 
@@ -509,6 +574,36 @@ abstract contract CSAccountingBondStateBaseTest is
     BondAmountModifiersTest,
     CSAccountingBaseTest
 {
+    ICSBondCurve.BondCurveIntervalInput[] public curveWithDiscount;
+    ICSBondCurve.BondCurveIntervalInput[] public individualCurve;
+
+    constructor() {
+        curveWithDiscount.push(
+            ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: 1,
+                trend: 2 ether
+            })
+        );
+        curveWithDiscount.push(
+            ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: 2,
+                trend: 1 ether
+            })
+        );
+        individualCurve.push(
+            ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: 1,
+                trend: 1.8 ether
+            })
+        );
+        individualCurve.push(
+            ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: 2,
+                trend: 0.9 ether
+            })
+        );
+    }
+
     function _operator(uint256 ongoing, uint256 withdrawn) internal virtual {
         mock_getNodeOperatorNonWithdrawnKeys(ongoing - withdrawn);
         mock_getNodeOperatorsCount(1);
@@ -523,19 +618,18 @@ abstract contract CSAccountingBondStateBaseTest is
         });
     }
 
-    uint256[] public defaultCurve = [2 ether, 3 ether];
-    uint256[] public individualCurve = [1.8 ether, 2.7 ether];
-
-    function _curve(uint256[] memory curve) internal virtual {
+    function _curve(
+        ICSBondCurve.BondCurveIntervalInput[] memory curve
+    ) internal virtual {
         vm.startPrank(admin);
         uint256 curveId = accounting.addBondCurve(curve);
         accounting.setBondCurve(0, curveId);
         vm.stopPrank();
     }
 
-    function _lock(uint256 id, uint256 amount) internal virtual {
+    function _lock(uint256 amount) internal virtual {
         vm.prank(address(stakingModule));
-        accounting.lockBondETH(id, amount);
+        accounting.lockBondETH(0, amount);
     }
 
     function test_WithOneWithdrawnValidator() public virtual;
@@ -563,7 +657,7 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
 
     function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _curve(defaultCurve);
+        _curve(curveWithDiscount);
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(current, 0 ether);
         assertEq(required, 17 ether);
@@ -571,7 +665,7 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
 
     function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _lock({ id: 0, amount: 1 ether });
+        _lock({ amount: 1 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(current, 0 ether);
         assertEq(required, 33 ether);
@@ -579,7 +673,7 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
 
     function test_WithLocked_MoreThanBond() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _lock({ id: 0, amount: 100500 ether });
+        _lock({ amount: 100500 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(current, 0 ether);
         assertEq(required, 100532 ether);
@@ -587,8 +681,8 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
 
     function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _curve(defaultCurve);
-        _lock({ id: 0, amount: 1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(current, 0 ether);
         assertEq(required, 18 ether);
@@ -674,7 +768,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
 
     function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _curve(defaultCurve);
+        _curve(curveWithDiscount);
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
@@ -684,7 +778,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
 
     function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _lock({ id: 0, amount: 1 ether });
+        _lock({ amount: 1 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
@@ -694,7 +788,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
 
     function test_WithLocked_MoreThanBond() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _lock({ id: 0, amount: 100500 ether });
+        _lock({ amount: 100500 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
@@ -704,8 +798,8 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
 
     function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _curve(defaultCurve);
-        _lock({ id: 0, amount: 1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
@@ -805,29 +899,29 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
     function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
-        _curve(defaultCurve);
+        _curve(curveWithDiscount);
         assertEq(accounting.getUnbondedKeysCount(0), 6);
     }
 
     function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
-        _lock({ id: 0, amount: 1 ether });
+        _lock({ amount: 1 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 11);
     }
 
     function test_WithLocked_MoreThanBond() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
-        _lock({ id: 0, amount: 100500 ether });
+        _lock({ amount: 100500 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 16);
     }
 
     function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
-        _curve(defaultCurve);
-        _lock({ id: 0, amount: 1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 7);
     }
 
@@ -887,9 +981,16 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
 
     function test_WithCustomSmolCurve() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        uint256[] memory curve = new uint256[](2);
-        curve[0] = 2 ether;
-        curve[1] = 3 ether;
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](2);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+        curve[1] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 2,
+            trend: 1 ether
+        });
         _curve(curve);
         _deposit({ bond: 2.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 15);
@@ -897,17 +998,12 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
 
     function test_WithCustomHugeCurve_1() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        uint256[] memory curve = new uint256[](10);
-        curve[0] = 1 ether;
-        curve[1] = 2 ether;
-        curve[2] = 3 ether;
-        curve[3] = 4 ether;
-        curve[4] = 5 ether;
-        curve[5] = 6 ether;
-        curve[6] = 7 ether;
-        curve[7] = 8 ether;
-        curve[8] = 9 ether;
-        curve[9] = 10 ether;
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 1 ether
+        });
         _curve(curve);
         _deposit({ bond: 3.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 13);
@@ -915,17 +1011,12 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
 
     function test_WithCustomHugeCurve_2() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        uint256[] memory curve = new uint256[](10);
-        curve[0] = 1 ether;
-        curve[1] = 2 ether;
-        curve[2] = 3 ether;
-        curve[3] = 4 ether;
-        curve[4] = 5 ether;
-        curve[5] = 6 ether;
-        curve[6] = 7 ether;
-        curve[7] = 8 ether;
-        curve[8] = 9 ether;
-        curve[9] = 10 ether;
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 1 ether
+        });
         _curve(curve);
         _deposit({ bond: 8.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 8);
@@ -944,29 +1035,29 @@ contract CSAccountingGetUnbondedKeysCountToEjectTest is
     function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
-        _curve(defaultCurve);
+        _curve(curveWithDiscount);
         assertEq(accounting.getUnbondedKeysCountToEject(0), 6);
     }
 
     function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 30 ether });
-        _lock({ id: 0, amount: 2 ether });
+        _lock({ amount: 2 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 1);
     }
 
     function test_WithLocked_MoreThanBond() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 30 ether });
-        _lock({ id: 0, amount: 100500 ether });
+        _lock({ amount: 100500 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 1);
     }
 
     function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
-        _curve(defaultCurve);
-        _lock({ id: 0, amount: 1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 6);
     }
 
@@ -1051,20 +1142,20 @@ contract CSAccountingGetRequiredETHBondTest is
 
     function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _curve(defaultCurve);
+        _curve(curveWithDiscount);
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 17 ether);
     }
 
     function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _lock({ id: 0, amount: 1 ether });
+        _lock({ amount: 1 ether });
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 33 ether);
     }
 
     function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _curve(defaultCurve);
-        _lock({ id: 0, amount: 1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 18 ether);
     }
 
@@ -1192,7 +1283,7 @@ contract CSAccountingGetRequiredWstETHBondTest is
 
     function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _curve(defaultCurve);
+        _curve(curveWithDiscount);
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
@@ -1202,7 +1293,7 @@ contract CSAccountingGetRequiredWstETHBondTest is
 
     function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _lock({ id: 0, amount: 1 ether });
+        _lock({ amount: 1 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
@@ -1212,8 +1303,8 @@ contract CSAccountingGetRequiredWstETHBondTest is
 
     function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _curve(defaultCurve);
-        _lock({ id: 0, amount: 1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
@@ -1338,9 +1429,9 @@ contract CSAccountingGetRequiredWstETHBondTest is
 abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
     CSAccountingBaseTest
 {
-    uint256[] public defaultCurve = [2 ether, 3 ether];
-
-    function _curve(uint256[] memory curve) internal virtual {
+    function _curve(
+        ICSBondCurve.BondCurveIntervalInput[] memory curve
+    ) internal virtual {
         vm.startPrank(admin);
         uint256 curveId = accounting.addBondCurve(curve);
         accounting.setBondCurve(0, curveId);
@@ -1372,21 +1463,30 @@ contract CSAccountingGetBondAmountByKeysCountWstETHTest is
     }
 
     function test_WithCurve() public override assertInvariants {
-        ICSBondCurve.BondCurve memory curve = ICSBondCurve.BondCurve({
-            points: defaultCurve,
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory defaultCurve = new ICSBondCurve.BondCurveIntervalInput[](2);
+        defaultCurve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+        defaultCurve[1] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 2,
             trend: 1 ether
         });
-        assertEq(accounting.getBondAmountByKeysCountWstETH(0, curve), 0);
+
+        vm.startPrank(admin);
+        uint256 curveId = accounting.addBondCurve(defaultCurve);
+        assertEq(accounting.getBondAmountByKeysCountWstETH(0, curveId), 0);
         assertEq(
-            accounting.getBondAmountByKeysCountWstETH(1, curve),
+            accounting.getBondAmountByKeysCountWstETH(1, curveId),
             wstETH.getWstETHByStETH(2 ether)
         );
         assertEq(
-            accounting.getBondAmountByKeysCountWstETH(2, curve),
+            accounting.getBondAmountByKeysCountWstETH(2, curveId),
             wstETH.getWstETHByStETH(3 ether)
         );
         assertEq(
-            accounting.getBondAmountByKeysCountWstETH(15, curve),
+            accounting.getBondAmountByKeysCountWstETH(15, curveId),
             wstETH.getWstETHByStETH(16 ether)
         );
     }
@@ -1406,6 +1506,14 @@ abstract contract CSAccountingRewardsBaseTest is CSAccountingBondStateBaseTest {
     uint256 wstETHAsFee;
     uint256 unstETHAsFee;
     uint256 unstETHSharesAsFee;
+
+    address internal rewardAddress;
+
+    function setUp() public override {
+        super.setUp();
+        rewardAddress = nextAddress("reward address");
+        mock_getNodeOperatorManagementProperties(user, rewardAddress, false);
+    }
 
     function _rewards(uint256 fee) internal {
         vm.deal(address(feeDistributor), fee);
@@ -1432,7 +1540,11 @@ abstract contract CSAccountingClaimRewardsBaseTest is
 
     function test_ExcessBondWithoutProof() public virtual;
 
-    function test_RevertWhen_SenderIsNotCSM() public virtual;
+    function test_SenderIsRewardAddress() public virtual;
+
+    function test_RevertWhen_SenderIsNotEligible() public virtual;
+
+    function test_RevertWhen_NodeOperatorDoesNotExist() public virtual;
 }
 
 contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
@@ -1442,20 +1554,26 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertEq(
-            stETH.balanceOf(address(user)),
+            stETH.balanceOf(rewardAddress),
             stETHAsFee,
-            "user balance should be equal to fee reward"
+            "reward address balance should be equal to fee reward"
         );
         assertEq(
             bondSharesAfter,
@@ -1478,24 +1596,23 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
-        _curve(defaultCurve);
+        _curve(curveWithDiscount);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            stETH.balanceOf(address(user)),
+            stETH.balanceOf(rewardAddress),
             stETHAsFee + 15 ether,
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after curve"
+            "reward address balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -1519,14 +1636,13 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
-        _lock({ id: 0, amount: 1 ether });
+        _lock({ amount: 1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1536,25 +1652,24 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
-        _curve(defaultCurve);
-        _lock({ id: 0, amount: 1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            stETH.balanceOf(address(user)),
+            stETH.balanceOf(rewardAddress),
             stETHAsFee + 14 ether,
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after curve"
+            "reward address balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -1580,21 +1695,20 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            stETH.balanceOf(address(user)),
+            stETH.balanceOf(rewardAddress),
             stETHAsFee + 2 ether,
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after curve"
+            "reward address balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -1620,21 +1734,20 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            stETH.balanceOf(address(user)),
+            stETH.balanceOf(rewardAddress),
             stETHAsFee,
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after curve"
+            "reward address balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -1664,21 +1777,20 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            stETH.balanceOf(address(user)),
+            stETH.balanceOf(rewardAddress),
             stETHAsFee + 2 ether,
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after curve"
+            "reward address balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -1704,21 +1816,20 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            stETH.balanceOf(address(user)),
+            stETH.balanceOf(rewardAddress),
             stETHAsFee + 1 ether,
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after curve"
+            "reward address balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -1748,21 +1859,20 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            stETH.balanceOf(address(user)),
+            stETH.balanceOf(rewardAddress),
             stETHAsFee + 3 ether,
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after curve"
+            "reward address balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -1787,12 +1897,11 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1807,12 +1916,11 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1827,20 +1935,19 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         uint256 stETHToClaim = stETH.getPooledEthByShares(sharesToClaim);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             0.05 ether,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertEq(
-            stETH.balanceOf(address(user)),
+            stETH.balanceOf(rewardAddress),
             stETHToClaim,
-            "user balance should be equal to claimed"
+            "reward address balance should be equal to claimed"
         );
         assertEq(
             bondSharesAfter,
@@ -1860,12 +1967,11 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             0,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1877,11 +1983,10 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             0,
             new bytes32[](0)
         );
@@ -1900,17 +2005,68 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_RevertWhen_SenderIsNotCSM() public override {
+    function test_SenderIsRewardAddress() public override assertInvariants {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(rewardAddress);
+        accounting.claimRewardsStETH(
+            leaf.nodeOperatorId,
+            UINT256_MAX,
+            leaf.shares,
+            leaf.proof
+        );
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            stETH.balanceOf(rewardAddress),
+            stETHAsFee,
+            "reward address balance should be equal to fee reward"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesBefore,
+            "bond manager after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_RevertWhen_SenderIsNotEligible() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
 
         vm.expectRevert(
-            abi.encodeWithSelector(CSAccounting.SenderIsNotCSM.selector)
+            abi.encodeWithSelector(ICSAccounting.SenderIsNotEligible.selector)
         );
         vm.prank(stranger);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
+            leaf.shares,
+            leaf.proof
+        );
+    }
+
+    function test_RevertWhen_NodeOperatorDoesNotExist() public override {
+        mock_getNodeOperatorManagementProperties(address(0), address(0), false);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ICSAccounting.NodeOperatorDoesNotExist.selector
+            )
+        );
+        accounting.claimRewardsStETH(
+            leaf.nodeOperatorId,
+            UINT256_MAX,
             leaf.shares,
             leaf.proof
         );
@@ -1926,21 +2082,27 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            wstETH.balanceOf(address(user)),
+            wstETH.balanceOf(rewardAddress),
             wstETHAsFee,
             1 wei,
-            "user balance should be equal to fee reward"
+            "reward address balance should be equal to fee reward"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -1969,24 +2131,23 @@ contract CSAccountingClaimWstETHRewardsTest is
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
-        _curve(defaultCurve);
+        _curve(curveWithDiscount);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            wstETH.balanceOf(address(user)),
+            wstETH.balanceOf(rewardAddress),
             wstETH.getWstETHByStETH(stETHAsFee + 15 ether),
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after curve"
+            "reward address balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2015,14 +2176,13 @@ contract CSAccountingClaimWstETHRewardsTest is
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
-        _lock({ id: 0, amount: 1 ether });
+        _lock({ amount: 1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2032,25 +2192,24 @@ contract CSAccountingClaimWstETHRewardsTest is
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
-        _curve(defaultCurve);
-        _lock({ id: 0, amount: 1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            wstETH.balanceOf(address(user)),
+            wstETH.balanceOf(rewardAddress),
             wstETH.getWstETHByStETH(stETHAsFee + 14 ether),
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after curve minus locked"
+            "reward address balance should be equal to fee reward plus excess bond after curve minus locked"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2081,21 +2240,20 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            wstETH.balanceOf(address(user)),
+            wstETH.balanceOf(rewardAddress),
             wstETHAsFee + stETH.getSharesByPooledEth(2 ether),
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after one validator withdrawn"
+            "reward address balance should be equal to fee reward plus excess bond after one validator withdrawn"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2126,21 +2284,20 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            wstETH.balanceOf(address(user)),
+            wstETH.balanceOf(rewardAddress),
             wstETHAsFee,
             1 wei,
-            "user balance should be equal to fee reward"
+            "reward address balance should be equal to fee reward"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2175,21 +2332,20 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            wstETH.balanceOf(address(user)),
+            wstETH.balanceOf(rewardAddress),
             wstETHAsFee + stETH.getSharesByPooledEth(2 ether),
             1 wei,
-            "user balance should be equal to fee reward"
+            "reward address balance should be equal to fee reward"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2220,21 +2376,20 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            wstETH.balanceOf(address(user)),
+            wstETH.balanceOf(rewardAddress),
             wstETHAsFee + stETH.getSharesByPooledEth(1 ether),
             1 wei,
-            "user balance should be equal to fee reward plus excess bond"
+            "reward address balance should be equal to fee reward plus excess bond"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2269,21 +2424,20 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            wstETH.balanceOf(address(user)),
+            wstETH.balanceOf(rewardAddress),
             wstETHAsFee + stETH.getSharesByPooledEth(3 ether),
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after one validator withdrawn"
+            "reward address balance should be equal to fee reward plus excess bond after one validator withdrawn"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2313,12 +2467,11 @@ contract CSAccountingClaimWstETHRewardsTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2333,12 +2486,11 @@ contract CSAccountingClaimWstETHRewardsTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2355,21 +2507,20 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             sharesToClaim,
-            address(user),
             leaf.shares,
             leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertApproxEqAbs(
-            wstETH.balanceOf(address(user)),
+            wstETH.balanceOf(rewardAddress),
             wstETHToClaim,
             1 wei,
-            "user balance should be equal to claimed"
+            "reward address balance should be equal to claimed"
         );
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2399,12 +2550,11 @@ contract CSAccountingClaimWstETHRewardsTest is
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             0,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2416,11 +2566,10 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             0,
             new bytes32[](0)
         );
@@ -2439,24 +2588,82 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_RevertWhen_SenderIsNotCSM() public override {
+    function test_SenderIsRewardAddress() public override assertInvariants {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(rewardAddress);
+        accounting.claimRewardsWstETH(
+            leaf.nodeOperatorId,
+            UINT256_MAX,
+            leaf.shares,
+            leaf.proof
+        );
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(rewardAddress),
+            wstETHAsFee,
+            1 wei,
+            "reward address balance should be equal to fee reward"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore,
+            1 wei,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_RevertWhen_SenderIsNotEligible() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
 
         vm.expectRevert(
-            abi.encodeWithSelector(CSAccounting.SenderIsNotCSM.selector)
+            abi.encodeWithSelector(ICSAccounting.SenderIsNotEligible.selector)
         );
         vm.prank(stranger);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
+            leaf.shares,
+            leaf.proof
+        );
+    }
+
+    function test_RevertWhen_NodeOperatorDoesNotExist() public override {
+        mock_getNodeOperatorManagementProperties(address(0), address(0), false);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ICSAccounting.NodeOperatorDoesNotExist.selector
+            )
+        );
+        accounting.claimRewardsWstETH(
+            leaf.nodeOperatorId,
+            UINT256_MAX,
             leaf.shares,
             leaf.proof
         );
     }
 }
 
-contract CSAccountingclaimRewardsUnstETHTest is
+contract CSAccountingClaimRewardsUnstETHTest is
     CSAccountingClaimRewardsBaseTest
 {
     function test_default() public override assertInvariants {
@@ -2465,11 +2672,17 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2481,7 +2694,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
             1 wei,
             "bond shares after claim should be equal to before"
         );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(
+            stETH.sharesOf(rewardAddress),
+            0,
+            "reward address shares should be 0"
+        );
         assertEq(
             accounting.totalBondShares(),
             bondSharesAfter,
@@ -2493,14 +2710,13 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
-        _curve(defaultCurve);
+        _curve(curveWithDiscount);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2512,7 +2728,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
             1 wei,
             "bond shares should be changed after request minus excess bond after curve"
         );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(
+            stETH.sharesOf(rewardAddress),
+            0,
+            "reward address shares should be 0"
+        );
         assertEq(
             accounting.totalBondShares(),
             bondSharesAfter,
@@ -2524,14 +2744,13 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
-        _lock({ id: 0, amount: 1 ether });
+        _lock({ amount: 1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2541,15 +2760,14 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
-        _curve(defaultCurve);
-        _lock({ id: 0, amount: 1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2561,7 +2779,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
             1 wei,
             "bond shares should be equal to before minus excess bond after curve and locked"
         );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(
+            stETH.sharesOf(rewardAddress),
+            0,
+            "reward address shares should be 0"
+        );
         assertEq(
             accounting.totalBondShares(),
             bondSharesAfter,
@@ -2576,11 +2798,10 @@ contract CSAccountingclaimRewardsUnstETHTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2593,7 +2814,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
             1 wei,
             "bond shares should be equal to before minus excess bond after one validator withdrawn"
         );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(
+            stETH.sharesOf(rewardAddress),
+            0,
+            "reward address shares should be 0"
+        );
         assertEq(
             accounting.totalBondShares(),
             bondSharesAfter,
@@ -2608,11 +2833,10 @@ contract CSAccountingclaimRewardsUnstETHTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2625,7 +2849,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
             1 wei,
             "bond shares after claim should be equal to before"
         );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(
+            stETH.sharesOf(rewardAddress),
+            0,
+            "reward address shares should be 0"
+        );
         assertEq(
             accounting.totalBondShares(),
             bondSharesAfter,
@@ -2644,11 +2872,10 @@ contract CSAccountingclaimRewardsUnstETHTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2661,7 +2888,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
             1 wei,
             "bond shares should be equal to before minus excess bond after one validator withdrawn"
         );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(
+            stETH.sharesOf(rewardAddress),
+            0,
+            "reward address shares should be 0"
+        );
         assertEq(
             accounting.totalBondShares(),
             bondSharesAfter,
@@ -2676,11 +2907,10 @@ contract CSAccountingclaimRewardsUnstETHTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2693,7 +2923,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
             1 wei,
             "bond shares should be equal to before minus excess bond"
         );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(
+            stETH.sharesOf(rewardAddress),
+            0,
+            "reward address shares should be 0"
+        );
         assertEq(
             accounting.totalBondShares(),
             bondSharesAfter,
@@ -2712,11 +2946,10 @@ contract CSAccountingclaimRewardsUnstETHTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2729,7 +2962,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
             1 wei,
             "bond shares should be equal to before minus excess bond after one validator withdrawn"
         );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(
+            stETH.sharesOf(rewardAddress),
+            0,
+            "reward address shares should be 0"
+        );
         assertEq(
             accounting.totalBondShares(),
             bondSharesAfter,
@@ -2742,12 +2979,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2762,12 +2998,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2781,11 +3016,10 @@ contract CSAccountingclaimRewardsUnstETHTest is
         uint256 sharesToRequest = stETH.getSharesByPooledEth(0.05 ether);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             0.05 ether,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2797,7 +3031,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
             1 wei,
             "bond shares should be equal to before plus fee shares minus requested shares"
         );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(
+            stETH.sharesOf(rewardAddress),
+            0,
+            "reward address shares should be 0"
+        );
         assertEq(
             accounting.totalBondShares(),
             bondSharesAfter,
@@ -2810,12 +3048,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
-        vm.prank(address(stakingModule));
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             0,
-            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2827,11 +3064,10 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(address(stakingModule));
+        vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             0,
             new bytes32[](0)
         );
@@ -2850,19 +3086,427 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_RevertWhen_SenderIsNotCSM() public override {
+    function test_SenderIsRewardAddress() public override assertInvariants {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(rewardAddress);
+        accounting.claimRewardsUnstETH(
+            leaf.nodeOperatorId,
+            UINT256_MAX,
+            leaf.shares,
+            leaf.proof
+        );
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore,
+            1 wei,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            stETH.sharesOf(rewardAddress),
+            0,
+            "rewardAddress shares should be 0"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares should not change"
+        );
+    }
+
+    function test_RevertWhen_SenderIsNotEligible() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
 
         vm.expectRevert(
-            abi.encodeWithSelector(CSAccounting.SenderIsNotCSM.selector)
+            abi.encodeWithSelector(ICSAccounting.SenderIsNotEligible.selector)
         );
         vm.prank(stranger);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            address(user),
             leaf.shares,
             leaf.proof
+        );
+    }
+
+    function test_RevertWhen_NodeOperatorDoesNotExist() public override {
+        mock_getNodeOperatorManagementProperties(address(0), address(0), false);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ICSAccounting.NodeOperatorDoesNotExist.selector
+            )
+        );
+        accounting.claimRewardsUnstETH(
+            leaf.nodeOperatorId,
+            UINT256_MAX,
+            leaf.shares,
+            leaf.proof
+        );
+    }
+}
+
+contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
+    function test_default() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
+        );
+    }
+
+    function test_WithCurve() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+        _curve(curveWithDiscount);
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(15 ether),
+            1 wei,
+            "claimable bond shares should be equal to the curve discount"
+        );
+    }
+
+    function test_WithLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _rewards({ fee: 0.1 ether });
+        _lock({ amount: 1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
+        );
+    }
+
+    function test_WithCurveAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(14 ether),
+            1 wei,
+            "claimable bond shares should be equal to the curve discount minus locked"
+        );
+    }
+
+    function test_WithOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "claimable bond shares should be equal to a single validator bond"
+        );
+    }
+
+    function test_WithBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
+        );
+    }
+
+    function test_WithBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "claimable bond shares should be equal to a single validator bond"
+        );
+    }
+
+    function test_WithExcessBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(1 ether),
+            1 wei,
+            "claimable bond shares should be equal to the excess bond"
+        );
+    }
+
+    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 33 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(3 ether),
+            1 wei,
+            "claimable bond shares should be equal to a single validator bond plus the excess bond"
+        );
+    }
+
+    function test_WithMissingBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 16 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
+        );
+    }
+
+    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 16 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
+        );
+    }
+}
+
+contract CSAccountingClaimableRewardsAndBondSharesTest is
+    CSAccountingRewardsBaseTest
+{
+    function test_default() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertEq(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(0.1 ether),
+            "claimable bond shares should not be zero"
+        );
+    }
+
+    function test_WithCurve() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+        _curve(curveWithDiscount);
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(15.1 ether),
+            1 wei,
+            "claimable bond shares should be equal to the curve discount + rewards"
+        );
+    }
+
+    function test_WithLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _rewards({ fee: 0.1 ether });
+        _lock({ amount: 1 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertEq(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(0.1 ether),
+            "claimable bond shares should not be zero"
+        );
+    }
+
+    function test_WithLockedMoreThanBondPlusRewards() public {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _rewards({ fee: 0.1 ether });
+        _lock({ amount: 1.05 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertEq(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(0.05 ether),
+            "claimable bond shares should not be zero"
+        );
+    }
+
+    function test_WithCurveAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+        _curve(curveWithDiscount);
+        _lock({ amount: 1 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(14.1 ether),
+            1 wei,
+            "claimable bond shares should be equal to the curve discount + rewards - locked"
+        );
+    }
+
+    function test_WithOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(2.1 ether),
+            1 wei,
+            "claimable bond shares should be equal to a single validator bond + rewards"
+        );
+    }
+
+    function test_WithBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertEq(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(0.1 ether),
+            "claimable bond shares should be equal to rewards"
+        );
+    }
+
+    function test_WithBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(2.1 ether),
+            1 wei,
+            "claimable bond shares should be equal to a single validator bond"
+        );
+    }
+
+    function test_WithExcessBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(1.1 ether),
+            1 wei,
+            "claimable bond shares should be equal to the excess bond"
+        );
+    }
+
+    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 33 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(3.1 ether),
+            1 wei,
+            "claimable bond shares should be equal to a single validator bond + excess bond + rewards"
+        );
+    }
+
+    function test_WithMissingBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 16 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
+        );
+    }
+
+    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 16 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
         );
     }
 }
@@ -2921,12 +3565,82 @@ contract CSAccountingDepositEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), 0);
     }
 
-    function test_depositETH_revertWhen_SenderIsNotCSM() public {
+    function test_depositETH_revertWhen_SenderIsNotModule() public {
         vm.deal(stranger, 32 ether);
         vm.prank(stranger);
 
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         accounting.depositETH{ value: 32 ether }(stranger, 0);
+    }
+}
+
+contract CSAccountingDepositEthPermissionlessTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        mock_getNodeOperatorNonWithdrawnKeys(0);
+        mock_getNodeOperatorsCount(1);
+    }
+
+    function test_depositETH() public assertInvariants {
+        vm.deal(address(user), 32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
+
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+        vm.prank(address(user));
+        accounting.depositETH{ value: 32 ether }(0);
+
+        assertEq(
+            address(user).balance,
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositETH_zeroAmount() public assertInvariants {
+        vm.prank(address(user));
+        accounting.depositETH{ value: 0 ether }(0);
+
+        assertEq(
+            address(user).balance,
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            0,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            0,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), 0);
+    }
+
+    function test_depositETH_revertWhen_OperatorDoesNotExist() public {
+        mock_getNodeOperatorsCount(0);
+        vm.deal(user, 32 ether);
+
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
+        accounting.depositETH{ value: 32 ether }(0);
     }
 }
 
@@ -2940,9 +3654,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     function test_depositStETH() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.prank(user);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
 
         vm.prank(address(stakingModule));
         accounting.depositStETH(
@@ -3015,9 +3727,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(accounting), type(uint256).max);
         vm.stopPrank();
 
@@ -3056,12 +3766,10 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     function test_depositStETH_withPermit() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.prank(user);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
 
         vm.prank(address(stakingModule));
-        vm.expectEmit(true, true, true, true, address(stETH));
+        vm.expectEmit(address(stETH));
         emit StETHMock.Approval(user, address(accounting), 32 ether);
 
         accounting.depositStETH(
@@ -3102,11 +3810,11 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(accounting), 1 ether);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true, address(stETH));
+        vm.expectEmit(address(stETH));
         emit StETHMock.Approval(user, address(accounting), 32 ether);
 
         vm.recordLogs();
@@ -3139,7 +3847,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(accounting), UINT256_MAX);
         vm.stopPrank();
 
@@ -3174,7 +3882,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(accounting), 32 ether);
         vm.stopPrank();
 
@@ -3202,12 +3910,297 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         );
     }
 
-    function test_depositStETH_revertWhen_SenderIsNotCSM() public {
+    function test_depositStETH_revertWhen_SenderIsNotModule() public {
         vm.prank(stranger);
 
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         accounting.depositStETH(
             stranger,
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+}
+
+contract CSAccountingDepositStEthPermissionlessTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        mock_getNodeOperatorNonWithdrawnKeys(0);
+        mock_getNodeOperatorsCount(1);
+    }
+
+    function test_depositStETH() public assertInvariants {
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
+
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+
+        vm.prank(user);
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositStETH_zeroAmount() public assertInvariants {
+        vm.prank(address(user));
+        accounting.depositStETH(
+            0,
+            0 ether,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            0,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            0,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), 0);
+    }
+
+    function test_depositStETH_withoutPermitButWithAllowance()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(accounting), type(uint256).max);
+        vm.stopPrank();
+
+        vm.prank(address(user));
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositStETH_withPermit() public assertInvariants {
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
+
+        vm.prank(address(user));
+        vm.expectEmit(address(stETH));
+        emit StETHMock.Approval(user, address(accounting), 32 ether);
+
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositStETH_withPermit_AlreadyPermittedWithLess()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(accounting), 1 ether);
+        vm.stopPrank();
+
+        vm.expectEmit(address(stETH));
+        emit StETHMock.Approval(user, address(accounting), 32 ether);
+
+        vm.recordLogs();
+
+        vm.prank(address(user));
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            2,
+            "should emit only one event about approve and deposit"
+        );
+    }
+
+    function test_depositStETH_withPermit_AlreadyPermittedWithInf()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(accounting), UINT256_MAX);
+        vm.stopPrank();
+
+        vm.prank(address(user));
+        vm.recordLogs();
+
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositStETH_withPermit_AlreadyPermittedWithTheSame()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(accounting), 32 ether);
+        vm.stopPrank();
+
+        vm.recordLogs();
+
+        vm.prank(address(user));
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositStETH_revertWhen_OperatorDoesNotExist() public {
+        mock_getNodeOperatorsCount(0);
+        vm.deal(user, 32 ether);
+
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
+        accounting.depositStETH(
             0,
             32 ether,
             ICSAccounting.PermitInput({
@@ -3231,7 +4224,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     function test_depositWstETH() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
@@ -3310,7 +4303,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
@@ -3354,7 +4347,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     function test_depositWstETH_withPermit() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
@@ -3362,7 +4355,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         );
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true, address(wstETH));
+        vm.expectEmit(address(wstETH));
         emit WstETHMock.Approval(user, address(accounting), 32 ether);
 
         vm.prank(address(stakingModule));
@@ -3404,13 +4397,13 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         wstETH.approve(address(accounting), 1 ether);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true, address(wstETH));
+        vm.expectEmit(address(wstETH));
         emit WstETHMock.Approval(user, address(accounting), 32 ether);
 
         vm.recordLogs();
@@ -3443,7 +4436,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         wstETH.approve(address(accounting), UINT256_MAX);
@@ -3478,7 +4471,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         wstETH.approve(address(accounting), 32 ether);
@@ -3508,11 +4501,318 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         );
     }
 
-    function test_depositWstETH_revertWhen_SenderIsNotCSM() public {
+    function test_depositWstETH_revertWhen_SenderIsNotModule() public {
         vm.prank(stranger);
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         accounting.depositWstETH(
             stranger,
+            0,
+            100,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+}
+
+contract CSAccountingDepositWstEthPermissionlessTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        mock_getNodeOperatorNonWithdrawnKeys(0);
+        mock_getNodeOperatorsCount(1);
+    }
+
+    function test_depositWstETH() public assertInvariants {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+        vm.stopPrank();
+
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            wstETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositWstETH_zeroAmount() public assertInvariants {
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            0 ether,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            wstETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            0,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            0,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), 0);
+    }
+
+    function test_depositWstETH_withoutPermitButWithAllowance()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+        wstETH.approve(address(accounting), UINT256_MAX);
+        vm.stopPrank();
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            wstETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositWstETH_withPermit() public assertInvariants {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+        vm.stopPrank();
+
+        vm.expectEmit(address(wstETH));
+        emit WstETHMock.Approval(user, address(accounting), 32 ether);
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            wstETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositWstETH_withPermit_AlreadyPermittedWithLess()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        wstETH.approve(address(accounting), 1 ether);
+        vm.stopPrank();
+
+        vm.expectEmit(address(wstETH));
+        emit WstETHMock.Approval(user, address(accounting), 32 ether);
+
+        vm.recordLogs();
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            2,
+            "should emit only one event about approve and deposit"
+        );
+    }
+
+    function test_depositWstETH_withPermit_AlreadyPermittedWithInf()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        wstETH.approve(address(accounting), UINT256_MAX);
+        vm.stopPrank();
+
+        vm.recordLogs();
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositWstETH_withPermit_AlreadyPermittedWithTheSame()
+        public
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        wstETH.approve(address(accounting), 32 ether);
+        vm.stopPrank();
+
+        vm.recordLogs();
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositWstETH_revertWhen_OperatorDoesNotExist() public {
+        mock_getNodeOperatorsCount(0);
+        vm.deal(user, 32 ether);
+
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
+        accounting.depositWstETH(
             0,
             100,
             ICSAccounting.PermitInput({
@@ -3539,13 +4839,13 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     function test_penalize() public assertInvariants {
         uint256 shares = stETH.getSharesByPooledEth(1 ether);
         uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 amountToBurn = stETH.getPooledEthByShares(shares);
 
         vm.expectCall(
             locator.burner(),
             abi.encodeWithSelector(
-                IBurner.requestBurnShares.selector,
-                address(accounting),
-                shares
+                IBurner.requestBurnMyStETH.selector,
+                amountToBurn
             )
         );
 
@@ -3561,8 +4861,8 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
-    function test_penalize_RevertWhen_SenderIsNotCSM() public {
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+    function test_penalize_RevertWhen_SenderIsNotModule() public {
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         vm.prank(stranger);
         accounting.penalize(0, 20);
     }
@@ -3594,24 +4894,24 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
-    function test_chargeFee_RevertWhen_SenderIsNotCSM() public {
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+    function test_chargeFee_RevertWhen_SenderIsNotModule() public {
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         vm.prank(stranger);
         accounting.chargeFee(0, 20);
     }
 }
 
 contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
-    function setLockedBondRetentionPeriod() public {
+    function test_setBondLockPeriod() public {
         vm.prank(admin);
-        accounting.setLockedBondRetentionPeriod(200 days);
-        assertEq(accounting.getBondLockRetentionPeriod(), 200 days);
+        accounting.setBondLockPeriod(200 days);
+        assertEq(accounting.getBondLockPeriod(), 200 days);
     }
 
-    function setLockedBondRetentionPeriod_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
+    function test_setBondLockPeriod_RevertWhen_DoesNotHaveRole() public {
+        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
         vm.prank(stranger);
-        accounting.setLockedBondRetentionPeriod(200 days);
+        accounting.setBondLockPeriod(200 days);
     }
 
     function test_lockBondETH() public assertInvariants {
@@ -3622,10 +4922,10 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(0), 1 ether);
     }
 
-    function test_lockBondETH_RevertWhen_SenderIsNotCSM() public {
+    function test_lockBondETH_RevertWhen_SenderIsNotModule() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         vm.prank(stranger);
         accounting.lockBondETH(0, 1 ether);
     }
@@ -3654,10 +4954,10 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(0), 0.6 ether);
     }
 
-    function test_releaseLockedBondETH_RevertWhen_SenderIsNotCSM() public {
+    function test_releaseLockedBondETH_RevertWhen_SenderIsNotModule() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         vm.prank(stranger);
         accounting.releaseLockedBondETH(0, 1 ether);
     }
@@ -3668,8 +4968,8 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         vm.prank(address(stakingModule));
         accounting.lockBondETH(0, 1 ether);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit CSAccounting.BondLockCompensated(0, 0.4 ether);
+        vm.expectEmit(address(accounting));
+        emit ICSAccounting.BondLockCompensated(0, 0.4 ether);
 
         vm.deal(address(stakingModule), 0.4 ether);
         vm.prank(address(stakingModule));
@@ -3695,18 +4995,20 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
         vm.deal(address(stakingModule), 0.4 ether);
         vm.prank(address(stakingModule));
-        vm.expectRevert(CSAccounting.ElRewardsVaultReceiveFailed.selector);
+        vm.expectRevert(ICSAccounting.ElRewardsVaultReceiveFailed.selector);
         accounting.compensateLockedBondETH{ value: 0.4 ether }(0);
     }
 
-    function test_compensateLockedBondETH_RevertWhen_SenderIsNotCSM() public {
+    function test_compensateLockedBondETH_RevertWhen_SenderIsNotModule()
+        public
+    {
         mock_getNodeOperatorsCount(1);
         vm.deal(stranger, 1 ether);
 
         vm.prank(address(stakingModule));
         accounting.lockBondETH(0, 1 ether);
 
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         vm.prank(stranger);
         accounting.compensateLockedBondETH{ value: 1 ether }(0);
     }
@@ -3722,8 +5024,9 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(noId), amount);
 
         vm.prank(address(stakingModule));
-        accounting.settleLockedBondETH(noId);
+        bool applied = accounting.settleLockedBondETH(noId);
         assertEq(accounting.getActualLockedBond(noId), 0);
+        assertTrue(applied);
     }
 
     function test_settleLockedBondETH_noLocked() public assertInvariants {
@@ -3735,9 +5038,10 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         uint256 bond = accounting.getBondShares(noId);
 
         vm.prank(address(stakingModule));
-        accounting.settleLockedBondETH(noId);
+        bool applied = accounting.settleLockedBondETH(noId);
         assertEq(accounting.getActualLockedBond(noId), 0);
         assertEq(accounting.getBondShares(noId), bond);
+        assertFalse(applied);
     }
 
     function test_settleLockedBondETH_noBond() public assertInvariants {
@@ -3750,22 +5054,25 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
         expectNoCall(
             address(burner),
-            abi.encodeWithSelector(IBurner.requestBurnShares.selector)
+            abi.encodeWithSelector(IBurner.requestBurnMyStETH.selector)
         );
-        accounting.settleLockedBondETH(noId);
+        bool applied = accounting.settleLockedBondETH(noId);
         vm.stopPrank();
 
         assertEq(accounting.getActualLockedBond(noId), 0);
         assertEq(accounting.getBondShares(noId), 0);
+        assertTrue(applied);
     }
 }
 
 contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     function test_addBondCurve() public {
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 2 ether;
-        curvePoints[1] = 4 ether;
-
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curvePoints = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curvePoints[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
         vm.prank(admin);
         uint256 addedId = accounting.addBondCurve(curvePoints);
 
@@ -3773,20 +5080,23 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
             curveId: addedId
         });
 
-        assertEq(curve.points[0], 2 ether);
-        assertEq(curve.points[1], 4 ether);
+        assertEq(curve.intervals[0].minBond, 2 ether);
+        assertEq(curve.intervals[0].trend, 2 ether);
     }
 
     function test_addBondCurve_RevertWhen_DoesNotHaveRole() public {
         expectRoleRevert(stranger, accounting.MANAGE_BOND_CURVES_ROLE());
         vm.prank(stranger);
-        accounting.addBondCurve(new uint256[](0));
+        accounting.addBondCurve(new ICSBondCurve.BondCurveIntervalInput[](0));
     }
 
     function test_updateBondCurve() public assertInvariants {
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 2 ether;
-        curvePoints[1] = 4 ether;
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curvePoints = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curvePoints[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         uint256 toUpdate = 0;
 
@@ -3797,43 +5107,62 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
             curveId: toUpdate
         });
 
-        assertEq(curve.points[0], 2 ether);
-        assertEq(curve.points[1], 4 ether);
+        assertEq(curve.intervals[0].minBond, 2 ether);
+        assertEq(curve.intervals[0].trend, 2 ether);
     }
 
     function test_updateBondCurve_RevertWhen_DoesNotHaveRole() public {
         expectRoleRevert(stranger, accounting.MANAGE_BOND_CURVES_ROLE());
         vm.prank(stranger);
-        accounting.updateBondCurve(0, new uint256[](0));
+        accounting.updateBondCurve(
+            0,
+            new ICSBondCurve.BondCurveIntervalInput[](0)
+        );
     }
 
     function test_updateBondCurve_RevertWhen_InvalidBondCurveId() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveId.selector);
         vm.prank(admin);
-        accounting.updateBondCurve(1, new uint256[](0));
+        accounting.updateBondCurve(
+            1,
+            new ICSBondCurve.BondCurveIntervalInput[](0)
+        );
     }
 
     function test_setBondCurve() public assertInvariants {
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 2 ether;
-        curvePoints[1] = 4 ether;
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curvePoints = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curvePoints[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         mock_getNodeOperatorsCount(1);
 
         vm.startPrank(admin);
+
         uint256 addedId = accounting.addBondCurve(curvePoints);
+
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
+
         vm.stopPrank();
 
         ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
 
-        assertEq(curve.points[0], 2 ether);
-        assertEq(curve.points[1], 4 ether);
+        assertEq(curve.intervals[0].minBond, 2 ether);
+        assertEq(curve.intervals[0].trend, 2 ether);
     }
 
     function test_setBondCurve_RevertWhen_OperatorDoesNotExist() public {
         mock_getNodeOperatorsCount(0);
-        vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
         vm.prank(admin);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
@@ -3843,43 +5172,13 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         vm.prank(stranger);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
-
-    function test_resetBondCurve() public assertInvariants {
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 1 ether;
-        curvePoints[1] = 2 ether;
-
-        mock_getNodeOperatorsCount(1);
-
-        vm.startPrank(admin);
-        uint256 addedId = accounting.addBondCurve(curvePoints);
-        accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
-        vm.stopPrank();
-        vm.prank(address(stakingModule));
-        accounting.resetBondCurve({ nodeOperatorId: 0 });
-
-        ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
-
-        uint256[] memory defaultPoints = accounting.getCurveInfo(0).points;
-
-        assertEq(curve.points[0], defaultPoints[0]);
-    }
-
-    function test_resetBondCurve_RevertWhen_OperatorDoesNotExist() public {
-        mock_getNodeOperatorsCount(0);
-        vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
-        vm.prank(address(stakingModule));
-        accounting.resetBondCurve({ nodeOperatorId: 0 });
-    }
-
-    function test_resetBondCurve_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.RESET_BOND_CURVE_ROLE());
-        vm.prank(stranger);
-        accounting.resetBondCurve({ nodeOperatorId: 0 });
-    }
 }
 
 contract CSAccountingMiscTest is CSAccountingBaseTest {
+    function test_getInitializedVersion() public view {
+        assertEq(accounting.getInitializedVersion(), 2);
+    }
+
     function test_totalBondShares() public assertInvariants {
         mock_getNodeOperatorsCount(2);
         vm.deal(address(stakingModule), 64 ether);
@@ -3894,8 +5193,8 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
     function test_setChargePenaltyRecipient() public {
         vm.prank(admin);
-        vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSAccounting.ChargePenaltyRecipientSet(address(1337));
+        vm.expectEmit(address(accounting));
+        emit ICSAccounting.ChargePenaltyRecipientSet(address(1337));
         accounting.setChargePenaltyRecipient(address(1337));
         assertEq(accounting.chargePenaltyRecipient(), address(1337));
     }
@@ -3903,7 +5202,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     function test_setChargePenaltyRecipient_RevertWhen_DoesNotHaveRole()
         public
     {
-        expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
+        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
         vm.prank(stranger);
         accounting.setChargePenaltyRecipient(address(1337));
     }
@@ -3914,12 +5213,12 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         accounting.setChargePenaltyRecipient(address(0));
     }
 
-    function test_setLockedBondRetentionPeriod() public assertInvariants {
-        uint256 retention = accounting.MIN_BOND_LOCK_RETENTION_PERIOD() + 1;
+    function test_setBondLockPeriod() public assertInvariants {
+        uint256 period = accounting.MIN_BOND_LOCK_PERIOD() + 1;
         vm.prank(admin);
-        accounting.setLockedBondRetentionPeriod(retention);
-        uint256 actualRetention = accounting.getBondLockRetentionPeriod();
-        assertEq(actualRetention, retention);
+        accounting.setBondLockPeriod(period);
+        uint256 actual = accounting.getBondLockPeriod();
+        assertEq(actual, period);
     }
 
     function test_renewBurnerAllowance() public assertInvariants {
@@ -3969,7 +5268,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         uint256 amount = 42 ether;
         vm.deal(address(accounting), amount);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit IAssetRecovererLib.EtherRecovered(recoverer, amount);
 
         vm.prank(recoverer);
@@ -3984,7 +5283,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         token.mint(address(accounting), 1000);
 
         vm.prank(recoverer);
-        vm.expectEmit(true, true, true, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit IAssetRecovererLib.ERC20Recovered(address(token), recoverer, 1000);
         accounting.recoverERC20(address(token), 1000);
 
@@ -4032,7 +5331,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         stETH.mintShares(address(accounting), sharesToRecover);
 
         vm.prank(recoverer);
-        vm.expectEmit(true, true, true, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit IAssetRecovererLib.StETHSharesRecovered(
             recoverer,
             sharesToRecover
@@ -4059,6 +5358,13 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
         uint256 bondSharesBefore = accounting.getBondShares(0);
         uint256 totalBondSharesBefore = accounting.totalBondShares();
 
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
         accounting.pullFeeRewards(0, feeShares, new bytes32[](0));
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
@@ -4086,7 +5392,7 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
     function test_pullFeeRewards_revertWhen_operatorDoesNotExits() public {
         mock_getNodeOperatorsCount(0);
 
-        vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
         accounting.pullFeeRewards(0, 0, new bytes32[](0));
     }
 }

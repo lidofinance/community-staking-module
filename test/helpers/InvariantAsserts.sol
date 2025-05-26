@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -10,9 +10,36 @@ import { CSModule } from "../../src/CSModule.sol";
 import { NodeOperator } from "../../src/interfaces/ICSModule.sol";
 import { Batch } from "../../src/lib/QueueLib.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
+import { CSStrikes } from "../../src/CSStrikes.sol";
+import { console } from "forge-std/console.sol";
 
 contract InvariantAsserts is Test {
+    bool internal _skipped;
+
+    function skipInvariants() public returns (bool skip) {
+        if (_skipped) {
+            return true;
+        }
+        string memory profile = vm.envOr("FOUNDRY_PROFILE", string(""));
+        bool isCIProfile = keccak256(abi.encodePacked(profile)) ==
+            keccak256(abi.encodePacked("ci"));
+        bool forkIsActive;
+        try vm.activeFork() returns (uint256) {
+            forkIsActive = true;
+        } catch {}
+        skip = !isCIProfile && forkIsActive;
+        if (skip) {
+            console.log(
+                "WARN: Skipping invariants. It only runs with FOUNDRY_PROFILE=ci and active fork"
+            );
+            _skipped = true;
+        }
+    }
+
     function assertCSMKeys(CSModule csm) public {
+        if (skipInvariants()) {
+            return;
+        }
         uint256 noCount = csm.getNodeOperatorsCount();
         NodeOperator memory no;
 
@@ -99,14 +126,20 @@ contract InvariantAsserts is Test {
     mapping(uint256 => uint256) batchKeys;
 
     function assertCSMEnqueuedCount(CSModule csm) public {
+        if (skipInvariants()) {
+            return;
+        }
         uint256 noCount = csm.getNodeOperatorsCount();
         NodeOperator memory no;
 
-        (uint128 head, uint128 tail) = csm.depositQueue();
-        for (uint128 i = head; i < tail; ) {
-            Batch item = csm.depositQueueItem(i);
-            batchKeys[item.noId()] += item.keys();
-            i = item.next();
+        for (uint256 p = 0; p <= csm.QUEUE_LOWEST_PRIORITY(); ++p) {
+            (uint128 head, uint128 tail) = csm.depositQueuePointers(p);
+
+            for (uint128 i = head; i < tail; ) {
+                Batch item = csm.depositQueueItem(p, i);
+                batchKeys[item.noId()] += item.keys();
+                i = item.next();
+            }
         }
 
         for (uint256 noId = 0; noId < noCount; noId++) {
@@ -124,26 +157,14 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertCSMEarlyAdoptionMaxKeys(CSModule csm) public {
-        if (csm.publicRelease()) return;
-
-        uint256 noCount = csm.getNodeOperatorsCount();
-        NodeOperator memory no;
-        for (uint256 noId = 0; noId < noCount; noId++) {
-            no = csm.getNodeOperator(noId);
-
-            assertGe(
-                csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
-                no.totalAddedKeys
-            );
-        }
-    }
-
     function assertAccountingTotalBondShares(
         uint256 nodeOperatorsCount,
         IStETH steth,
         CSAccounting accounting
     ) public {
+        if (skipInvariants()) {
+            return;
+        }
         uint256 totalNodeOperatorsShares;
 
         for (uint256 noId = 0; noId < nodeOperatorsCount; noId++) {
@@ -166,6 +187,9 @@ contract InvariantAsserts is Test {
         address accounting,
         address burner
     ) public {
+        if (skipInvariants()) {
+            return;
+        }
         assertGe(
             steth.allowance(accounting, burner),
             type(uint128).max,
@@ -177,6 +201,9 @@ contract InvariantAsserts is Test {
         IStETH lido,
         CSFeeDistributor feeDistributor
     ) public {
+        if (skipInvariants()) {
+            return;
+        }
         assertGe(
             lido.sharesOf(address(feeDistributor)),
             feeDistributor.totalClaimableShares(),
@@ -185,6 +212,9 @@ contract InvariantAsserts is Test {
     }
 
     function assertFeeDistributorTree(CSFeeDistributor feeDistributor) public {
+        if (skipInvariants()) {
+            return;
+        }
         if (feeDistributor.treeRoot() == bytes32(0)) {
             assertEq(
                 feeDistributor.treeCid(),
@@ -197,6 +227,17 @@ contract InvariantAsserts is Test {
                 "",
                 "tree exists, but has no CID"
             );
+        }
+    }
+
+    function assertStrikesTree(CSStrikes strikes) public {
+        if (skipInvariants()) {
+            return;
+        }
+        if (strikes.treeRoot() == bytes32(0)) {
+            assertEq(strikes.treeCid(), "", "tree doesn't exist, but has CID");
+        } else {
+            assertNotEq(strikes.treeCid(), "", "tree exists, but has no CID");
         }
     }
 }

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -37,6 +37,17 @@ library TransientUintUintMapLib {
         }
     }
 
+    function set(
+        TransientUintUintMap self,
+        uint256 key,
+        uint256 value
+    ) internal {
+        uint256 slot = _slot(self, key);
+        assembly ("memory-safe") {
+            tstore(slot, value)
+        }
+    }
+
     function get(
         TransientUintUintMap self,
         uint256 key
@@ -44,6 +55,14 @@ library TransientUintUintMapLib {
         uint256 slot = _slot(self, key);
         assembly ("memory-safe") {
             v := tload(slot)
+        }
+    }
+
+    function load(
+        bytes32 tslot
+    ) internal pure returns (TransientUintUintMap self) {
+        assembly ("memory-safe") {
+            self := tslot
         }
     }
 

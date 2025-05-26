@@ -1,12 +1,12 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { UnstructuredStorage } from "../UnstructuredStorage.sol";
 import { Versioned } from "../utils/Versioned.sol";
-import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 import { IReportAsyncProcessor } from "./interfaces/IReportAsyncProcessor.sol";
 import { IConsensusContract } from "./interfaces/IConsensusContract.sol";
@@ -104,7 +104,10 @@ abstract contract BaseOracle is
     ///
 
     constructor(uint256 secondsPerSlot, uint256 genesisTime) {
-        if (secondsPerSlot == 0) revert SecondsPerSlotCannotBeZero();
+        if (secondsPerSlot == 0) {
+            revert SecondsPerSlotCannotBeZero();
+        }
+
         SECONDS_PER_SLOT = secondsPerSlot;
         GENESIS_TIME = genesisTime;
     }
@@ -383,8 +386,9 @@ abstract contract BaseOracle is
     }
 
     function _checkProcessingDeadline(uint256 deadlineTime) internal view {
-        if (_getTime() > deadlineTime)
+        if (_getTime() > deadlineTime) {
             revert ProcessingDeadlineMissed(deadlineTime);
+        }
     }
 
     ///
@@ -393,8 +397,14 @@ abstract contract BaseOracle is
 
     function _setConsensusVersion(uint256 version) internal {
         uint256 prevVersion = CONSENSUS_VERSION_POSITION.getStorageUint256();
-        if (version == prevVersion) revert VersionCannotBeSame();
-        if (version == 0) revert VersionCannotBeZero();
+        if (version == prevVersion) {
+            revert VersionCannotBeSame();
+        }
+
+        if (version == 0) {
+            revert VersionCannotBeZero();
+        }
+
         CONSENSUS_VERSION_POSITION.setStorageUint256(version);
         emit ConsensusVersionSet(version, prevVersion);
     }
@@ -403,10 +413,14 @@ abstract contract BaseOracle is
         address addr,
         uint256 lastProcessingRefSlot
     ) internal {
-        if (addr == address(0)) revert AddressCannotBeZero();
+        if (addr == address(0)) {
+            revert AddressCannotBeZero();
+        }
 
         address prevAddr = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
-        if (addr == prevAddr) revert AddressCannotBeSame();
+        if (addr == prevAddr) {
+            revert AddressCannotBeSame();
+        }
 
         (, uint256 secondsPerSlot, uint256 genesisTime) = IConsensusContract(
             addr

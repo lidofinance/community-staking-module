@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -14,6 +14,8 @@ library SSZ {
     function hashTreeRoot(
         BeaconBlockHeader memory header
     ) internal view returns (bytes32 root) {
+        root = bytes32(0);
+
         bytes32[8] memory nodes = [
             toLittleEndian(header.slot.unwrap()),
             toLittleEndian(header.proposerIndex),
@@ -25,7 +27,7 @@ library SSZ {
             bytes32(0)
         ];
 
-        /// @solidity memory-safe-assembly
+        // @solidity memory-safe-assembly
         assembly {
             // Count of nodes to hash
             let count := 8
@@ -84,8 +86,9 @@ library SSZ {
     function hashTreeRoot(
         Validator memory validator
     ) internal view returns (bytes32 root) {
-        bytes32 pubkeyRoot;
+        root = bytes32(0);
 
+        bytes32 pubkeyRoot;
         assembly {
             // Dynamic data types such as bytes are stored at the specified offset.
             let offset := mload(validator)
@@ -115,7 +118,7 @@ library SSZ {
             toLittleEndian(validator.withdrawableEpoch)
         ];
 
-        /// @solidity memory-safe-assembly
+        // @solidity memory-safe-assembly
         assembly {
             // Count of nodes to hash
             let count := 8
@@ -181,7 +184,7 @@ library SSZ {
     ) internal view {
         uint256 index = gI.index();
 
-        /// @solidity memory-safe-assembly
+        // @solidity memory-safe-assembly
         assembly {
             // Check if `proof` is empty.
             if iszero(proof.length) {

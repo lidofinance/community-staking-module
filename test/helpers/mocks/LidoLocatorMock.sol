@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -10,6 +10,7 @@ contract LidoLocatorMock {
     address public el;
     address public t;
     address public sr;
+    address public twg;
 
     constructor(
         address _lido,
@@ -17,7 +18,8 @@ contract LidoLocatorMock {
         address _wq,
         address _el,
         address _t,
-        address _sr
+        address _sr,
+        address _twg
     ) {
         l = _lido;
         b = _burner;
@@ -25,6 +27,7 @@ contract LidoLocatorMock {
         el = _el;
         t = _t;
         sr = _sr;
+        twg = _twg;
     }
 
     function lido() external view returns (address) {
@@ -49,5 +52,9 @@ contract LidoLocatorMock {
 
     function stakingRouter() external view returns (address payable) {
         return payable(sr);
+    }
+
+    function triggerableWithdrawalsGateway() external view returns (address) {
+        return twg;
     }
 }

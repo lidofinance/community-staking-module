@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -126,23 +126,19 @@ contract BaseOracleTest is Test, Utilities {
     function test_submitConsensusReport_RevertsIfSenderIsNotConsensusContract()
         public
     {
-        uint256 initialRefSlot = oracle.getTime();
+        uint256 refSlot = oracle.getTime();
         vm.prank(stranger);
         vm.expectRevert(BaseOracle.SenderIsNotTheConsensusContract.selector);
-        oracle.submitConsensusReport(
-            keccak256("HASH_1"),
-            initialRefSlot,
-            initialRefSlot
-        );
+        oracle.submitConsensusReport(keccak256("HASH_1"), refSlot, refSlot);
     }
 
     function test_submitConsensusReport_SubmitsFromConsensusContract() public {
-        uint256 initialRefSlot = oracle.getTime();
+        uint256 refSlot = oracle.getTime();
         vm.prank(address(consensus));
         oracle.submitConsensusReport(
             keccak256("HASH_1"),
-            initialRefSlot,
-            initialRefSlot + SLOTS_PER_FRAME
+            refSlot,
+            refSlot + SLOTS_PER_FRAME
         );
         assertEq(oracle.getConsensusReportLastCall().callCount, 1);
     }
@@ -150,25 +146,25 @@ contract BaseOracleTest is Test, Utilities {
     function test_discardConsensusReport_RevertsIfSenderIsNotConsensusContract()
         public
     {
-        uint256 initialRefSlot = oracle.getTime();
+        uint256 refSlot = oracle.getTime();
         vm.prank(stranger);
         vm.expectRevert(BaseOracle.SenderIsNotTheConsensusContract.selector);
-        oracle.discardConsensusReport(initialRefSlot);
+        oracle.discardConsensusReport(refSlot);
     }
 
     function test_discardConsensusReport_DiscardsFromConsensusContract()
         public
     {
-        uint256 initialRefSlot = oracle.getTime();
+        uint256 refSlot = oracle.getTime();
         vm.prank(address(consensus));
         oracle.submitConsensusReport(
             keccak256("HASH_1"),
-            initialRefSlot,
-            initialRefSlot + SLOTS_PER_FRAME
+            refSlot,
+            refSlot + SLOTS_PER_FRAME
         );
         assertEq(oracle.getConsensusReportLastCall().callCount, 1);
         vm.prank(address(consensus));
-        oracle.discardConsensusReport(initialRefSlot);
+        oracle.discardConsensusReport(refSlot);
     }
 
     // consensus tests
@@ -257,7 +253,7 @@ contract BaseOracleTest is Test, Utilities {
         newConsensus.setInitialRefSlot(initialRefSlot);
 
         vm.prank(admin);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ConsensusHashContractSet(
             address(newConsensus),
             address(consensus)
@@ -281,7 +277,7 @@ contract BaseOracleTest is Test, Utilities {
 
     function test_setConsensusVersion_UpdatesConsensusVersion() public {
         vm.prank(admin);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ConsensusVersionSet(3, CONSENSUS_VERSION);
         oracle.setConsensusVersion(3);
 
@@ -392,19 +388,19 @@ contract BaseOracleTest is Test, Utilities {
         oracle.checkProcessingDeadline();
     }
 
-    function test_isConsensusMember_ReturnsFalseOnNonMember() public {
+    function test_isConsensusMember_ReturnsFalseOnNonMember() public view {
         bool r = oracle.isConsensusMember(notMember);
         assertFalse(r);
     }
 
-    function test_isConsensusMember_ReturnsTrueOnMember() public {
+    function test_isConsensusMember_ReturnsTrueOnMember() public view {
         bool r = oracle.isConsensusMember(member);
         assertTrue(r);
     }
 
     // consensus report
 
-    function test_getConsensusReport_ReturnsEmptyState() public {
+    function test_getConsensusReport_ReturnsEmptyState() public view {
         (
             bytes32 hash,
             uint256 refSlot,
@@ -448,7 +444,7 @@ contract BaseOracleTest is Test, Utilities {
         uint256 nextRefSlot = initialRefSlot + SLOTS_PER_EPOCH;
         uint256 nextRefSlotDeadline = deadline + SECONDS_PER_EPOCH;
         vm.prank(address(consensus));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.WarnProcessingMissed(initialRefSlot);
         oracle.submitConsensusReport(
             keccak256("HASH_2"),
@@ -583,9 +579,9 @@ contract BaseOracleTest is Test, Utilities {
             deadline
         );
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ProcessingStarted(initialRefSlot, keccak256("HASH_1"));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracleImpl.MockStartProcessingResult(0);
         oracle.startProcessing();
     }
@@ -609,9 +605,9 @@ contract BaseOracleTest is Test, Utilities {
             refSlot1Deadline
         );
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ProcessingStarted(refSlot1, keccak256("HASH_2"));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracleImpl.MockStartProcessingResult(initialRefSlot);
         oracle.startProcessing();
         assertEq(oracle.getLastProcessingRefSlot(), refSlot1);
@@ -704,7 +700,7 @@ contract BaseOracleTest is Test, Utilities {
         assertEq(beforeCallCount, 0);
 
         vm.prank(address(consensus));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ReportSubmitted(
             initialRefSlot,
             keccak256("HASH_1"),
@@ -736,9 +732,9 @@ contract BaseOracleTest is Test, Utilities {
         );
 
         vm.prank(address(consensus));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.WarnProcessingMissed(secondRefSlot);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ReportSubmitted(
             thirdRefSlot,
             keccak256("HASH_1"),
@@ -816,16 +812,11 @@ contract BaseOracleTest is Test, Utilities {
         );
 
         vm.prank(address(consensus));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ReportDiscarded(initialRefSlot, keccak256("HASH_1"));
         oracle.discardConsensusReport(initialRefSlot);
 
-        (
-            bytes32 hash,
-            uint256 refSlot,
-            uint256 processingDeadlineTime,
-            bool processingStarted
-        ) = oracle.getConsensusReport();
+        (bytes32 hash, , , ) = oracle.getConsensusReport();
         assertEq(hash, bytes32(0));
     }
 
@@ -842,8 +833,7 @@ contract BaseOracleTest is Test, Utilities {
         vm.prank(address(consensus));
         oracle.discardConsensusReport(initialRefSlot);
 
-        (bytes32 hash, uint256 refSlot, uint256 processingDeadlineTime) = oracle
-            .lastDiscardedReport();
+        (bytes32 hash, , ) = oracle.lastDiscardedReport();
         assertEq(hash, keccak256("HASH_1"));
     }
 
@@ -861,12 +851,7 @@ contract BaseOracleTest is Test, Utilities {
             initialRefSlot,
             deadline
         );
-        (
-            bytes32 hash,
-            uint256 refSlot,
-            uint256 processingDeadlineTime,
-            bool processingStarted
-        ) = oracle.getConsensusReport();
+        (bytes32 hash, , , ) = oracle.getConsensusReport();
         assertEq(hash, keccak256("HASH_2"));
     }
 
@@ -956,7 +941,7 @@ contract BaseOracleTest is Test, Utilities {
             deadline + SECONDS_PER_EPOCH
         );
 
-        vm.expectEmit(true, true, true, true, address(oracle));
+        vm.expectEmit(address(oracle));
         emit BaseOracle.WarnProcessingMissed(initialRefSlot + SLOTS_PER_EPOCH);
         oracle.submitConsensusReport(
             keccak256("HASH_3"),
@@ -990,7 +975,7 @@ contract BaseOracleTest is Test, Utilities {
             deadline
         );
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.WarnProcessingMissed(initialRefSlot);
         oracle.submitConsensusReport(
             keccak256("HASH_2"),
@@ -1099,7 +1084,7 @@ contract BaseOracleImpl is BaseOracle {
         _checkConsensusData(refSlot, consensusVersion, hash);
     }
 
-    function checkProcessingDeadline() external {
+    function checkProcessingDeadline() external view {
         _checkProcessingDeadline(
             _storageConsensusReport().value.processingDeadlineTime
         );

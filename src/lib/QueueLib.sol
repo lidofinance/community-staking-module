@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
 import { NodeOperator } from "../interfaces/ICSModule.sol";
-import { TransientUintUintMap, TransientUintUintMapLib } from "./TransientUintUintMapLib.sol";
+import { TransientUintUintMap } from "./TransientUintUintMapLib.sol";
 
 // Batch is an uint256 as it's the internal data type used by solidity.
 // Batch is a packed value, consisting of the following fields:
@@ -58,18 +58,15 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
 }
 
 /// @dev can be unsafe if the From batch is previous to the self
-function setNext(Batch self, Batch from) pure returns (Batch) {
+function setNext(Batch self, uint128 nextIndex) pure returns (Batch) {
     assembly {
         self := or(
             and(
                 self,
                 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
             ),
-            and(
-                from,
-                0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
-            )
-        ) // self.next = from.next
+            nextIndex
+        ) // self.next = next
     }
     return self;
 }
@@ -94,8 +91,6 @@ using { noId, keys, setKeys, setNext, next, isNil, unwrap } for Batch global;
 using QueueLib for QueueLib.Queue;
 
 interface IQueueLib {
-    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
-
     error QueueIsEmpty();
     error QueueLookupNoLimit();
 }
@@ -114,45 +109,44 @@ library QueueLib {
     //////
     /// External methods
     //////
-    function normalize(
-        Queue storage self,
-        mapping(uint256 => NodeOperator) storage nodeOperators,
-        uint256 nodeOperatorId
-    ) external {
-        NodeOperator storage no = nodeOperators[nodeOperatorId];
-        uint32 depositable = no.depositableValidatorsCount;
-        uint32 enqueued = no.enqueuedCount;
-
-        if (enqueued < depositable) {
-            uint32 count;
-            unchecked {
-                count = depositable - enqueued;
-            }
-            no.enqueuedCount = depositable;
-            self.enqueue(nodeOperatorId, count);
-        }
-    }
 
     function clean(
         Queue storage self,
         mapping(uint256 => NodeOperator) storage nodeOperators,
-        uint256 maxItems
-    ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
-        if (maxItems == 0) revert IQueueLib.QueueLookupNoLimit();
+        uint256 maxItems,
+        TransientUintUintMap queueLookup
+    )
+        external
+        returns (
+            uint256 removed,
+            uint256 lastRemovedAtDepth,
+            uint256 visited,
+            bool reachedOutOfQueue
+        )
+    {
+        removed = 0;
+        lastRemovedAtDepth = 0;
+        visited = 0;
+        reachedOutOfQueue = false;
 
-        Batch prev;
+        if (maxItems == 0) {
+            revert IQueueLib.QueueLookupNoLimit();
+        }
+
+        Batch prevItem;
         uint128 indexOfPrev;
 
         uint128 head = self.head;
         uint128 curr = head;
 
-        TransientUintUintMap queueLookup = TransientUintUintMapLib.create();
-
-        for (uint256 i; i < maxItems; ++i) {
+        while (visited < maxItems) {
             Batch item = self.queue[curr];
             if (item.isNil()) {
+                reachedOutOfQueue = true;
                 break;
             }
+
+            visited++;
 
             NodeOperator storage no = nodeOperators[item.noId()];
             if (queueLookup.get(item.noId()) >= no.depositableValidatorsCount) {
@@ -164,8 +158,8 @@ library QueueLib {
                 } else {
                     // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
                     // other than changing its `next` field.
-                    prev = prev.setNext(item);
-                    self.queue[indexOfPrev] = prev;
+                    prevItem = prevItem.setNext(item.next());
+                    self.queue[indexOfPrev] = prevItem;
                 }
 
                 // We assume that the invariant `enqueuedCount` >= `keys` is kept.
@@ -173,13 +167,13 @@ library QueueLib {
                 no.enqueuedCount -= uint32(item.keys());
 
                 unchecked {
-                    lastRemovedAtDepth = i + 1;
+                    lastRemovedAtDepth = visited;
                     ++removed;
                 }
             } else {
                 queueLookup.add(item.noId(), item.keys());
                 indexOfPrev = curr;
-                prev = item;
+                prevItem = item;
             }
 
             curr = item.next();
@@ -211,7 +205,6 @@ library QueueLib {
         unchecked {
             ++self.tail;
         }
-        emit IQueueLib.BatchEnqueued(nodeOperatorId, keysCount);
     }
 
     function dequeue(Queue storage self) internal returns (Batch item) {

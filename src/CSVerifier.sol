@@ -1,14 +1,17 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
 
-import { ICSVerifier } from "./interfaces/ICSVerifier.sol";
-import { ICSModule } from "./interfaces/ICSModule.sol";
+import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 
 import { BeaconBlockHeader, Slot, Validator, Withdrawal } from "./lib/Types.sol";
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { GIndex } from "./lib/GIndex.sol";
 import { SSZ } from "./lib/SSZ.sol";
+
+import { ICSVerifier } from "./interfaces/ICSVerifier.sol";
+import { ICSModule, ValidatorWithdrawalInfo } from "./interfaces/ICSModule.sol";
 
 /// @notice Convert withdrawal amount to wei
 /// @param withdrawal Withdrawal struct
@@ -22,12 +25,15 @@ function gweiToWei(uint64 amount) pure returns (uint256) {
     return uint256(amount) * 1 gwei;
 }
 
-contract CSVerifier is ICSVerifier {
+contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
     using { amountWei } for Withdrawal;
 
     using SSZ for BeaconBlockHeader;
     using SSZ for Withdrawal;
     using SSZ for Validator;
+
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
 
     // See `BEACON_ROOTS_ADDRESS` constant in the EIP-4788.
     address public constant BEACON_ROOTS =
@@ -65,67 +71,73 @@ contract CSVerifier is ICSVerifier {
     /// @dev Staking module contract
     ICSModule public immutable MODULE;
 
-    error RootNotFound();
-    error InvalidGIndex();
-    error InvalidBlockHeader();
-    error InvalidChainConfig();
-    error PartialWithdrawal();
-    error ValidatorNotWithdrawn();
-    error InvalidWithdrawalAddress();
-    error UnsupportedSlot(Slot slot);
-    error ZeroModuleAddress();
-    error ZeroWithdrawalAddress();
-    error InvalidPivotSlot();
-
     /// @dev The previous and current forks can be essentially the same.
     constructor(
         address withdrawalAddress,
         address module,
         uint64 slotsPerEpoch,
-        GIndex gIFirstWithdrawalPrev,
-        GIndex gIFirstWithdrawalCurr,
-        GIndex gIFirstValidatorPrev,
-        GIndex gIFirstValidatorCurr,
-        GIndex gIHistoricalSummariesPrev,
-        GIndex gIHistoricalSummariesCurr,
+        GIndices memory gindices,
         Slot firstSupportedSlot,
-        Slot pivotSlot
+        Slot pivotSlot,
+        address admin
     ) {
-        if (withdrawalAddress == address(0)) revert ZeroWithdrawalAddress();
-        if (module == address(0)) revert ZeroModuleAddress();
+        if (withdrawalAddress == address(0)) {
+            revert ZeroWithdrawalAddress();
+        }
 
-        if (slotsPerEpoch == 0) revert InvalidChainConfig();
-        if (firstSupportedSlot > pivotSlot) revert InvalidPivotSlot();
+        if (module == address(0)) {
+            revert ZeroModuleAddress();
+        }
+
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
+
+        if (slotsPerEpoch == 0) {
+            revert InvalidChainConfig();
+        }
+
+        if (firstSupportedSlot > pivotSlot) {
+            revert InvalidPivotSlot();
+        }
 
         WITHDRAWAL_ADDRESS = withdrawalAddress;
         MODULE = ICSModule(module);
 
         SLOTS_PER_EPOCH = slotsPerEpoch;
 
-        GI_FIRST_WITHDRAWAL_PREV = gIFirstWithdrawalPrev;
-        GI_FIRST_WITHDRAWAL_CURR = gIFirstWithdrawalCurr;
+        GI_FIRST_WITHDRAWAL_PREV = gindices.gIFirstWithdrawalPrev;
+        GI_FIRST_WITHDRAWAL_CURR = gindices.gIFirstWithdrawalCurr;
 
-        GI_FIRST_VALIDATOR_PREV = gIFirstValidatorPrev;
-        GI_FIRST_VALIDATOR_CURR = gIFirstValidatorCurr;
+        GI_FIRST_VALIDATOR_PREV = gindices.gIFirstValidatorPrev;
+        GI_FIRST_VALIDATOR_CURR = gindices.gIFirstValidatorCurr;
 
-        GI_HISTORICAL_SUMMARIES_PREV = gIHistoricalSummariesPrev;
-        GI_HISTORICAL_SUMMARIES_CURR = gIHistoricalSummariesCurr;
+        GI_HISTORICAL_SUMMARIES_PREV = gindices.gIHistoricalSummariesPrev;
+        GI_HISTORICAL_SUMMARIES_CURR = gindices.gIHistoricalSummariesCurr;
 
         FIRST_SUPPORTED_SLOT = firstSupportedSlot;
         PIVOT_SLOT = pivotSlot;
+
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    /// @notice Verify withdrawal proof and report withdrawal to the module for valid proofs
-    /// @param beaconBlock Beacon block header
-    /// @param witness Withdrawal witness
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the validator key in the Node Operator's key storage
+    /// @inheritdoc ICSVerifier
+    function resume() external onlyRole(RESUME_ROLE) {
+        _resume();
+    }
+
+    /// @inheritdoc ICSVerifier
+    function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
+        _pauseFor(duration);
+    }
+
+    /// @inheritdoc ICSVerifier
     function processWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
         WithdrawalWitness calldata witness,
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external {
+    ) external whenResumed {
         if (beaconBlock.header.slot < FIRST_SUPPORTED_SLOT) {
             revert UnsupportedSlot(beaconBlock.header.slot);
         }
@@ -152,27 +164,25 @@ contract CSVerifier is ICSVerifier {
             pubkey: pubkey
         });
 
-        MODULE.submitWithdrawal(
+        ValidatorWithdrawalInfo[]
+            memory withdrawalsInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalsInfo[0] = ValidatorWithdrawalInfo(
             nodeOperatorId,
             keyIndex,
             withdrawalAmount,
             witness.slashed
         );
+        MODULE.submitWithdrawals(withdrawalsInfo);
     }
 
-    /// @notice Verify withdrawal proof against historical summaries data and report withdrawal to the module for valid proofs
-    /// @param beaconBlock Beacon block header
-    /// @param oldBlock Historical block header witness
-    /// @param witness Withdrawal witness
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the validator key in the Node Operator's key storage
+    /// @inheritdoc ICSVerifier
     function processHistoricalWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
         HistoricalHeaderWitness calldata oldBlock,
         WithdrawalWitness calldata witness,
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external {
+    ) external whenResumed {
         if (beaconBlock.header.slot < FIRST_SUPPORTED_SLOT) {
             revert UnsupportedSlot(beaconBlock.header.slot);
         }
@@ -221,12 +231,15 @@ contract CSVerifier is ICSVerifier {
             pubkey: pubkey
         });
 
-        MODULE.submitWithdrawal(
+        ValidatorWithdrawalInfo[]
+            memory withdrawalsInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalsInfo[0] = ValidatorWithdrawalInfo(
             nodeOperatorId,
             keyIndex,
             withdrawalAmount,
             witness.slashed
         );
+        MODULE.submitWithdrawals(withdrawalsInfo);
     }
 
     function _getParentBlockRoot(

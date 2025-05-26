@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -47,7 +47,10 @@ library AssetRecovererLib {
     function recoverEther() external {
         uint256 amount = address(this).balance;
         (bool success, ) = msg.sender.call{ value: amount }("");
-        if (!success) revert IAssetRecovererLib.FailedToSendEther();
+        if (!success) {
+            revert IAssetRecovererLib.FailedToSendEther();
+        }
+
         emit IAssetRecovererLib.EtherRecovered(msg.sender, amount);
     }
 

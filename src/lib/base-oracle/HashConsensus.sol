@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -217,15 +217,25 @@ contract HashConsensus is
         address admin,
         address reportProcessor
     ) {
-        if (slotsPerEpoch == 0) revert InvalidChainConfig();
-        if (secondsPerSlot == 0) revert InvalidChainConfig();
+        if (slotsPerEpoch == 0) {
+            revert InvalidChainConfig();
+        }
+
+        if (secondsPerSlot == 0) {
+            revert InvalidChainConfig();
+        }
 
         SLOTS_PER_EPOCH = slotsPerEpoch.toUint64();
         SECONDS_PER_SLOT = secondsPerSlot.toUint64();
         GENESIS_TIME = genesisTime.toUint64();
 
-        if (admin == address(0)) revert AdminCannotBeZero();
-        if (reportProcessor == address(0)) revert ReportProcessorCannotBeZero();
+        if (admin == address(0)) {
+            revert AdminCannotBeZero();
+        }
+
+        if (reportProcessor == address(0)) {
+            revert ReportProcessorCannotBeZero();
+        }
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
@@ -639,7 +649,9 @@ contract HashConsensus is
         uint256 fastLaneLengthSlots,
         FrameConfig memory prevConfig
     ) internal {
-        if (epochsPerFrame == 0) revert EpochsPerFrameCannotBeZero();
+        if (epochsPerFrame == 0) {
+            revert EpochsPerFrameCannotBeZero();
+        }
 
         if (fastLaneLengthSlots > epochsPerFrame * SLOTS_PER_EPOCH) {
             revert FastLanePeriodCannotBeLongerThanFrame();
@@ -784,8 +796,13 @@ contract HashConsensus is
     }
 
     function _addMember(address addr, uint256 quorum) internal {
-        if (_isMember(addr)) revert DuplicateMember();
-        if (addr == address(0)) revert AddressCannotBeZero();
+        if (_isMember(addr)) {
+            revert DuplicateMember();
+        }
+
+        if (addr == address(0)) {
+            revert AddressCannotBeZero();
+        }
 
         _memberStates.push(MemberState(0, 0));
         _memberAddresses.push(addr);
@@ -931,9 +948,17 @@ contract HashConsensus is
         bytes32 report,
         uint256 consensusVersion
     ) internal {
-        if (slot == 0) revert InvalidSlot();
-        if (slot > type(uint64).max) revert NumericOverflow();
-        if (report == ZERO_HASH) revert EmptyReport();
+        if (slot == 0) {
+            revert InvalidSlot();
+        }
+
+        if (slot > type(uint64).max) {
+            revert NumericOverflow();
+        }
+
+        if (report == ZERO_HASH) {
+            revert EmptyReport();
+        }
 
         uint256 memberIndex = _getMemberIndex(_msgSender());
         MemberState memory memberState = _memberStates[memberIndex];
@@ -951,9 +976,13 @@ contract HashConsensus is
         FrameConfig memory config = _frameConfig;
         ConsensusFrame memory frame = _getFrameAtTimestamp(timestamp, config);
 
-        if (slot != frame.refSlot) revert InvalidSlot();
-        if (currentSlot > frame.reportProcessingDeadlineSlot)
+        if (slot != frame.refSlot) {
+            revert InvalidSlot();
+        }
+
+        if (currentSlot > frame.reportProcessingDeadlineSlot) {
             revert StaleReport();
+        }
 
         if (
             currentSlot <= frame.refSlot + config.fastLaneLengthSlots &&
@@ -1161,8 +1190,13 @@ contract HashConsensus is
 
     function _setReportProcessor(address newProcessor) internal {
         address prevProcessor = _reportProcessor;
-        if (newProcessor == address(0)) revert ReportProcessorCannotBeZero();
-        if (newProcessor == prevProcessor) revert NewProcessorCannotBeTheSame();
+        if (newProcessor == address(0)) {
+            revert ReportProcessorCannotBeZero();
+        }
+
+        if (newProcessor == prevProcessor) {
+            revert NewProcessorCannotBeTheSame();
+        }
 
         _reportProcessor = newProcessor;
         emit ReportProcessorSet(newProcessor, prevProcessor);

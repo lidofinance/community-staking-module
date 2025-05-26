@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -19,6 +19,7 @@ abstract contract AssetRecoverer {
 
     /// @dev Allows sender to recover ERC20 tokens held by the contract
     /// @param token The address of the ERC20 token to recover
+    /// @param amount The amount of the ERC20 token to recover
     /// Emits an ERC20Recovered event upon success
     /// Optionally, the inheriting contract can override this function to add additional restrictions
     function recoverERC20(address token, uint256 amount) external virtual {

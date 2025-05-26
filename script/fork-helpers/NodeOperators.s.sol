@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -9,7 +9,7 @@ import { ForkHelpersCommon } from "./Common.sol";
 import "../../src/interfaces/IVEBO.sol";
 import { Utilities } from "../../test/helpers/Utilities.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
-import { NodeOperator } from "../../src/interfaces/ICSModule.sol";
+import { NodeOperator, ValidatorWithdrawalInfo } from "../../src/interfaces/ICSModule.sol";
 
 contract NodeOperators is
     Script,
@@ -136,6 +136,7 @@ contract NodeOperators is
         bytes memory keys = randomBytes(48 * keysCount);
         bytes memory signatures = randomBytes(96 * keysCount);
         csm.addValidatorKeysETH{ value: amount }(
+            msg.sender,
             noId,
             keysCount,
             keys,
@@ -192,21 +193,6 @@ contract NodeOperators is
         assertEq(csm.getNodeOperator(noId).totalExitedKeys, exitedKeysCount);
     }
 
-    function stuck(
-        uint256 noId,
-        uint256 stuckKeysCount
-    ) external broadcastStakingRouter {
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(uint64(noId))),
-            bytes.concat(bytes16(uint128(stuckKeysCount)))
-        );
-
-        assertEq(
-            csm.getNodeOperator(noId).stuckValidatorsCount,
-            stuckKeysCount
-        );
-    }
-
     function withdraw(
         uint256 noId,
         uint256 keyIndex,
@@ -214,18 +200,21 @@ contract NodeOperators is
     ) external broadcastVerifier {
         uint256 withdrawnBefore = csm.getNodeOperator(noId).totalWithdrawnKeys;
 
-        csm.submitWithdrawal(noId, keyIndex, amount, false);
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            amount,
+            false
+        );
+        csm.submitWithdrawals(withdrawalInfo);
 
         assertTrue(csm.isValidatorWithdrawn(noId, keyIndex));
         assertEq(
             csm.getNodeOperator(noId).totalWithdrawnKeys,
             withdrawnBefore + 1
         );
-    }
-
-    function slash(uint256 noId, uint256 keyIndex) external broadcastVerifier {
-        csm.submitInitialSlashing(noId, keyIndex);
-        assertTrue(csm.isValidatorSlashed(noId, keyIndex));
     }
 
     function targetLimit(
@@ -255,7 +244,11 @@ contract NodeOperators is
         uint256 lockedAfter = accounting.getActualLockedBond(noId);
         assertEq(
             lockedAfter,
-            lockedBefore + amount + csm.EL_REWARDS_STEALING_FINE()
+            lockedBefore +
+                amount +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(
+                    accounting.getBondCurveId(noId)
+                )
         );
     }
 
@@ -301,7 +294,7 @@ contract NodeOperators is
 
         bytes3 moduleId = bytes3(uint24(_getCSMId()));
         bytes5 nodeOpId = bytes5(uint40(noId));
-        bytes8 validatorIndex = bytes8(uint64(validatorIndex));
+        bytes8 _validatorIndex = bytes8(uint64(validatorIndex));
 
         (, uint256 refSlot, , ) = vebo.getConsensusReport();
         uint256 reportRefSlot = refSlot + 1;
@@ -309,7 +302,7 @@ contract NodeOperators is
         data = abi.encodePacked(
             moduleId,
             nodeOpId,
-            validatorIndex,
+            _validatorIndex,
             validatorPubKey
         );
         IVEBO.ReportData memory report = IVEBO.ReportData({

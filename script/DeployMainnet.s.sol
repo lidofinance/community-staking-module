@@ -1,10 +1,11 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
 
 import { DeployBase } from "./DeployBase.s.sol";
-import { GIndex } from "../src/lib/GIndex.sol";
+import { GIndicies } from "./constants/GIndicies.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 contract DeployMainnet is DeployBase {
     constructor() DeployBase("mainnet", 1) {
@@ -21,10 +22,9 @@ contract DeployMainnet is DeployBase {
         config.clGenesisTime = 1606824023; // https://github.com/eth-clients/mainnet/blob/f6b7882618a5ad2c1d2731ae35e5d16a660d5bb7/README.md?plain=1#L10
         config.oracleReportEpochsPerFrame = 225 * 28; // 28 days
         config.fastLaneLengthSlots = 1800;
-        config.consensusVersion = 1;
-        config.avgPerfLeewayBP = 500;
+        config.consensusVersion = 3;
         config.oracleMembers = new address[](9);
-        config.oracleMembers[0] = 0x140Bd8FbDc884f48dA7cb1c09bE8A2fAdfea776E; // Chorus One
+        config.oracleMembers[0] = 0x73181107c8D9ED4ce0bbeF7A0b4ccf3320C41d12; // Instadapp
         config.oracleMembers[1] = 0xA7410857ABbf75043d61ea54e07D57A6EB6EF186; // Kyber Network
         config.oracleMembers[2] = 0x404335BcE530400a5814375E7Ec1FB55fAff3eA2; // Staking Facilities
         config.oracleMembers[3] = 0x946D3b081ed19173dC83Cd974fC69e1e760B7d78; // Stakefish
@@ -32,57 +32,89 @@ contract DeployMainnet is DeployBase {
         config.oracleMembers[5] = 0xc79F702202E3A6B0B6310B537E786B9ACAA19BAf; // Chainlayer
         config.oracleMembers[6] = 0x61c91ECd902EB56e314bB2D5c5C07785444Ea1c8; // bloXroute
         config.oracleMembers[7] = 0xe57B3792aDCc5da47EF4fF588883F0ee0c9835C9; // MatrixedLink
-        config.oracleMembers[8] = 0x73181107c8D9ED4ce0bbeF7A0b4ccf3320C41d12; // Instadapp
+        config.oracleMembers[8] = 0x285f8537e1dAeEdaf617e96C742F2Cf36d63CcfB; // Chorus One
         config.hashConsensusQuorum = 5;
+
         // Verifier
-        // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
-        // Check using `yarn run gindex`
-        config.gIFirstWithdrawal = GIndex.wrap(
-            0x0000000000000000000000000000000000000000000000000000000000e1c004
-        );
-        config.gIFirstValidator = GIndex.wrap(
-            0x0000000000000000000000000000000000000000000000000056000000000028
-        );
-        config.gIHistoricalSummaries = GIndex.wrap(
-            0x0000000000000000000000000000000000000000000000000000000000003b00
-        );
-
+        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_CAPELLA;
+        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_CAPELLA;
+        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_CAPELLA;
         config.verifierSupportedEpoch = 269568;
-        // Accounting
-        config.maxCurveLength = 10;
-        config.bondCurve = new uint256[](2);
-        // 2.4 -> 1.3
-        config.bondCurve[0] = 2.4 ether;
-        config.bondCurve[1] = 3.7 ether;
 
-        config.minBondLockRetentionPeriod = 4 weeks;
-        config.maxBondLockRetentionPeriod = 365 days;
-        config.bondLockRetentionPeriod = 8 weeks;
+        // Accounting
+        // 2.4 -> 1.3
+        config.bondCurve.push([1, 2.4 ether]);
+        config.bondCurve.push([2, 1.3 ether]);
+
+        config.minBondLockPeriod = 4 weeks;
+        config.maxBondLockPeriod = 365 days;
+        config.bondLockPeriod = 8 weeks;
         config
             .setResetBondCurveAddress = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config
             .chargePenaltyRecipient = 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c; // locator.treasury()
+
         // Module
+        config.stakingModuleId = 3;
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
-        config.minSlashingPenaltyQuotient = 32;
-        config.elRewardsStealingFine = 0.1 ether;
-        config.maxKeysPerOperatorEA = 12; // 12 EA vals will result in approx 16 ETH worth of bond
-        config.maxKeyRemovalCharge = 0.1 ether;
-        config.keyRemovalCharge = 0.05 ether;
         config
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
-        // EarlyAdoption
+
+        // CSParameters
+        config.keyRemovalCharge = 0.05 ether;
+        config.elRewardsStealingAdditionalFine = 0.1 ether;
+        config.keysLimit = type(uint256).max;
+        config.avgPerfLeewayBP = 450;
+        config.rewardShareBP = 10000;
+        config.strikesLifetimeFrames = 6;
+        config.strikesThreshold = 3;
+        config.queueLowestPriority = 5;
+        config.defaultQueuePriority = 5;
+        config.defaultQueueMaxDeposits = type(uint32).max;
+        config.badPerformancePenalty = 0.1 ether; // TODO: to be reviewed
+        config.attestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
+        config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
+        config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
+
+        // VettedGate
         config
-            .earlyAdoptionTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
-        config.earlyAdoptionBondCurve = new uint256[](2);
+            .identifiedCommunityStakersGateManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
+        config
+            .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
+        config.identifiedCommunityStakersGateTreeCid = "someCid"; // TODO: to be set in the future
         // 1.5 -> 1.3
-        config.earlyAdoptionBondCurve[0] = 1.5 ether;
-        config.earlyAdoptionBondCurve[1] = 2.8 ether;
+        config.identifiedCommunityStakersGateBondCurve.push([1, 1.5 ether]);
+        config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
+
+        // Parameters for Identified Community Staker type
+        // TODO: Set proper values bellow
+        config.identifiedCommunityStakersGateKeyRemovalCharge = 0.01 ether;
+        config
+            .identifiedCommunityStakersGateELRewardsStealingAdditionalFine = 0.05 ether;
+        config.identifiedCommunityStakersGateKeysLimit = type(uint248).max;
+        config.identifiedCommunityStakersGateAvgPerfLeewayData.push([1, 500]);
+        config.identifiedCommunityStakersGateRewardShareData.push([1, 10000]);
+        config.identifiedCommunityStakersGateRewardShareData.push([17, 5834]);
+        config.identifiedCommunityStakersGateStrikesLifetimeFrames = 8;
+        config.identifiedCommunityStakersGateStrikesThreshold = 4;
+        config.identifiedCommunityStakersGateQueuePriority = 0;
+        config.identifiedCommunityStakersGateQueueMaxDeposits = 10;
+        config.identifiedCommunityStakersGateBadPerformancePenalty = 0.05 ether;
+        config.identifiedCommunityStakersGateAttestationsWeight = 60;
+        config.identifiedCommunityStakersGateBlocksWeight = 4;
+        config.identifiedCommunityStakersGateSyncWeight = 0;
+        config.identifiedCommunityStakersGateAllowedExitDelay = 8 days;
+        config.identifiedCommunityStakersGateExitDelayPenalty = 0.05 ether;
+        config
+            .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.05 ether;
 
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
         config.sealingCommittee = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
-        config.sealDuration = 6 days;
+        config.sealDuration = 11 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
         _setUp();

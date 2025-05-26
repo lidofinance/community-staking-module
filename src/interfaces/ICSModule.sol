@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -8,6 +8,11 @@ import { ICSAccounting } from "./ICSAccounting.sol";
 import { IQueueLib } from "../lib/QueueLib.sol";
 import { INOAddresses } from "../lib/NOAddresses.sol";
 import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
+import { Batch } from "../lib/QueueLib.sol";
+import { ILidoLocator } from "./ILidoLocator.sol";
+import { IStETH } from "./IStETH.sol";
+import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
+import { ICSExitPenalties } from "./ICSExitPenalties.sol";
 
 struct NodeOperator {
     // All the counters below are used together e.g. in the _updateDepositableValidatorsCount
@@ -26,6 +31,7 @@ struct NodeOperator {
     /* 4 */ address rewardAddress;
     /* 5 */ address proposedRewardAddress;
     /* 5 */ bool extendedManagerPermissions;
+    /* 5 */ bool usedPriorityQueue;
 }
 
 struct NodeOperatorManagementProperties {
@@ -34,31 +40,386 @@ struct NodeOperatorManagementProperties {
     bool extendedManagerPermissions;
 }
 
+struct ValidatorWithdrawalInfo {
+    uint256 nodeOperatorId; // @dev ID of the Node Operator
+    uint256 keyIndex; // @dev Index of the withdrawn key in the Node Operator's keys storage
+    uint256 amount; // @dev Amount of withdrawn ETH in wei
+    bool isSlashed; // @dev If validator is slashed or not
+}
+
 /// @title Lido's Community Staking Module interface
 interface ICSModule is
-    IStakingModule,
     IQueueLib,
     INOAddresses,
-    IAssetRecovererLib
+    IAssetRecovererLib,
+    IStakingModule
 {
+    error CannotAddKeys();
     error NodeOperatorDoesNotExist();
-    error ZeroRewardAddress();
+    error SenderIsNotEligible();
+    error InvalidVetKeysPointer();
+    error ExitedKeysHigherThanTotalDeposited();
+    error ExitedKeysDecrease();
 
-    /// @notice Gets node operator non-withdrawn keys
-    /// @param nodeOperatorId ID of the node operator
+    error InvalidInput();
+    error NotEnoughKeys();
+    error PriorityQueueAlreadyUsed();
+
+    error KeysLimitExceeded();
+    error SigningKeysInvalidOffset();
+
+    error AlreadyWithdrawn();
+
+    error InvalidAmount();
+
+    error ZeroLocatorAddress();
+    error ZeroAccountingAddress();
+    error ZeroExitPenaltiesAddress();
+    error ZeroAdminAddress();
+    error ZeroSenderAddress();
+    error ZeroParametersRegistryAddress();
+
+    event NodeOperatorAdded(
+        uint256 indexed nodeOperatorId,
+        address indexed managerAddress,
+        address indexed rewardAddress,
+        bool extendedManagerPermissions
+    );
+    event ReferrerSet(uint256 indexed nodeOperatorId, address indexed referrer);
+    event DepositableSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 depositableKeysCount
+    );
+    event VettedSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 vettedKeysCount
+    );
+    event VettedSigningKeysCountDecreased(uint256 indexed nodeOperatorId);
+    event DepositedSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 depositedKeysCount
+    );
+    event ExitedSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 exitedKeysCount
+    );
+    event TotalSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 totalKeysCount
+    );
+    event TargetValidatorsCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 targetLimitMode,
+        uint256 targetValidatorsCount
+    );
+    event WithdrawalSubmitted(
+        uint256 indexed nodeOperatorId,
+        uint256 keyIndex,
+        uint256 amount,
+        bytes pubkey
+    );
+
+    event BatchEnqueued(
+        uint256 indexed queuePriority,
+        uint256 indexed nodeOperatorId,
+        uint256 count
+    );
+
+    event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId);
+    event ELRewardsStealingPenaltyReported(
+        uint256 indexed nodeOperatorId,
+        bytes32 proposedBlockHash,
+        uint256 stolenAmount
+    );
+    event ELRewardsStealingPenaltyCancelled(
+        uint256 indexed nodeOperatorId,
+        uint256 amount
+    );
+    event ELRewardsStealingPenaltyCompensated(
+        uint256 indexed nodeOperatorId,
+        uint256 amount
+    );
+    event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
+
+    function PAUSE_ROLE() external view returns (bytes32);
+
+    function RESUME_ROLE() external view returns (bytes32);
+
+    function STAKING_ROUTER_ROLE() external view returns (bytes32);
+
+    function REPORT_EL_REWARDS_STEALING_PENALTY_ROLE()
+        external
+        view
+        returns (bytes32);
+
+    function SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE()
+        external
+        view
+        returns (bytes32);
+
+    function VERIFIER_ROLE() external view returns (bytes32);
+
+    function RECOVERER_ROLE() external view returns (bytes32);
+
+    function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
+
+    function DEPOSIT_SIZE() external view returns (uint256);
+
+    function LIDO_LOCATOR() external view returns (ILidoLocator);
+
+    function STETH() external view returns (IStETH);
+
+    function PARAMETERS_REGISTRY()
+        external
+        view
+        returns (ICSParametersRegistry);
+
+    function ACCOUNTING() external view returns (ICSAccounting);
+
+    function EXIT_PENALTIES() external view returns (ICSExitPenalties);
+
+    function FEE_DISTRIBUTOR() external view returns (address);
+
+    function QUEUE_LOWEST_PRIORITY() external view returns (uint256);
+
+    function QUEUE_LEGACY_PRIORITY() external view returns (uint256);
+
+    /// @notice Returns the address of the accounting contract
+    function accounting() external view returns (ICSAccounting);
+
+    /// @notice Pause creation of the Node Operators and keys upload for `duration` seconds.
+    ///         Existing NO management and reward claims are still available.
+    ///         To pause reward claims use pause method on CSAccounting
+    /// @param duration Duration of the pause in seconds
+    function pauseFor(uint256 duration) external;
+
+    /// @notice Resume creation of the Node Operators and keys upload
+    function resume() external;
+
+    /// @notice Returns the initialized version of the contract
+    function getInitializedVersion() external view returns (uint64);
+
+    /// @notice Permissioned method to add a new Node Operator
+    ///         Should be called by `*Gate.sol` contracts. See `PermissionlessGate.sol` and `VettedGate.sol` for examples
+    /// @param from Sender address. Initial sender address to be used as a default manager and reward addresses.
+    ///     Gates must pass the correct address in order to specify which address should be the owner of the Node Operator
+    /// @param managementProperties Optional. Management properties to be used for the Node Operator.
+    ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `from` will be used.
+    ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `from` will be used.
+    ///                             extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`.
+    ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
+    /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
+    function createNodeOperator(
+        address from,
+        NodeOperatorManagementProperties memory managementProperties,
+        address referrer
+    ) external returns (uint256 nodeOperatorId);
+
+    /// @notice Add new keys to the existing Node Operator using ETH as a bond
+    /// @param from Sender address. Commonly equals to `msg.sender` except for the case of Node Operator creation by `*Gate.sol` contracts
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keysCount Signing keys count
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
+    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
+    function addValidatorKeysETH(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes memory publicKeys,
+        bytes memory signatures
+    ) external payable;
+
+    /// @notice Add new keys to the existing Node Operator using stETH as a bond
+    /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
+    /// @param from Sender address. Commonly equals to `msg.sender` except for the case of Node Operator creation by `*Gate.sol` contracts
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keysCount Signing keys count
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
+    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
+    /// @param permit Optional. Permit to use stETH as bond
+    function addValidatorKeysStETH(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes memory publicKeys,
+        bytes memory signatures,
+        ICSAccounting.PermitInput memory permit
+    ) external;
+
+    /// @notice Add new keys to the existing Node Operator using wstETH as a bond
+    /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
+    /// @param from Sender address. Commonly equals to `msg.sender` except for the case of Node Operator creation by `*Gate.sol` contracts
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keysCount Signing keys count
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
+    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
+    /// @param permit Optional. Permit to use wstETH as bond
+    function addValidatorKeysWstETH(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes memory publicKeys,
+        bytes memory signatures,
+        ICSAccounting.PermitInput memory permit
+    ) external;
+
+    /// @notice Report EL rewards stealing for the given Node Operator
+    /// @notice The final locked amount will be equal to the stolen funds plus EL stealing additional fine
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param blockHash Execution layer block hash of the proposed block with EL rewards stealing
+    /// @param amount Amount of stolen EL rewards in ETH
+    function reportELRewardsStealingPenalty(
+        uint256 nodeOperatorId,
+        bytes32 blockHash,
+        uint256 amount
+    ) external;
+
+    /// @notice Compensate EL rewards stealing penalty for the given Node Operator to prevent further validator exits
+    /// @dev Can only be called by the Node Operator manager
+    /// @param nodeOperatorId ID of the Node Operator
+    function compensateELRewardsStealingPenalty(
+        uint256 nodeOperatorId
+    ) external payable;
+
+    /// @notice Cancel previously reported and not settled EL rewards stealing penalty for the given Node Operator
+    /// @notice The funds will be unlocked
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param amount Amount of penalty to cancel
+    function cancelELRewardsStealingPenalty(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external;
+
+    /// @notice Settle locked bond for the given Node Operators
+    /// @dev SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE role is expected to be assigned to Easy Track
+    /// @param nodeOperatorIds IDs of the Node Operators
+    function settleELRewardsStealingPenalty(
+        uint256[] memory nodeOperatorIds
+    ) external;
+
+    /// @notice Propose a new manager address for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param proposedAddress Proposed manager address
+    function proposeNodeOperatorManagerAddressChange(
+        uint256 nodeOperatorId,
+        address proposedAddress
+    ) external;
+
+    /// @notice Confirm a new manager address for the Node Operator.
+    ///         Should be called from the currently proposed address
+    /// @param nodeOperatorId ID of the Node Operator
+    function confirmNodeOperatorManagerAddressChange(
+        uint256 nodeOperatorId
+    ) external;
+
+    /// @notice Reset the manager address to the reward address.
+    ///         Should be called from the reward address
+    /// @param nodeOperatorId ID of the Node Operator
+    function resetNodeOperatorManagerAddress(uint256 nodeOperatorId) external;
+
+    /// @notice Propose a new reward address for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param proposedAddress Proposed reward address
+    function proposeNodeOperatorRewardAddressChange(
+        uint256 nodeOperatorId,
+        address proposedAddress
+    ) external;
+
+    /// @notice Confirm a new reward address for the Node Operator.
+    ///         Should be called from the currently proposed address
+    /// @param nodeOperatorId ID of the Node Operator
+    function confirmNodeOperatorRewardAddressChange(
+        uint256 nodeOperatorId
+    ) external;
+
+    /// @notice Change rewardAddress if extendedManagerPermissions is enabled for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param newAddress Proposed reward address
+    function changeNodeOperatorRewardAddress(
+        uint256 nodeOperatorId,
+        address newAddress
+    ) external;
+
+    /// @notice Get the pointers to the head and tail of queue with the given priority.
+    /// @param queuePriority Priority of the queue to get the pointers.
+    /// @return head Pointer to the head of the queue.
+    /// @return tail Pointer to the tail of the queue.
+    function depositQueuePointers(
+        uint256 queuePriority
+    ) external view returns (uint128 head, uint128 tail);
+
+    /// @notice Get the deposit queue item by an index
+    /// @param queuePriority Priority of the queue to get an item from
+    /// @param index Index of a queue item
+    /// @return Deposit queue item from the priority queue
+    function depositQueueItem(
+        uint256 queuePriority,
+        uint128 index
+    ) external view returns (Batch);
+
+    /// @notice Clean the deposit queue from batches with no depositable keys
+    /// @dev Use **eth_call** to check how many items will be removed
+    /// @param maxItems How many queue items to review
+    /// @return removed Count of batches to be removed by visiting `maxItems` batches
+    /// @return lastRemovedAtDepth The value to use as `maxItems` to remove `removed` batches if the static call of the method was used
+    function cleanDepositQueue(
+        uint256 maxItems
+    ) external returns (uint256 removed, uint256 lastRemovedAtDepth);
+
+    /// @notice Update depositable validators data and enqueue all unqueued keys for the given Node Operator
+    /// @notice Unqueued stands for vetted but not enqueued keys
+    /// @param nodeOperatorId ID of the Node Operator
+    function updateDepositableValidatorsCount(uint256 nodeOperatorId) external;
+
+    /// Performs a one-time migration of allocated seats from the legacy queue to a priority queue
+    /// for an eligible node operator. This is possible, e.g., in the following scenario: A node
+    /// operator with EA curve added their keys before CSM v2 and has no deposits due to a very long
+    /// queue. The EA curve gives the node operator the ability to get some count of deposits through
+    /// the priority queue. So, by calling the migration method, the node operator can obtain seats
+    /// in the priority queue even though they already have seats in the legacy queue.
+    /// @param nodeOperatorId ID of the Node Operator
+    function migrateToPriorityQueue(uint256 nodeOperatorId) external;
+
+    /// @notice Get Node Operator info
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Node Operator info
+    function getNodeOperator(
+        uint256 nodeOperatorId
+    ) external view returns (NodeOperator memory);
+
+    /// @notice Get Node Operator management properties
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Node Operator management properties
+    function getNodeOperatorManagementProperties(
+        uint256 nodeOperatorId
+    ) external view returns (NodeOperatorManagementProperties memory);
+
+    /// @notice Get Node Operator owner. Owner is manager address if `extendedManagerPermissions` is enabled and reward address otherwise
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Node Operator owner
+    function getNodeOperatorOwner(
+        uint256 nodeOperatorId
+    ) external view returns (address);
+
+    /// @notice Get Node Operator non-withdrawn keys
+    /// @param nodeOperatorId ID of the Node Operator
     /// @return Non-withdrawn keys count
     function getNodeOperatorNonWithdrawnKeys(
         uint256 nodeOperatorId
     ) external view returns (uint256);
 
-    /// @notice Returns the node operator by id
-    /// @param nodeOperatorId Node Operator id
-    function getNodeOperator(
+    /// @notice Get Node Operator total deposited keys
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Total deposited keys count
+    function getNodeOperatorTotalDepositedKeys(
         uint256 nodeOperatorId
-    ) external view returns (NodeOperator memory);
+    ) external view returns (uint256);
 
-    /// @notice Gets node operator signing keys
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Get Node Operator signing keys
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key
     /// @param keysCount Count of keys to get
     /// @return Signing keys
@@ -68,49 +429,43 @@ interface ICSModule is
         uint256 keysCount
     ) external view returns (bytes memory);
 
-    /// @notice Gets node operator signing keys with signatures
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Get Node Operator signing keys with signatures
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key
     /// @param keysCount Count of keys to get
     /// @return keys Signing keys
-    /// @return signatures Signatures of (deposit_message, domain) tuples
+    /// @return signatures Signatures of `(deposit_message_root, domain)` tuples
+    ///                    https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     function getSigningKeysWithSignatures(
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount
     ) external view returns (bytes memory keys, bytes memory signatures);
 
-    /// @notice Report node operator's key as slashed and apply initial slashing penalty.
-    /// @param nodeOperatorId Operator ID in the module.
-    /// @param keyIndex Index of the slashed key in the node operator's keys.
-    function submitInitialSlashing(
+    /// @notice Report Node Operator's keys as withdrawn and settle withdrawn amount
+    /// @notice Called by `CSVerifier` contract.
+    ///         See `CSVerifier.processWithdrawalProof` to use this method permissionless
+    /// @param withdrawalsInfo An array for the validator withdrawals info structs
+    function submitWithdrawals(
+        ValidatorWithdrawalInfo[] calldata withdrawalsInfo
+    ) external;
+
+    /// @notice Check if the given Node Operator's key is reported as withdrawn
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex index of the key to check
+    /// @return Is validator reported as withdrawn or not
+    function isValidatorWithdrawn(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external;
+    ) external view returns (bool);
 
-    /// @notice Report node operator's key as withdrawn and settle withdrawn amount.
-    /// @param nodeOperatorId Operator ID in the module.
-    /// @param keyIndex Index of the withdrawn key in the node operator's keys.
-    /// @param amount Amount of withdrawn ETH in wei.
-    /// @param isSlashed Validator is slashed or not
-    function submitWithdrawal(
+    /// @notice Remove keys for the Node Operator and confiscate removal charge for each deleted key
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param startIndex Index of the first key
+    /// @param keysCount Keys count to delete
+    function removeKeys(
         uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256 amount,
-        bool isSlashed
+        uint256 startIndex,
+        uint256 keysCount
     ) external;
-
-    function depositWstETH(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount,
-        ICSAccounting.PermitInput calldata permit
-    ) external;
-
-    function depositStETH(
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        ICSAccounting.PermitInput calldata permit
-    ) external;
-
-    function depositETH(uint256 nodeOperatorId) external payable;
 }

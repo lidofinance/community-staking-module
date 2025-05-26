@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -49,7 +49,7 @@ contract AssetRecovererTest is Test, Utilities {
         vm.deal(address(recoverer), 1 ether);
 
         vm.prank(actor);
-        vm.expectEmit(true, true, true, true, address(recoverer));
+        vm.expectEmit(address(recoverer));
         emit IAssetRecovererLib.EtherRecovered(actor, 1 ether);
         recoverer.recoverEther();
 
@@ -78,7 +78,7 @@ contract AssetRecovererTest is Test, Utilities {
         token.mint(address(recoverer), 1000);
 
         vm.prank(actor);
-        vm.expectEmit(true, true, true, true, address(recoverer));
+        vm.expectEmit(address(recoverer));
         emit IAssetRecovererLib.ERC20Recovered(address(token), actor, 1000);
         recoverer.recoverERC20(address(token), 1000);
 
@@ -100,7 +100,7 @@ contract AssetRecovererTest is Test, Utilities {
         token.mint(address(recoverer), 0);
 
         vm.prank(actor);
-        vm.expectEmit(true, true, true, true, address(recoverer));
+        vm.expectEmit(address(recoverer));
         emit IAssetRecovererLib.ERC721Recovered(address(token), 0, actor);
         recoverer.recoverERC721(address(token), 0);
 
@@ -121,7 +121,7 @@ contract AssetRecovererTest is Test, Utilities {
         token.mint(address(recoverer), 0, 10, "");
 
         vm.prank(actor);
-        vm.expectEmit(true, true, true, true, address(recoverer));
+        vm.expectEmit(address(recoverer));
         emit IAssetRecovererLib.ERC1155Recovered(address(token), 0, actor, 10);
         recoverer.recoverERC1155(address(token), 0);
 

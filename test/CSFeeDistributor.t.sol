@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -10,6 +10,7 @@ import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { IStETH } from "../src/interfaces/IStETH.sol";
+import { ICSFeeDistributor } from "../src/interfaces/ICSFeeDistributor.sol";
 
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { MerkleTree } from "./helpers/MerkleTree.sol";
@@ -31,6 +32,7 @@ contract CSFeeDistributorTestBase is
 
     address internal stranger;
     address internal oracle;
+    address internal rebateRecipient;
     CSFeeDistributor internal feeDistributor;
     Stub internal csm;
     Stub internal accounting;
@@ -49,6 +51,7 @@ contract CSFeeDistributorConstructorTest is CSFeeDistributorTestBase {
     function setUp() public {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
+        rebateRecipient = nextAddress("REBATE_RECIPIENT");
         csm = new Stub();
         accounting = new Stub();
 
@@ -75,21 +78,21 @@ contract CSFeeDistributorConstructorTest is CSFeeDistributorTestBase {
         );
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        feeDistributor.initialize(address(this));
+        feeDistributor.initialize(address(this), rebateRecipient);
     }
 
-    function test_initialize_RevertWhen_ZeroAccountingAddress() public {
-        vm.expectRevert(CSFeeDistributor.ZeroAccountingAddress.selector);
+    function test_constructor_RevertWhen_ZeroAccountingAddress() public {
+        vm.expectRevert(ICSFeeDistributor.ZeroAccountingAddress.selector);
         new CSFeeDistributor(address(stETH), address(0), oracle);
     }
 
-    function test_initialize_RevertWhen_ZeroStEthAddress() public {
-        vm.expectRevert(CSFeeDistributor.ZeroStEthAddress.selector);
+    function test_constructor_RevertWhen_ZeroStEthAddress() public {
+        vm.expectRevert(ICSFeeDistributor.ZeroStEthAddress.selector);
         new CSFeeDistributor(address(0), address(accounting), oracle);
     }
 
-    function test_initialize_RevertWhen_ZeroOracleAddress() public {
-        vm.expectRevert(CSFeeDistributor.ZeroOracleAddress.selector);
+    function test_constructor_RevertWhen_ZeroOracleAddress() public {
+        vm.expectRevert(ICSFeeDistributor.ZeroOracleAddress.selector);
         new CSFeeDistributor(address(stETH), address(accounting), address(0));
     }
 }
@@ -98,6 +101,7 @@ contract CSFeeDistributorInitTest is CSFeeDistributorTestBase {
     function setUp() public {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
+        rebateRecipient = nextAddress("REBATE_RECIPIENT");
         csm = new Stub();
         accounting = new Stub();
 
@@ -110,11 +114,53 @@ contract CSFeeDistributorInitTest is CSFeeDistributorTestBase {
         );
     }
 
+    function test_initialize() public {
+        _enableInitializers(address(feeDistributor));
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.RebateRecipientSet(rebateRecipient);
+        feeDistributor.initialize(address(this), rebateRecipient);
+
+        vm.assertTrue(
+            feeDistributor.hasRole(
+                feeDistributor.DEFAULT_ADMIN_ROLE(),
+                address(this)
+            )
+        );
+        assertEq(feeDistributor.rebateRecipient(), rebateRecipient);
+        assertEq(feeDistributor.getInitializedVersion(), 2);
+    }
+
     function test_initialize_RevertWhen_zeroAdmin() public {
         _enableInitializers(address(feeDistributor));
 
-        vm.expectRevert(CSFeeDistributor.ZeroAdminAddress.selector);
-        feeDistributor.initialize(address(0));
+        vm.expectRevert(ICSFeeDistributor.ZeroAdminAddress.selector);
+        feeDistributor.initialize(address(0), rebateRecipient);
+    }
+
+    function test_initialize_RevertWhen_zeroRebateRecipient() public {
+        _enableInitializers(address(feeDistributor));
+
+        vm.expectRevert(ICSFeeDistributor.ZeroRebateRecipientAddress.selector);
+        feeDistributor.initialize(address(this), address(0));
+    }
+
+    function test_finalizeUpgradeV2() public {
+        _enableInitializers(address(feeDistributor));
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.RebateRecipientSet(rebateRecipient);
+        feeDistributor.finalizeUpgradeV2(rebateRecipient);
+
+        assertEq(feeDistributor.rebateRecipient(), rebateRecipient);
+        assertEq(feeDistributor.getInitializedVersion(), 2);
+    }
+
+    function test_finalizeUpgradeV2_RevertWhen_zeroRebateRecipient() public {
+        _enableInitializers(address(feeDistributor));
+
+        vm.expectRevert(ICSFeeDistributor.ZeroRebateRecipientAddress.selector);
+        feeDistributor.finalizeUpgradeV2(address(0));
     }
 }
 
@@ -122,6 +168,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
     function setUp() public {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
+        rebateRecipient = nextAddress("REBATE_RECIPIENT");
         csm = new Stub();
         accounting = new Stub();
 
@@ -134,7 +181,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         );
 
         _enableInitializers(address(feeDistributor));
-        feeDistributor.initialize(address(this));
+        feeDistributor.initialize(address(this), rebateRecipient);
 
         tree = new MerkleTree();
 
@@ -143,10 +190,16 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         vm.label(address(csm), "CSM");
     }
 
+    function test_getInitializedVersion() public view {
+        assertEq(feeDistributor.getInitializedVersion(), 2);
+    }
+
     function test_distributeFeesHappyPath() public assertInvariants {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
+        uint256 refSlot = 154;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
@@ -156,17 +209,19 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
 
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit CSFeeDistributor.FeeDistributed(nodeOperatorId, shares);
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.OperatorFeeDistributed(nodeOperatorId, shares);
 
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
 
         assertEq(stETH.sharesOf(address(accounting)), shares);
@@ -178,7 +233,9 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
     {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
+        uint256 refSlot = 154;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
@@ -188,13 +245,15 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
 
         uint256 sharesToDistribute = feeDistributor.getFeesToDistribute({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
 
         assertEq(sharesToDistribute, shares);
@@ -206,7 +265,9 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
     {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
+        uint256 refSlot = 154;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
@@ -216,20 +277,22 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
 
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
 
         uint256 sharesToDistribute = feeDistributor.getFeesToDistribute({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
 
         assertEq(sharesToDistribute, 0);
@@ -245,12 +308,91 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             .sig("treeRoot()")
             .checked_write(feeDistributor.hashLeaf(noId, shares));
 
-        vm.expectRevert(CSFeeDistributor.InvalidProof.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidProof.selector);
         feeDistributor.getFeesToDistribute({
             proof: new bytes32[](0),
             nodeOperatorId: noId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
+    }
+
+    function test_getHistoricalDistributionData() public {
+        uint256 shares = 100;
+        uint256 rebate = 10;
+        uint256 refSlot = 154;
+        bytes32 root = someBytes32();
+        string memory treeCid = someCIDv0();
+        string memory logCid = someCIDv0();
+
+        stETH.mintShares(address(feeDistributor), shares + rebate);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(
+            root,
+            treeCid,
+            logCid,
+            shares,
+            rebate,
+            refSlot
+        );
+
+        ICSFeeDistributor.DistributionData memory data = feeDistributor
+            .getHistoricalDistributionData(0);
+
+        assertEq(data.refSlot, refSlot);
+        assertEq(data.treeRoot, root);
+        assertEq(data.treeCid, treeCid);
+        assertEq(data.logCid, logCid);
+        assertEq(data.distributed, shares);
+        assertEq(data.rebate, rebate);
+    }
+
+    function test_getHistoricalDistributionData_multipleRecords() public {
+        uint256 shares = 100;
+        uint256 rebate = 0;
+        uint256 refSlot = 154;
+        bytes32 root = someBytes32();
+        string memory treeCid = someCIDv0();
+        string memory logCid = someCIDv0();
+        stETH.mintShares(address(feeDistributor), shares + rebate);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(
+            root,
+            treeCid,
+            logCid,
+            shares,
+            rebate,
+            refSlot
+        );
+
+        shares = 120;
+        rebate = 10;
+        refSlot = 155;
+        root = someBytes32();
+        treeCid = someCIDv0();
+        logCid = someCIDv0();
+
+        stETH.mintShares(address(feeDistributor), shares + rebate);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(
+            root,
+            treeCid,
+            logCid,
+            shares,
+            rebate,
+            refSlot
+        );
+
+        uint256 historyLength = feeDistributor.distributionDataHistoryCount();
+
+        ICSFeeDistributor.DistributionData memory data = feeDistributor
+            .getHistoricalDistributionData(historyLength - 1);
+
+        assertEq(data.refSlot, refSlot);
+        assertEq(data.treeRoot, root);
+        assertEq(data.treeCid, treeCid);
+        assertEq(data.logCid, logCid);
+        assertEq(data.distributed, shares);
+        assertEq(data.rebate, rebate);
     }
 
     function test_hashLeaf() public assertInvariants {
@@ -265,12 +407,12 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         public
         assertInvariants
     {
-        vm.expectRevert(CSFeeDistributor.NotAccounting.selector);
+        vm.expectRevert(ICSFeeDistributor.SenderIsNotAccounting.selector);
 
         feeDistributor.distributeFees({
             proof: new bytes32[](1),
             nodeOperatorId: 0,
-            shares: 0
+            cumulativeFeeShares: 0
         });
     }
 
@@ -278,13 +420,13 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         public
         assertInvariants
     {
-        vm.expectRevert(CSFeeDistributor.InvalidProof.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidProof.selector);
 
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: new bytes32[](1),
             nodeOperatorId: 0,
-            shares: 0
+            cumulativeFeeShares: 0
         });
     }
 
@@ -294,7 +436,9 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
     {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
+        uint256 refSlot = 154;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
@@ -304,7 +448,9 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
 
         stdstore
@@ -313,12 +459,12 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             .with_key(nodeOperatorId)
             .checked_write(shares + 99);
 
-        vm.expectRevert(CSFeeDistributor.FeeSharesDecrease.selector);
+        vm.expectRevert(ICSFeeDistributor.FeeSharesDecrease.selector);
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
     }
 
@@ -328,7 +474,9 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
     {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
+        uint256 refSlot = 154;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
@@ -338,15 +486,17 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             root,
             someCIDv0(),
             someCIDv0(),
-            shares - 1
+            shares - 1,
+            0,
+            refSlot
         );
 
-        vm.expectRevert(CSFeeDistributor.NotEnoughShares.selector);
+        vm.expectRevert(ICSFeeDistributor.NotEnoughShares.selector);
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
     }
 
@@ -356,7 +506,9 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
     {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
+        uint256 refSlot = 154;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
@@ -366,7 +518,9 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
 
         stdstore
@@ -380,7 +534,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         uint256 sharesToDistribute = feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(logs.length, 0); // could be changed after resolving https://github.com/foundry-rs/foundry/issues/509
@@ -389,6 +543,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
 
     function test_pendingSharesToDistribute() public assertInvariants {
         uint256 totalShares = 1000;
+        uint256 refSlot = 154;
         stETH.mintShares(address(feeDistributor), totalShares);
 
         vm.prank(oracle);
@@ -396,46 +551,162 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             someBytes32(),
             someCIDv0(),
             someCIDv0(),
-            899
+            899,
+            0,
+            refSlot
         );
 
         assertEq(feeDistributor.pendingSharesToDistribute(), 101);
     }
 
     function test_processOracleReport_HappyPath() public assertInvariants {
-        uint256 nodeOperatorId = 42;
         uint256 shares = 100;
-        stETH.mintShares(address(feeDistributor), shares);
+        uint256 rebate = 10;
+        uint256 refSlot = 154;
+        stETH.mintShares(address(feeDistributor), shares + rebate);
 
         string memory treeCid = someCIDv0();
         string memory logCid = someCIDv0();
         bytes32 treeRoot = someBytes32();
 
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit CSFeeDistributor.DistributionDataUpdated(
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.DistributionDataUpdated(
             shares,
             treeRoot,
             treeCid
         );
 
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit CSFeeDistributor.DistributionLogUpdated(logCid);
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.ModuleFeeDistributed(shares);
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.RebateTransferred(rebate);
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.DistributionLogUpdated(logCid);
 
         vm.prank(oracle);
-        feeDistributor.processOracleReport(treeRoot, treeCid, logCid, shares);
+        feeDistributor.processOracleReport(
+            treeRoot,
+            treeCid,
+            logCid,
+            shares,
+            rebate,
+            refSlot
+        );
 
         assertEq(feeDistributor.treeRoot(), treeRoot);
         assertEq(feeDistributor.treeCid(), treeCid);
         assertEq(feeDistributor.logCid(), logCid);
         assertEq(feeDistributor.pendingSharesToDistribute(), 0);
         assertEq(feeDistributor.totalClaimableShares(), shares);
+        assertEq(stETH.sharesOf(rebateRecipient), rebate);
+        assertEq(stETH.sharesOf(address(feeDistributor)), shares);
+    }
+
+    function test_processOracleReport_ZeroRebate() public assertInvariants {
+        uint256 shares = 100;
+        uint256 rebate = 0;
+        uint256 refSlot = 154;
+        stETH.mintShares(address(feeDistributor), shares + rebate);
+
+        string memory treeCid = someCIDv0();
+        string memory logCid = someCIDv0();
+        bytes32 treeRoot = someBytes32();
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.DistributionDataUpdated(
+            shares,
+            treeRoot,
+            treeCid
+        );
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.ModuleFeeDistributed(shares);
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.DistributionLogUpdated(logCid);
+
+        vm.recordLogs();
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(
+            treeRoot,
+            treeCid,
+            logCid,
+            shares,
+            rebate,
+            refSlot
+        );
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries.length, 3);
+
+        assertEq(feeDistributor.treeRoot(), treeRoot);
+        assertEq(feeDistributor.treeCid(), treeCid);
+        assertEq(feeDistributor.logCid(), logCid);
+        assertEq(feeDistributor.pendingSharesToDistribute(), 0);
+        assertEq(feeDistributor.totalClaimableShares(), shares);
+        assertEq(stETH.sharesOf(rebateRecipient), rebate);
+        assertEq(stETH.sharesOf(address(feeDistributor)), shares);
+    }
+
+    function test_processOracleReport_ZeroDistributedAndRebate()
+        public
+        assertInvariants
+    {
+        uint256 shares = 0;
+        uint256 rebate = 0;
+        uint256 refSlot = 154;
+
+        string memory treeCid = someCIDv0();
+        string memory logCid = someCIDv0();
+        bytes32 treeRoot = someBytes32();
+
+        string memory treeCidOld = feeDistributor.treeCid();
+        bytes32 treeRootOld = feeDistributor.treeRoot();
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.ModuleFeeDistributed(0);
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.DistributionLogUpdated(logCid);
+
+        vm.recordLogs();
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(
+            treeRoot,
+            treeCid,
+            logCid,
+            shares,
+            rebate,
+            refSlot
+        );
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries.length, 2);
+
+        assertEq(feeDistributor.treeRoot(), treeRootOld);
+        assertEq(feeDistributor.treeCid(), treeCidOld);
+        assertEq(feeDistributor.logCid(), logCid);
+        assertEq(feeDistributor.pendingSharesToDistribute(), 0);
+        assertEq(feeDistributor.totalClaimableShares(), shares);
+        assertEq(stETH.sharesOf(rebateRecipient), rebate);
+        assertEq(stETH.sharesOf(address(feeDistributor)), shares);
     }
 
     function test_processOracleReport_EmptyInitialReport() public {
         string memory logCid = someCIDv0();
+        uint256 refSlot = 154;
 
         vm.prank(oracle);
-        feeDistributor.processOracleReport(bytes32(0), "", logCid, 0);
+        feeDistributor.processOracleReport(
+            bytes32(0),
+            "",
+            logCid,
+            0,
+            0,
+            refSlot
+        );
 
         assertEq(feeDistributor.treeRoot(), bytes32(0));
         assertEq(feeDistributor.treeCid(), "");
@@ -444,6 +715,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
 
     function test_processOracleReport_EmptySubsequentReport() public {
         uint256 shares = 1_000_000;
+        uint256 refSlot = 154;
         _makeInitialReport(shares);
 
         string memory lastTreeCid = feeDistributor.treeCid();
@@ -451,7 +723,14 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         string memory newLogCid = someCIDv0();
 
         vm.prank(oracle);
-        feeDistributor.processOracleReport(lastRoot, lastTreeCid, newLogCid, 0);
+        feeDistributor.processOracleReport(
+            lastRoot,
+            lastTreeCid,
+            newLogCid,
+            0,
+            0,
+            refSlot
+        );
 
         assertEq(feeDistributor.treeRoot(), lastRoot);
         assertEq(feeDistributor.treeCid(), lastTreeCid);
@@ -459,25 +738,68 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         assertEq(feeDistributor.totalClaimableShares(), shares);
     }
 
-    function test_processOracleReport_RevertWhen_InvalidShares()
+    function test_processOracleReport_RevertWhen_ZeroDistributedButNonZeroRebate()
         public
         assertInvariants
     {
-        uint256 nodeOperatorId = 42;
-        uint256 shares = 100;
-        tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        uint256 shares = 0;
+        uint256 rebate = 10;
+        uint256 refSlot = 154;
+        stETH.mintShares(address(feeDistributor), shares + rebate);
 
         stETH.mintShares(address(feeDistributor), shares);
 
-        bytes32 root = tree.root();
-
-        vm.expectRevert(CSFeeDistributor.InvalidShares.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidReportData.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
-            root,
+            someBytes32(),
             someCIDv0(),
             someCIDv0(),
-            shares + 1
+            shares,
+            rebate,
+            refSlot
+        );
+    }
+
+    function test_processOracleReport_RevertWhen_InvalidShares_TooMuchDistributed()
+        public
+        assertInvariants
+    {
+        uint256 shares = 100;
+        uint256 refSlot = 154;
+
+        stETH.mintShares(address(feeDistributor), shares);
+
+        vm.expectRevert(ICSFeeDistributor.InvalidShares.selector);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(
+            someBytes32(),
+            someCIDv0(),
+            someCIDv0(),
+            shares + 1,
+            0,
+            refSlot
+        );
+    }
+
+    function test_processOracleReport_RevertWhen_InvalidShares_NotEnoughForRebate()
+        public
+        assertInvariants
+    {
+        uint256 shares = 100;
+        uint256 refSlot = 154;
+
+        stETH.mintShares(address(feeDistributor), shares);
+
+        vm.expectRevert(ICSFeeDistributor.InvalidShares.selector);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(
+            someBytes32(),
+            someCIDv0(),
+            someCIDv0(),
+            shares,
+            1,
+            refSlot
         );
     }
 
@@ -486,17 +808,20 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         assertInvariants
     {
         uint256 shares = 1_000_000;
+        uint256 refSlot = 154;
         _makeInitialReport(shares);
 
         stETH.mintShares(address(feeDistributor), shares);
 
-        vm.expectRevert(CSFeeDistributor.InvalidTreeRoot.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidTreeRoot.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             bytes32(0),
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
     }
 
@@ -505,18 +830,21 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         assertInvariants
     {
         uint256 shares = 1_000_000;
+        uint256 refSlot = 154;
         _makeInitialReport(shares);
 
         stETH.mintShares(address(feeDistributor), shares);
         bytes32 root = feeDistributor.treeRoot();
 
-        vm.expectRevert(CSFeeDistributor.InvalidTreeRoot.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidTreeRoot.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
     }
 
@@ -525,17 +853,20 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         assertInvariants
     {
         uint256 shares = 1_000_000;
+        uint256 refSlot = 154;
         _makeInitialReport(shares);
 
         stETH.mintShares(address(feeDistributor), shares);
 
-        vm.expectRevert(CSFeeDistributor.InvalidTreeCID.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidTreeCid.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),
             "",
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
     }
 
@@ -544,40 +875,54 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         assertInvariants
     {
         uint256 shares = 1_000_000;
+        uint256 refSlot = 154;
         _makeInitialReport(shares);
 
         stETH.mintShares(address(feeDistributor), shares);
         string memory lastTreeCid = feeDistributor.treeCid();
 
-        vm.expectRevert(CSFeeDistributor.InvalidTreeCID.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidTreeCid.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),
             lastTreeCid,
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
     }
 
     function test_processOracleReport_RevertWhen_ZeroLogCid() public {
-        vm.expectRevert(CSFeeDistributor.InvalidLogCID.selector);
+        uint256 refSlot = 154;
+        vm.expectRevert(ICSFeeDistributor.InvalidLogCID.selector);
         vm.prank(oracle);
-        feeDistributor.processOracleReport(someBytes32(), someCIDv0(), "", 0);
+        feeDistributor.processOracleReport(
+            someBytes32(),
+            someCIDv0(),
+            "",
+            0,
+            0,
+            refSlot
+        );
     }
 
     function test_processOracleReport_RevertWhen_SameLogCid() public {
         uint256 shares = 1_000_000;
+        uint256 refSlot = 154;
         _makeInitialReport(shares);
 
         string memory lastLogCid = feeDistributor.logCid();
 
-        vm.expectRevert(CSFeeDistributor.InvalidLogCID.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidLogCID.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),
             someCIDv0(),
             lastLogCid,
-            0
+            0,
+            0,
+            refSlot
         );
     }
 
@@ -586,15 +931,18 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         assertInvariants
     {
         uint256 shares = 1_000_000;
+        uint256 refSlot = 154;
         _makeInitialReport(shares);
 
-        vm.expectRevert(CSFeeDistributor.InvalidShares.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidShares.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),
             someCIDv0(),
             someCIDv0(),
-            1
+            1,
+            0,
+            refSlot
         );
     }
 
@@ -602,25 +950,53 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         public
         assertInvariants
     {
-        vm.expectRevert(CSFeeDistributor.NotOracle.selector);
+        uint256 refSlot = 154;
+        vm.expectRevert(ICSFeeDistributor.SenderIsNotOracle.selector);
         vm.prank(stranger);
         feeDistributor.processOracleReport(
             someBytes32(),
             someCIDv0(),
             someCIDv0(),
-            1
+            1,
+            0,
+            refSlot
         );
+    }
+
+    function test_setRebateRecipient() public {
+        address recipient = nextAddress();
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.RebateRecipientSet(recipient);
+        feeDistributor.setRebateRecipient(recipient);
+        assertEq(feeDistributor.rebateRecipient(), recipient);
+    }
+
+    function test_setRebateRecipient_revertWhen_ZeroRebateRecipientAddress()
+        public
+    {
+        vm.expectRevert(ICSFeeDistributor.ZeroRebateRecipientAddress.selector);
+        feeDistributor.setRebateRecipient(address(0));
+    }
+
+    function test_setRebateRecipient_revertWhen_NotAdmin() public {
+        address recipient = nextAddress();
+        expectRoleRevert(stranger, feeDistributor.DEFAULT_ADMIN_ROLE());
+        vm.prank(stranger);
+        feeDistributor.setRebateRecipient(recipient);
     }
 
     function _makeInitialReport(uint256 shares) internal {
         stETH.mintShares(address(feeDistributor), shares);
+        uint256 refSlot = 154;
 
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
     }
 }
@@ -637,6 +1013,8 @@ contract CSFeeDistributorAssetRecovererTest is CSFeeDistributorTestBase {
         recoverer = nextAddress("RECOVERER");
         stranger = nextAddress("STRANGER");
 
+        rebateRecipient = nextAddress("REBATE_RECIPIENT");
+
         feeDistributor = new CSFeeDistributor(
             address(stETH),
             address(accounting),
@@ -645,7 +1023,7 @@ contract CSFeeDistributorAssetRecovererTest is CSFeeDistributorTestBase {
 
         _enableInitializers(address(feeDistributor));
 
-        feeDistributor.initialize(address(this));
+        feeDistributor.initialize(address(this), rebateRecipient);
 
         feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), recoverer);
     }
@@ -654,7 +1032,7 @@ contract CSFeeDistributorAssetRecovererTest is CSFeeDistributorTestBase {
         uint256 amount = 42 ether;
         vm.deal(address(feeDistributor), amount);
 
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        vm.expectEmit(address(feeDistributor));
         emit IAssetRecovererLib.EtherRecovered(recoverer, amount);
 
         vm.prank(recoverer);
@@ -678,7 +1056,7 @@ contract CSFeeDistributorAssetRecovererTest is CSFeeDistributorTestBase {
         token.mint(address(feeDistributor), 1000);
 
         vm.prank(recoverer);
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        vm.expectEmit(address(feeDistributor));
         emit IAssetRecovererLib.ERC20Recovered(address(token), recoverer, 1000);
         feeDistributor.recoverERC20(address(token), 1000);
 

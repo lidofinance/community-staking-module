@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -19,7 +19,7 @@ import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { MerkleTree } from "../../helpers/MerkleTree.sol";
 import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 
-contract ClaimIntegrationTest is
+contract ClaimRewardsTest is
     Test,
     Utilities,
     PermitHelper,
@@ -37,7 +37,6 @@ contract ClaimIntegrationTest is
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
-        assertCSMEarlyAdoptionMaxKeys(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
@@ -52,15 +51,11 @@ contract ClaimIntegrationTest is
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        csm.grantRole(csm.RESUME_ROLE(), address(this));
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
-        csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
+        csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         vm.stopPrank();
-        if (csm.isPaused()) csm.resume();
-        if (!csm.publicRelease()) csm.activatePublicRelease();
 
         handleStakingLimit();
         handleBunkerMode();
@@ -75,20 +70,19 @@ contract ClaimIntegrationTest is
         );
         uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
         vm.deal(nodeOperator, amount);
+
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: amount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
+        defaultNoId = permissionlessGate.addNodeOperatorETH{ value: amount }({
+            keysCount: keysCount,
+            publicKeys: keys,
+            signatures: signatures,
+            managementProperties: NodeOperatorManagementProperties({
                 managerAddress: address(0),
                 rewardAddress: address(0),
                 extendedManagerPermissions: false
             }),
-            new bytes32[](0),
-            address(0)
-        );
-        defaultNoId = csm.getNodeOperatorsCount() - 1;
+            referrer: address(0)
+        });
     }
 
     function test_claimExcessBondStETH() public assertInvariants {
@@ -96,7 +90,7 @@ contract ClaimIntegrationTest is
         vm.startPrank(user);
         vm.deal(user, amount);
 
-        csm.depositETH{ value: amount }(defaultNoId);
+        accounting.depositETH{ value: amount }(defaultNoId);
         vm.stopPrank();
 
         uint256 noSharesBefore = lido.sharesOf(nodeOperator);
@@ -113,12 +107,14 @@ contract ClaimIntegrationTest is
         assertTrue(excessBondShares > 0, "Excess bond should be > 0");
 
         vm.prank(nodeOperator);
-        csm.claimRewardsStETH(
+        vm.startSnapshotGas("CSAccounting.claimRewardsStETH_excessBond");
+        uint256 claimedShares = accounting.claimRewardsStETH(
             defaultNoId,
             type(uint256).max,
             0,
             new bytes32[](0)
         );
+        vm.stopSnapshotGas();
 
         uint256 noSharesAfter = lido.sharesOf(nodeOperator);
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
@@ -127,6 +123,11 @@ contract ClaimIntegrationTest is
         );
         uint256 accountingTotalBondSharesAfter = accounting.totalBondShares();
 
+        assertEq(
+            claimedShares,
+            excessBondShares,
+            "Claimed shares should be equal to excess bond"
+        );
         assertEq(
             noSharesAfter,
             noSharesBefore + excessBondShares,
@@ -150,7 +151,7 @@ contract ClaimIntegrationTest is
         vm.startPrank(user);
         vm.deal(user, amount);
 
-        csm.depositETH{ value: amount }(defaultNoId);
+        accounting.depositETH{ value: amount }(defaultNoId);
         vm.stopPrank();
 
         uint256 balanceBefore = wstETH.balanceOf(nodeOperator);
@@ -171,12 +172,14 @@ contract ClaimIntegrationTest is
         );
 
         vm.prank(nodeOperator);
-        csm.claimRewardsWstETH(
+        vm.startSnapshotGas("CSAccounting.claimRewardsWstETH_excessBond");
+        uint256 claimedWstETH = accounting.claimRewardsWstETH(
             defaultNoId,
             type(uint256).max,
             0,
             new bytes32[](0)
         );
+        vm.stopSnapshotGas();
 
         uint256 balanceAfter = wstETH.balanceOf(nodeOperator);
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
@@ -185,6 +188,11 @@ contract ClaimIntegrationTest is
         );
         uint256 accountingTotalBondSharesAfter = accounting.totalBondShares();
 
+        assertEq(
+            claimedWstETH,
+            excessBondWstETH,
+            "Claimed WstETH should be equal to excess bond WstETH"
+        );
         assertEq(
             balanceAfter,
             balanceBefore + excessBondWstETH,
@@ -218,7 +226,7 @@ contract ClaimIntegrationTest is
         vm.startPrank(user);
         vm.deal(user, amount);
 
-        csm.depositETH{ value: amount }(defaultNoId);
+        accounting.depositETH{ value: amount }(defaultNoId);
         vm.stopPrank();
 
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
@@ -234,12 +242,14 @@ contract ClaimIntegrationTest is
         assertTrue(excessBondShares > 0, "Excess bond should be > 0");
 
         vm.prank(nodeOperator);
-        csm.claimRewardsUnstETH(
+        vm.startSnapshotGas("CSAccounting.claimRewardsUnstETH_excessBond");
+        uint256 claimedRequestId = accounting.claimRewardsUnstETH(
             defaultNoId,
             type(uint256).max,
             0,
             new bytes32[](0)
         );
+        vm.stopSnapshotGas();
 
         uint256[] memory requestsIdsAfter = wq.getWithdrawalRequests(
             nodeOperator
@@ -259,6 +269,11 @@ contract ClaimIntegrationTest is
         );
         uint256 accountingTotalBondSharesAfter = accounting.totalBondShares();
 
+        assertEq(
+            claimedRequestId,
+            requestsIdsAfter[0],
+            "Claimed request should be equal to found request"
+        );
         assertEq(
             statuses[0].amountOfStETH,
             lido.getPooledEthByShares(excessBondShares),
@@ -285,29 +300,46 @@ contract ClaimIntegrationTest is
         // Supply funds to feeDistributor
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.transferShares(address(feeDistributor), shares);
         vm.stopPrank();
 
         // Prepare and submit report data
         MerkleTree tree = new MerkleTree();
         tree.pushLeaf(abi.encode(defaultNoId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
+        uint256 refSlot = 154;
 
         vm.prank(feeDistributor.ORACLE());
         feeDistributor.processOracleReport(
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
 
         vm.prank(nodeOperator);
-        csm.claimRewardsStETH(defaultNoId, type(uint256).max, shares, proof);
+        vm.startSnapshotGas("CSAccounting.claimRewardsStETH_proof");
+        uint256 claimedShares = accounting.claimRewardsStETH(
+            defaultNoId,
+            type(uint256).max,
+            shares,
+            proof
+        );
+        vm.stopSnapshotGas();
 
         uint256 noSharesAfter = lido.sharesOf(nodeOperator);
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
+
+        assertEq(
+            claimedShares,
+            shares,
+            "Claimed shares should be equal to distributed shares"
+        );
         assertEq(
             noSharesAfter,
             noSharesBefore +
@@ -333,29 +365,45 @@ contract ClaimIntegrationTest is
         // Supply funds to feeDistributor
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.transferShares(address(feeDistributor), shares);
         vm.stopPrank();
+
+        uint256 distributedWstETHAmount = wstETH.getWstETHByStETH(
+            lido.getPooledEthByShares(shares)
+        );
 
         // Prepare and submit report data
         MerkleTree tree = new MerkleTree();
         tree.pushLeaf(abi.encode(defaultNoId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
+        uint256 refSlot = 154;
 
         vm.prank(feeDistributor.ORACLE());
         feeDistributor.processOracleReport(
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
 
         vm.prank(nodeOperator);
-        csm.claimRewardsWstETH(defaultNoId, type(uint256).max, shares, proof);
+        vm.startSnapshotGas("CSAccounting.claimRewardsWstETH_proof");
+        uint256 claimedWstETHAmount = accounting.claimRewardsWstETH(
+            defaultNoId,
+            type(uint256).max,
+            shares,
+            proof
+        );
+        vm.stopSnapshotGas();
 
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
 
+        assertEq(claimedWstETHAmount, distributedWstETHAmount);
         assertEq(
             wstETH.balanceOf(nodeOperator),
             balanceBefore +
@@ -395,28 +443,39 @@ contract ClaimIntegrationTest is
         // Supply funds to feeDistributor
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.transferShares(address(feeDistributor), shares);
         vm.stopPrank();
 
         // Prepare and submit report data
         MerkleTree tree = new MerkleTree();
         tree.pushLeaf(abi.encode(defaultNoId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
+        uint256 refSlot = 154;
 
         vm.prank(feeDistributor.ORACLE());
         feeDistributor.processOracleReport(
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            0,
+            refSlot
         );
 
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
 
         vm.prank(nodeOperator);
-        csm.claimRewardsUnstETH(defaultNoId, type(uint256).max, shares, proof);
+        vm.startSnapshotGas("CSAccounting.claimRewardsUnstETH_proof");
+        uint256 claimedRequestId = accounting.claimRewardsUnstETH(
+            defaultNoId,
+            type(uint256).max,
+            shares,
+            proof
+        );
+        vm.stopSnapshotGas();
 
         uint256[] memory requestsIdsAfter = wq.getWithdrawalRequests(
             nodeOperator
@@ -430,6 +489,11 @@ contract ClaimIntegrationTest is
         IWithdrawalQueue.WithdrawalRequestStatus[] memory statuses = wq
             .getWithdrawalStatus(requestsIdsAfter);
 
+        assertEq(
+            claimedRequestId,
+            requestsIdsAfter[0],
+            "Claimed request should be equal to found request"
+        );
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
         assertApproxEqAbs(
             statuses[0].amountOfStETH,

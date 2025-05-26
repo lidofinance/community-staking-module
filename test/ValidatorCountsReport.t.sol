@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -75,7 +75,7 @@ contract ValidatorCountsReportTest is Test {
         caller.safeCountOperators(ids, counts);
     }
 
-    function test_count() public {
+    function test_count() public view {
         (bytes memory ids, bytes memory counts) = (
             bytes.concat(bytes8(0x0000000000000001)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
@@ -84,7 +84,7 @@ contract ValidatorCountsReportTest is Test {
         assertEq(caller.safeCountOperators(ids, counts), 1);
     }
 
-    function test_next() public {
+    function test_next() public view {
         (bytes memory ids, bytes memory counts) = (
             bytes.concat(bytes8(0x0000000000000001)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
@@ -95,7 +95,7 @@ contract ValidatorCountsReportTest is Test {
         assertEq(count, 1, "count != 1");
     }
 
-    function test_nextWithOffset() public {
+    function test_nextWithOffset() public view {
         (bytes memory ids, bytes memory counts) = (
             bytes.concat(
                 bytes8(0x0000000000000001),

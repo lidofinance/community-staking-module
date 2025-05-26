@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -23,12 +23,13 @@ contract VersionedTest is Test {
         );
     }
 
-    function test_constructor_PetrifiesImplementation() public {
+    function test_constructor_PetrifiesImplementation() public view {
         assertEq(impl.getContractVersion(), petrifiedVersion);
     }
 
     function test_getContractVersionPosition_ReturnsStorageSlotPosition()
         public
+        view
     {
         assertEq(
             consumer.getContractVersionPosition(),
@@ -36,11 +37,14 @@ contract VersionedTest is Test {
         );
     }
 
-    function test_getPetrifiedVersionMark_ReturnsPetrifiedVersion() public {
+    function test_getPetrifiedVersionMark_ReturnsPetrifiedVersion()
+        public
+        view
+    {
         assertEq(consumer.getPetrifiedVersionMark(), petrifiedVersion);
     }
 
-    function test_checkContractVersion_PassesIfVersionsMatch() public {
+    function test_checkContractVersion_PassesIfVersionsMatch() public view {
         consumer.checkContractVersion(initialVersion);
     }
 

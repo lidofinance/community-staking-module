@@ -1,6 +1,9 @@
+snapshots/
 node_modules/
 
-.env
+.env*
+!.env.sample
+!.envrc
 .idea
 .vscode
 .direnv
@@ -8,6 +11,7 @@ node_modules/
 
 # Foundry files
 broadcast/
+coverage/
 cache/
 out/
 localhost.json
@@ -21,4 +25,5 @@ lcov.info
 !.yarn/sdks
 !.yarn/versions
 
-lib/*
+.wake/
+tags

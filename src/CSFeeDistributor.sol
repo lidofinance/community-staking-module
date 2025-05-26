@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -7,10 +7,12 @@ import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerklePr
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
+
+import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
+
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
-import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
-import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 /// @author madlabman
 contract CSFeeDistributor is
@@ -25,53 +27,59 @@ contract CSFeeDistributor is
     address public immutable ACCOUNTING;
     address public immutable ORACLE;
 
-    /// @notice Merkle Tree root
+    /// @notice The latest Merkle Tree root
     bytes32 public treeRoot;
 
-    /// @notice CID of the published Merkle tree
+    /// @notice CID of the last published Merkle tree
     string public treeCid;
 
-    /// @notice CID of the file with log of the last frame reported
+    /// @notice CID of the file with log for the last frame reported
     string public logCid;
 
     /// @notice Amount of stETH shares sent to the Accounting in favor of the NO
-    mapping(uint256 => uint256) public distributedShares;
+    mapping(uint256 nodeOperatorId => uint256 distributed)
+        public distributedShares;
 
     /// @notice Total Amount of stETH shares available for claiming by NOs
     uint256 public totalClaimableShares;
 
-    /// @dev Emitted when fees are distributed
-    event FeeDistributed(uint256 indexed nodeOperatorId, uint256 shares);
+    /// @notice Array of the distribution data history
+    mapping(uint256 index => DistributionData)
+        internal _distributionDataHistory;
 
-    /// @dev Emitted when distribution data is updated
-    event DistributionDataUpdated(
-        uint256 totalClaimableShares,
-        bytes32 treeRoot,
-        string treeCid
-    );
+    /// @notice The number of _distributionDataHistory records
+    uint256 public distributionDataHistoryCount;
 
-    /// @dev Emitted when distribution log is updated
-    event DistributionLogUpdated(string logCid);
+    /// @notice The address to transfer rebate to
+    address public rebateRecipient;
 
-    error ZeroAccountingAddress();
-    error ZeroStEthAddress();
-    error ZeroAdminAddress();
-    error ZeroOracleAddress();
-    error NotAccounting();
-    error NotOracle();
+    modifier onlyAccounting() {
+        if (msg.sender != ACCOUNTING) {
+            revert SenderIsNotAccounting();
+        }
 
-    error InvalidTreeRoot();
-    error InvalidTreeCID();
-    error InvalidLogCID();
-    error InvalidShares();
-    error InvalidProof();
-    error FeeSharesDecrease();
-    error NotEnoughShares();
+        _;
+    }
+
+    modifier onlyOracle() {
+        if (msg.sender != ORACLE) {
+            revert SenderIsNotOracle();
+        }
+
+        _;
+    }
 
     constructor(address stETH, address accounting, address oracle) {
-        if (accounting == address(0)) revert ZeroAccountingAddress();
-        if (oracle == address(0)) revert ZeroOracleAddress();
-        if (stETH == address(0)) revert ZeroStEthAddress();
+        if (accounting == address(0)) {
+            revert ZeroAccountingAddress();
+        }
+        if (oracle == address(0)) {
+            revert ZeroOracleAddress();
+        }
+
+        if (stETH == address(0)) {
+            revert ZeroStEthAddress();
+        }
 
         ACCOUNTING = accounting;
         STETH = IStETH(stETH);
@@ -80,25 +88,45 @@ contract CSFeeDistributor is
         _disableInitializers();
     }
 
-    function initialize(address admin) external initializer {
+    function initialize(
+        address admin,
+        address _rebateRecipient
+    ) external reinitializer(2) {
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
+
+        _setRebateRecipient(_rebateRecipient);
+
         __AccessControlEnumerable_init();
-        if (admin == address(0)) revert ZeroAdminAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    /// @notice Distribute fees to the Accounting in favor of the Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Total Amount of stETH shares earned as fees
-    /// @param proof Merkle proof of the leaf
-    /// @return sharesToDistribute Amount of stETH shares distributed
+    function finalizeUpgradeV2(
+        address _rebateRecipient
+    ) external reinitializer(2) {
+        _setRebateRecipient(_rebateRecipient);
+    }
+
+    /// @inheritdoc ICSFeeDistributor
+    function setRebateRecipient(
+        address _rebateRecipient
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setRebateRecipient(_rebateRecipient);
+    }
+
+    /// @inheritdoc ICSFeeDistributor
     function distributeFees(
         uint256 nodeOperatorId,
-        uint256 shares,
+        uint256 cumulativeFeeShares,
         bytes32[] calldata proof
-    ) external returns (uint256 sharesToDistribute) {
-        if (msg.sender != ACCOUNTING) revert NotAccounting();
-        sharesToDistribute = getFeesToDistribute(nodeOperatorId, shares, proof);
+    ) external onlyAccounting returns (uint256 sharesToDistribute) {
+        sharesToDistribute = getFeesToDistribute(
+            nodeOperatorId,
+            cumulativeFeeShares,
+            proof
+        );
 
         if (sharesToDistribute == 0) {
             return 0;
@@ -114,29 +142,43 @@ contract CSFeeDistributor is
         }
 
         STETH.transferShares(ACCOUNTING, sharesToDistribute);
-        emit FeeDistributed(nodeOperatorId, sharesToDistribute);
+        emit OperatorFeeDistributed(nodeOperatorId, sharesToDistribute);
     }
 
-    /// @notice Receive the data of the Merkle tree from the Oracle contract and process it
+    /// @inheritdoc ICSFeeDistributor
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
         string calldata _logCid,
-        uint256 distributed
-    ) external {
-        if (msg.sender != ORACLE) revert NotOracle();
+        uint256 distributed,
+        uint256 rebate,
+        uint256 refSlot
+    ) external onlyOracle {
         if (
-            totalClaimableShares + distributed > STETH.sharesOf(address(this))
+            totalClaimableShares + distributed + rebate >
+            STETH.sharesOf(address(this))
         ) {
             revert InvalidShares();
         }
 
+        if (distributed == 0 && rebate > 0) {
+            revert InvalidReportData();
+        }
+
         if (distributed > 0) {
-            if (bytes(_treeCid).length == 0) revert InvalidTreeCID();
-            if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid)))
-                revert InvalidTreeCID();
-            if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
-            if (_treeRoot == treeRoot) revert InvalidTreeRoot();
+            if (bytes(_treeCid).length == 0) {
+                revert InvalidTreeCid();
+            }
+            if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid))) {
+                revert InvalidTreeCid();
+            }
+
+            if (_treeRoot == bytes32(0)) {
+                revert InvalidTreeRoot();
+            }
+            if (_treeRoot == treeRoot) {
+                revert InvalidTreeRoot();
+            }
 
             // Doesn't overflow because of the very first check.
             unchecked {
@@ -153,20 +195,42 @@ contract CSFeeDistributor is
             );
         }
 
+        emit ModuleFeeDistributed(distributed);
+
+        if (rebate > 0) {
+            STETH.transferShares(rebateRecipient, rebate);
+            emit RebateTransferred(rebate);
+        }
+
         // NOTE: Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
         // in a frame identifier such as reference slot to a file.
-        if (bytes(_logCid).length == 0) revert InvalidLogCID();
-        if (keccak256(bytes(_logCid)) == keccak256(bytes(logCid)))
+        if (bytes(_logCid).length == 0) {
             revert InvalidLogCID();
+        }
+        if (keccak256(bytes(_logCid)) == keccak256(bytes(logCid))) {
+            revert InvalidLogCID();
+        }
 
         logCid = _logCid;
         emit DistributionLogUpdated(_logCid);
+
+        _distributionDataHistory[
+            distributionDataHistoryCount
+        ] = DistributionData({
+            refSlot: refSlot,
+            treeRoot: treeRoot,
+            treeCid: treeCid,
+            logCid: _logCid,
+            distributed: distributed,
+            rebate: rebate
+        });
+
+        unchecked {
+            ++distributionDataHistoryCount;
+        }
     }
 
-    /// @notice Recover ERC20 tokens (except for stETH) from the contract
-    /// @dev Any stETH transferred to feeDistributor is treated as a donation and can not be recovered
-    /// @param token Address of the ERC20 token to recover
-    /// @param amount Amount of the ERC20 token to recover
+    /// @inheritdoc AssetRecoverer
     function recoverERC20(address token, uint256 amount) external override {
         _onlyRecoverer();
         if (token == address(STETH)) {
@@ -175,46 +239,56 @@ contract CSFeeDistributor is
         AssetRecovererLib.recoverERC20(token, amount);
     }
 
-    /// @notice Get the Amount of stETH shares that are pending to be distributed
-    /// @return pendingShares Amount shares that are pending to distribute
+    /// @inheritdoc ICSFeeDistributor
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
+    }
+
+    /// @inheritdoc ICSFeeDistributor
     function pendingSharesToDistribute() external view returns (uint256) {
         return STETH.sharesOf(address(this)) - totalClaimableShares;
     }
 
-    /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Total Amount of stETH shares earned as fees
-    /// @param proof Merkle proof of the leaf
-    /// @return sharesToDistribute Amount of stETH shares that can be distributed
+    /// @inheritdoc ICSFeeDistributor
+    function getHistoricalDistributionData(
+        uint256 index
+    ) external view returns (DistributionData memory) {
+        return _distributionDataHistory[index];
+    }
+
+    /// @inheritdoc ICSFeeDistributor
     function getFeesToDistribute(
         uint256 nodeOperatorId,
-        uint256 shares,
+        uint256 cumulativeFeeShares,
         bytes32[] calldata proof
     ) public view returns (uint256 sharesToDistribute) {
-        if (proof.length == 0) revert InvalidProof();
+        // NOTE: We reject empty proofs to separate two business logic paths on the level of
+        // CSAccounting.sol (see _pullFeeRewards function invocations) with and without a proof.
+        if (proof.length == 0) {
+            revert InvalidProof();
+        }
+
         bool isValid = MerkleProof.verifyCalldata(
             proof,
             treeRoot,
-            hashLeaf(nodeOperatorId, shares)
+            hashLeaf(nodeOperatorId, cumulativeFeeShares)
         );
-        if (!isValid) revert InvalidProof();
+        if (!isValid) {
+            revert InvalidProof();
+        }
 
         uint256 _distributedShares = distributedShares[nodeOperatorId];
-        if (_distributedShares > shares) {
+        if (_distributedShares > cumulativeFeeShares) {
             // This error means the fee oracle brought invalid data.
             revert FeeSharesDecrease();
         }
 
         unchecked {
-            sharesToDistribute = shares - _distributedShares;
+            sharesToDistribute = cumulativeFeeShares - _distributedShares;
         }
     }
 
-    /// @notice Get a hash of a leaf
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Amount of stETH shares
-    /// @return Hash of the leaf
-    /// @dev Double hash the leaf to prevent second preimage attacks
+    /// @inheritdoc ICSFeeDistributor
     function hashLeaf(
         uint256 nodeOperatorId,
         uint256 shares
@@ -223,6 +297,15 @@ contract CSFeeDistributor is
             keccak256(
                 bytes.concat(keccak256(abi.encode(nodeOperatorId, shares)))
             );
+    }
+
+    function _setRebateRecipient(address _rebateRecipient) internal {
+        if (_rebateRecipient == address(0)) {
+            revert ZeroRebateRecipientAddress();
+        }
+
+        rebateRecipient = _rebateRecipient;
+        emit RebateRecipientSet(_rebateRecipient);
     }
 
     function _onlyRecoverer() internal view override {

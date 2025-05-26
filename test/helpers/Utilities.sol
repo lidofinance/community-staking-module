@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -116,17 +116,17 @@ contract Utilities is CommonBase {
     }
 
     function someCIDv0() public returns (string memory result) {
-        bytes memory seed = randomBytes(46);
+        bytes memory CIDSeed = randomBytes(46);
 
-        seed[0] = "Q";
-        seed[1] = "m";
+        CIDSeed[0] = "Q";
+        CIDSeed[1] = "m";
 
-        for (uint256 i = 2; i < seed.length; ++i) {
-            uint256 symIndex = uint8(seed[i]) % 58;
-            seed[i] = BASE58ALPHABET[symIndex];
+        for (uint256 i = 2; i < CIDSeed.length; ++i) {
+            uint256 symIndex = uint8(CIDSeed[i]) % 58;
+            CIDSeed[i] = BASE58ALPHABET[symIndex];
         }
 
-        result = string(seed);
+        result = string(CIDSeed);
     }
 
     function checkChainId(uint256 chainId) public view {
@@ -171,14 +171,35 @@ contract Utilities is CommonBase {
         return arr;
     }
 
+    function UintArr(
+        uint256 e0,
+        uint256 e1,
+        uint256 e2
+    ) public pure returns (uint256[] memory) {
+        uint256[] memory arr = new uint256[](3);
+        arr[0] = e0;
+        arr[1] = e1;
+        arr[2] = e2;
+        return arr;
+    }
+
     function slice(
         bytes memory subject,
         uint256 offset,
         uint256 length
-    ) public pure returns (bytes memory slice) {
-        slice = new bytes(length);
-        for (uint i; i < length; ++i) {
-            slice[i] = subject[offset + i];
+    ) public pure returns (bytes memory result) {
+        result = new bytes(length);
+        for (uint256 i; i < length; ++i) {
+            result[i] = subject[offset + i];
+        }
+    }
+
+    function shuffle(uint256[] memory arr) public {
+        if (arr.length < 2) return;
+
+        for (uint256 i = arr.length - 1; i > 0; i--) {
+            uint256 j = uint256(someBytes32()) % (i + 1);
+            (arr[i], arr[j]) = (arr[j], arr[i]);
         }
     }
 
@@ -254,8 +275,13 @@ contract Utilities is CommonBase {
             // Check the value of the zero slot.
             zeroSlotIsNotZero := mload(0x60)
         }
-        if (freeMemoryPointerOverflowed) revert FreeMemoryPointerOverflowed();
-        if (zeroSlotIsNotZero) revert ZeroSlotIsNotZero();
+        if (freeMemoryPointerOverflowed) {
+            revert FreeMemoryPointerOverflowed();
+        }
+
+        if (zeroSlotIsNotZero) {
+            revert ZeroSlotIsNotZero();
+        }
     }
 
     /// See https://github.com/Vectorized/solady - MIT licensed.
@@ -269,7 +295,7 @@ contract Utilities is CommonBase {
 }
 
 function hasLog(Vm.Log[] memory self, bytes32 topic) pure returns (bool) {
-    for (uint i = 0; i < self.length; ++i) {
+    for (uint256 i = 0; i < self.length; ++i) {
         if (self[i].topics[0] == topic) {
             return true;
         }

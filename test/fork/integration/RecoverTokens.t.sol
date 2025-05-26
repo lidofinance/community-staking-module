@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -34,7 +34,6 @@ contract RecoverIntegrationTest is
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
-        assertCSMEarlyAdoptionMaxKeys(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
@@ -49,16 +48,14 @@ contract RecoverIntegrationTest is
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
 
         recoverer = nextAddress("Recoverer");
         user = nextAddress("User");
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.RECOVERER_ROLE(), recoverer);
         vm.stopPrank();
-        if (csm.isPaused()) csm.resume();
 
         handleStakingLimit();
         handleBunkerMode();
@@ -86,7 +83,7 @@ contract RecoverIntegrationTest is
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         uint256 amountStETH = lido.getPooledEthByShares(shares);
         lido.transfer(address(csm), amountStETH);
         vm.stopPrank();
@@ -117,7 +114,7 @@ contract RecoverIntegrationTest is
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.approve(address(wstETH), type(uint256).max);
         uint256 amountWstETH = wstETH.wrap(lido.getPooledEthByShares(shares));
         wstETH.transfer(address(csm), amountWstETH);
@@ -135,7 +132,7 @@ contract RecoverIntegrationTest is
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.transferShares(address(accounting), shares);
         vm.stopPrank();
 
@@ -165,7 +162,7 @@ contract RecoverIntegrationTest is
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.approve(address(wstETH), type(uint256).max);
         uint256 amountWstETH = wstETH.wrap(lido.getPooledEthByShares(shares));
         wstETH.transfer(address(accounting), amountWstETH);
@@ -197,7 +194,7 @@ contract RecoverIntegrationTest is
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.approve(address(wstETH), type(uint256).max);
         uint256 amountWstETH = wstETH.wrap(lido.getPooledEthByShares(shares));
         wstETH.transfer(address(feeDistributor), amountWstETH);
@@ -229,7 +226,7 @@ contract RecoverIntegrationTest is
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.approve(address(wstETH), type(uint256).max);
         uint256 amountWstETH = wstETH.wrap(lido.getPooledEthByShares(shares));
         wstETH.transfer(address(oracle), amountWstETH);

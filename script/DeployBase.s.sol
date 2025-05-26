@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -10,17 +10,29 @@ import { OssifiableProxy } from "../src/lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../src/CSModule.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
+import { CSEjector } from "../src/CSEjector.sol";
+import { CSStrikes } from "../src/CSStrikes.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
-import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
+import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
+import { PermissionlessGate } from "../src/PermissionlessGate.sol";
+import { VettedGate } from "../src/VettedGate.sol";
+import { CSParametersRegistry } from "../src/CSParametersRegistry.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { IGateSealFactory } from "../src/interfaces/IGateSealFactory.sol";
 import { BaseOracle } from "../src/lib/base-oracle/BaseOracle.sol";
+import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
+import { Dummy } from "./utils/Dummy.sol";
+import { CommonScriptUtils } from "./utils/Common.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
+import { VettedGateFactory } from "../src/VettedGateFactory.sol";
+import { CSExitPenalties } from "../src/CSExitPenalties.sol";
+import { IGateSeal } from "../src/interfaces/IGateSeal.sol";
 
 struct DeployParams {
     // Lido addresses
@@ -35,7 +47,6 @@ struct DeployParams {
     uint256 oracleReportEpochsPerFrame;
     uint256 fastLaneLengthSlots;
     uint256 consensusVersion;
-    uint256 avgPerfLeewayBP;
     address[] oracleMembers;
     uint256 hashConsensusQuorum;
     // Verifier
@@ -44,24 +55,57 @@ struct DeployParams {
     GIndex gIFirstValidator;
     uint256 verifierSupportedEpoch;
     // Accounting
-    uint256 maxCurveLength;
-    uint256[] bondCurve;
-    uint256 minBondLockRetentionPeriod;
-    uint256 maxBondLockRetentionPeriod;
-    uint256 bondLockRetentionPeriod;
+    uint256[2][] bondCurve;
+    uint256 minBondLockPeriod;
+    uint256 maxBondLockPeriod;
+    uint256 bondLockPeriod;
     address setResetBondCurveAddress;
     address chargePenaltyRecipient;
     // Module
+    uint256 stakingModuleId;
     bytes32 moduleType;
-    uint256 minSlashingPenaltyQuotient;
-    uint256 elRewardsStealingFine;
-    uint256 maxKeysPerOperatorEA;
-    uint256 maxKeyRemovalCharge;
-    uint256 keyRemovalCharge;
     address elRewardsStealingReporter;
-    // EarlyAdoption
-    bytes32 earlyAdoptionTreeRoot;
-    uint256[] earlyAdoptionBondCurve;
+    // CSParameters
+    uint256 keyRemovalCharge;
+    uint256 elRewardsStealingAdditionalFine;
+    uint256 keysLimit;
+    uint256 avgPerfLeewayBP;
+    uint256 rewardShareBP;
+    uint256 strikesLifetimeFrames;
+    uint256 strikesThreshold;
+    uint256 queueLowestPriority;
+    uint256 defaultQueuePriority;
+    uint256 defaultQueueMaxDeposits;
+    uint256 badPerformancePenalty;
+    uint256 attestationsWeight;
+    uint256 blocksWeight;
+    uint256 syncWeight;
+    // TODO rename other default parameters to be consistent
+    uint256 defaultAllowedExitDelay;
+    uint256 defaultExitDelayPenalty;
+    uint256 defaultMaxWithdrawalRequestFee;
+    // VettedGate
+    address identifiedCommunityStakersGateManager;
+    bytes32 identifiedCommunityStakersGateTreeRoot;
+    string identifiedCommunityStakersGateTreeCid;
+    uint256[2][] identifiedCommunityStakersGateBondCurve;
+    // Parameters for Identified Community Staker type
+    uint256 identifiedCommunityStakersGateKeyRemovalCharge;
+    uint256 identifiedCommunityStakersGateELRewardsStealingAdditionalFine;
+    uint256 identifiedCommunityStakersGateKeysLimit;
+    uint256[2][] identifiedCommunityStakersGateAvgPerfLeewayData;
+    uint256[2][] identifiedCommunityStakersGateRewardShareData;
+    uint256 identifiedCommunityStakersGateStrikesLifetimeFrames;
+    uint256 identifiedCommunityStakersGateStrikesThreshold;
+    uint256 identifiedCommunityStakersGateQueuePriority;
+    uint256 identifiedCommunityStakersGateQueueMaxDeposits;
+    uint256 identifiedCommunityStakersGateBadPerformancePenalty;
+    uint256 identifiedCommunityStakersGateAttestationsWeight;
+    uint256 identifiedCommunityStakersGateBlocksWeight;
+    uint256 identifiedCommunityStakersGateSyncWeight;
+    uint256 identifiedCommunityStakersGateAllowedExitDelay;
+    uint256 identifiedCommunityStakersGateExitDelayPenalty;
+    uint256 identifiedCommunityStakersGateMaxWithdrawalRequestFee;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -72,6 +116,7 @@ struct DeployParams {
 }
 
 abstract contract DeployBase is Script {
+    string internal gitRef;
     DeployParams internal config;
     string internal artifactDir;
     string internal chainName;
@@ -79,19 +124,25 @@ abstract contract DeployBase is Script {
     ILidoLocator internal locator;
 
     address internal deployer;
-    uint256 internal pk;
     CSModule public csm;
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
+    CSExitPenalties public exitPenalties;
+    CSEjector public ejector;
+    CSStrikes public strikes;
     CSVerifier public verifier;
-    CSEarlyAdoption public earlyAdoption;
+    address public gateSeal;
+    PermissionlessGate public permissionlessGate;
+    VettedGateFactory public vettedGateFactory;
+    VettedGate public vettedGate;
     HashConsensus public hashConsensus;
+    CSParametersRegistry public parametersRegistry;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
     error HashConsensusMismatch();
-    error IsNotReadyForDeployment();
     error CannotBeUsedInMainnet();
+    error InvalidSecondAdmin();
 
     constructor(string memory _chainName, uint256 _chainId) {
         chainName = _chainName;
@@ -105,7 +156,8 @@ abstract contract DeployBase is Script {
         locator = ILidoLocator(config.lidoLocatorAddress);
     }
 
-    function run() external virtual {
+    function run(string memory _gitRef) external virtual {
+        gitRef = _gitRef;
         if (chainId != block.chainid) {
             revert ChainIdMismatch({
                 actual: block.chainid,
@@ -127,40 +179,27 @@ abstract contract DeployBase is Script {
             }
         }
         artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/local/"));
-        pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        deployer = vm.addr(pk);
+        (, deployer, ) = vm.readCallers();
         vm.label(deployer, "DEPLOYER");
 
-        vm.startBroadcast(pk);
+        vm.startBroadcast(deployer);
         {
-            CSModule csmImpl = new CSModule({
-                moduleType: config.moduleType,
-                minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
-                elRewardsStealingFine: config.elRewardsStealingFine,
-                maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
-                maxKeyRemovalCharge: config.maxKeyRemovalCharge,
-                lidoLocator: config.lidoLocatorAddress
-            });
-            csm = CSModule(_deployProxy(config.proxyAdmin, address(csmImpl)));
+            CSParametersRegistry parametersRegistryImpl = new CSParametersRegistry(
+                    config.queueLowestPriority
+                );
+            parametersRegistry = CSParametersRegistry(
+                _deployProxy(config.proxyAdmin, address(parametersRegistryImpl))
+            );
 
-            CSAccounting accountingImpl = new CSAccounting({
-                lidoLocator: config.lidoLocatorAddress,
-                communityStakingModule: address(csm),
-                maxCurveLength: config.maxCurveLength,
-                minBondLockRetentionPeriod: config.minBondLockRetentionPeriod,
-                maxBondLockRetentionPeriod: config.maxBondLockRetentionPeriod
-            });
+            Dummy dummyImpl = new Dummy();
+
+            csm = CSModule(_deployProxy(deployer, address(dummyImpl)));
+
             accounting = CSAccounting(
-                _deployProxy(config.proxyAdmin, address(accountingImpl))
+                _deployProxy(deployer, address(dummyImpl))
             );
 
-            CSFeeOracle oracleImpl = new CSFeeOracle({
-                secondsPerSlot: config.secondsPerSlot,
-                genesisTime: config.clGenesisTime
-            });
-            oracle = CSFeeOracle(
-                _deployProxy(config.proxyAdmin, address(oracleImpl))
-            );
+            oracle = CSFeeOracle(_deployProxy(deployer, address(dummyImpl)));
 
             CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
                 stETH: locator.lido(),
@@ -175,25 +214,70 @@ abstract contract DeployBase is Script {
                 withdrawalAddress: locator.withdrawalVault(),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
-                gIFirstWithdrawalPrev: config.gIFirstWithdrawal,
-                gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
-                gIFirstValidatorPrev: config.gIFirstValidator,
-                gIFirstValidatorCurr: config.gIFirstValidator,
-                gIHistoricalSummariesPrev: config.gIHistoricalSummaries,
-                gIHistoricalSummariesCurr: config.gIHistoricalSummaries,
+                gindices: ICSVerifier.GIndices({
+                    gIFirstWithdrawalPrev: config.gIFirstWithdrawal,
+                    gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
+                    gIFirstValidatorPrev: config.gIFirstValidator,
+                    gIFirstValidatorCurr: config.gIFirstValidator,
+                    gIHistoricalSummariesPrev: config.gIHistoricalSummaries,
+                    gIHistoricalSummariesCurr: config.gIHistoricalSummaries
+                }),
                 firstSupportedSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
                 ),
                 pivotSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
-                )
+                ),
+                admin: deployer
             });
 
-            accounting.initialize({
-                bondCurve: config.bondCurve,
+            parametersRegistry.initialize({
                 admin: deployer,
+                data: ICSParametersRegistry.InitializationData({
+                    keyRemovalCharge: config.keyRemovalCharge,
+                    elRewardsStealingAdditionalFine: config
+                        .elRewardsStealingAdditionalFine,
+                    keysLimit: config.keysLimit,
+                    rewardShare: config.rewardShareBP,
+                    performanceLeeway: config.avgPerfLeewayBP,
+                    strikesLifetime: config.strikesLifetimeFrames,
+                    strikesThreshold: config.strikesThreshold,
+                    defaultQueuePriority: config.defaultQueuePriority,
+                    defaultQueueMaxDeposits: config.defaultQueueMaxDeposits,
+                    badPerformancePenalty: config.badPerformancePenalty,
+                    attestationsWeight: config.attestationsWeight,
+                    blocksWeight: config.blocksWeight,
+                    syncWeight: config.syncWeight,
+                    defaultAllowedExitDelay: config.defaultAllowedExitDelay,
+                    defaultExitDelayPenalty: config.defaultExitDelayPenalty,
+                    defaultMaxWithdrawalRequestFee: config
+                        .defaultMaxWithdrawalRequestFee
+                })
+            });
+
+            CSAccounting accountingImpl = new CSAccounting({
+                lidoLocator: config.lidoLocatorAddress,
+                module: address(csm),
                 _feeDistributor: address(feeDistributor),
-                bondLockRetentionPeriod: config.bondLockRetentionPeriod,
+                minBondLockPeriod: config.minBondLockPeriod,
+                maxBondLockPeriod: config.maxBondLockPeriod
+            });
+
+            {
+                OssifiableProxy accountingProxy = OssifiableProxy(
+                    payable(address(accounting))
+                );
+                accountingProxy.proxy__upgradeTo(address(accountingImpl));
+                accountingProxy.proxy__changeAdmin(config.proxyAdmin);
+            }
+
+            ICSBondCurve.BondCurveIntervalInput[]
+                memory bondCurve = CommonScriptUtils
+                    .arraysToBondCurveIntervalsInputs(config.bondCurve);
+            accounting.initialize({
+                bondCurve: bondCurve,
+                admin: deployer,
+                bondLockPeriod: config.bondLockPeriod,
                 _chargePenaltyRecipient: config.chargePenaltyRecipient
             });
 
@@ -201,28 +285,155 @@ abstract contract DeployBase is Script {
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
             );
-            uint256 eaCurveId = accounting.addBondCurve(
-                config.earlyAdoptionBondCurve
-            );
+
+            ICSBondCurve.BondCurveIntervalInput[]
+                memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils
+                    .arraysToBondCurveIntervalsInputs(
+                        config.identifiedCommunityStakersGateBondCurve
+                    );
+            uint256 identifiedCommunityStakersGateBondCurveId = accounting
+                .addBondCurve(identifiedCommunityStakersGateBondCurve);
             accounting.revokeRole(
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
             );
 
-            earlyAdoption = new CSEarlyAdoption({
-                treeRoot: config.earlyAdoptionTreeRoot,
-                curveId: eaCurveId,
-                module: address(csm)
-            });
+            exitPenalties = CSExitPenalties(
+                _deployProxy(deployer, address(dummyImpl))
+            );
 
-            csm.initialize({
+            CSModule csmImpl = new CSModule({
+                moduleType: config.moduleType,
+                lidoLocator: config.lidoLocatorAddress,
+                parametersRegistry: address(parametersRegistry),
                 _accounting: address(accounting),
-                _earlyAdoption: address(earlyAdoption),
-                _keyRemovalCharge: config.keyRemovalCharge,
-                admin: deployer
+                exitPenalties: address(exitPenalties)
             });
 
-            feeDistributor.initialize({ admin: address(deployer) });
+            {
+                OssifiableProxy csmProxy = OssifiableProxy(
+                    payable(address(csm))
+                );
+                csmProxy.proxy__upgradeTo(address(csmImpl));
+                csmProxy.proxy__changeAdmin(config.proxyAdmin);
+            }
+
+            csm.initialize({ admin: deployer });
+
+            CSStrikes strikesImpl = new CSStrikes({
+                module: address(csm),
+                oracle: address(oracle),
+                exitPenalties: address(exitPenalties),
+                parametersRegistry: address(parametersRegistry)
+            });
+
+            strikes = CSStrikes(
+                _deployProxy(config.proxyAdmin, address(strikesImpl))
+            );
+
+            CSExitPenalties exitPenaltiesImpl = new CSExitPenalties(
+                address(csm),
+                address(parametersRegistry),
+                address(strikes)
+            );
+
+            {
+                OssifiableProxy exitPenaltiesProxy = OssifiableProxy(
+                    payable(address(exitPenalties))
+                );
+                exitPenaltiesProxy.proxy__upgradeTo(address(exitPenaltiesImpl));
+                exitPenaltiesProxy.proxy__changeAdmin(config.proxyAdmin);
+            }
+
+            ejector = new CSEjector(
+                address(csm),
+                address(strikes),
+                config.stakingModuleId,
+                deployer
+            );
+
+            strikes.initialize(deployer, address(ejector));
+
+            permissionlessGate = new PermissionlessGate(address(csm), deployer);
+
+            address vettedGateImpl = address(new VettedGate(address(csm)));
+            vettedGateFactory = new VettedGateFactory(vettedGateImpl);
+            vettedGate = VettedGate(
+                vettedGateFactory.create({
+                    curveId: identifiedCommunityStakersGateBondCurveId,
+                    treeRoot: config.identifiedCommunityStakersGateTreeRoot,
+                    treeCid: config.identifiedCommunityStakersGateTreeCid,
+                    admin: deployer
+                })
+            );
+
+            OssifiableProxy vettedGateProxy = OssifiableProxy(
+                payable(address(vettedGate))
+            );
+            vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
+
+            parametersRegistry.setKeyRemovalCharge(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateKeyRemovalCharge
+            );
+            parametersRegistry.setElRewardsStealingAdditionalFine(
+                identifiedCommunityStakersGateBondCurveId,
+                config
+                    .identifiedCommunityStakersGateELRewardsStealingAdditionalFine
+            );
+            parametersRegistry.setKeysLimit(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateKeysLimit
+            );
+            parametersRegistry.setPerformanceLeewayData(
+                identifiedCommunityStakersGateBondCurveId,
+                CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                    config.identifiedCommunityStakersGateAvgPerfLeewayData
+                )
+            );
+            parametersRegistry.setRewardShareData(
+                identifiedCommunityStakersGateBondCurveId,
+                CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                    config.identifiedCommunityStakersGateRewardShareData
+                )
+            );
+            parametersRegistry.setStrikesParams(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateStrikesLifetimeFrames,
+                config.identifiedCommunityStakersGateStrikesThreshold
+            );
+            parametersRegistry.setQueueConfig(
+                identifiedCommunityStakersGateBondCurveId,
+                uint32(config.identifiedCommunityStakersGateQueuePriority),
+                uint32(config.identifiedCommunityStakersGateQueueMaxDeposits)
+            );
+            parametersRegistry.setBadPerformancePenalty(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateBadPerformancePenalty
+            );
+            parametersRegistry.setPerformanceCoefficients(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateAttestationsWeight,
+                config.identifiedCommunityStakersGateBlocksWeight,
+                config.identifiedCommunityStakersGateSyncWeight
+            );
+            parametersRegistry.setAllowedExitDelay(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateAllowedExitDelay
+            );
+            parametersRegistry.setExitDelayPenalty(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateExitDelayPenalty
+            );
+            parametersRegistry.setMaxWithdrawalRequestFee(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateMaxWithdrawalRequestFee
+            );
+
+            feeDistributor.initialize({
+                admin: address(deployer),
+                _rebateRecipient: config.aragonAgent
+            });
 
             hashConsensus = new HashConsensus({
                 slotsPerEpoch: config.slotsPerEpoch,
@@ -233,6 +444,10 @@ abstract contract DeployBase is Script {
                 admin: address(deployer),
                 reportProcessor: address(oracle)
             });
+            hashConsensus.grantRole(
+                hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(),
+                config.aragonAgent
+            );
             hashConsensus.grantRole(
                 hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(),
                 address(deployer)
@@ -248,31 +463,59 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
-            oracle.initialize({
-                admin: address(deployer),
-                feeDistributorContract: address(feeDistributor),
-                consensusContract: address(hashConsensus),
-                consensusVersion: config.consensusVersion,
-                _avgPerfLeewayBP: config.avgPerfLeewayBP
+            CSFeeOracle oracleImpl = new CSFeeOracle({
+                feeDistributor: address(feeDistributor),
+                strikes: address(strikes),
+                secondsPerSlot: config.secondsPerSlot,
+                genesisTime: config.clGenesisTime
             });
 
-            address gateSeal;
+            {
+                OssifiableProxy oracleProxy = OssifiableProxy(
+                    payable(address(oracle))
+                );
+                oracleProxy.proxy__upgradeTo(address(oracleImpl));
+                oracleProxy.proxy__changeAdmin(config.proxyAdmin);
+            }
+
+            oracle.initialize({
+                admin: address(deployer),
+                consensusContract: address(hashConsensus),
+                consensusVersion: config.consensusVersion
+            });
+
             if (config.gateSealFactory != address(0)) {
-                gateSeal = _deployGateSeal();
+                address[] memory sealables = new address[](6);
+                sealables[0] = address(csm);
+                sealables[1] = address(accounting);
+                sealables[2] = address(oracle);
+                sealables[3] = address(verifier);
+                sealables[4] = address(vettedGate);
+                sealables[5] = address(ejector);
+                gateSeal = _deployGateSeal(sealables);
+
                 csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
                 oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
                 accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
+                verifier.grantRole(verifier.PAUSE_ROLE(), gateSeal);
+                vettedGate.grantRole(vettedGate.PAUSE_ROLE(), gateSeal);
+                ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
             }
 
             accounting.grantRole(
                 accounting.SET_BOND_CURVE_ROLE(),
-                config.setResetBondCurveAddress
+                address(config.setResetBondCurveAddress)
             );
             accounting.grantRole(
-                accounting.RESET_BOND_CURVE_ROLE(),
-                config.setResetBondCurveAddress
+                accounting.SET_BOND_CURVE_ROLE(),
+                address(vettedGate)
             );
 
+            csm.grantRole(
+                csm.CREATE_NODE_OPERATOR_ROLE(),
+                address(permissionlessGate)
+            );
+            csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(vettedGate));
             csm.grantRole(
                 csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
                 config.elRewardsStealingReporter
@@ -285,11 +528,59 @@ abstract contract DeployBase is Script {
             csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
 
             if (config.secondAdminAddress != address(0)) {
+                if (config.secondAdminAddress == deployer) {
+                    revert InvalidSecondAdmin();
+                }
                 _grantSecondAdmins();
             }
 
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+
+            ejector.grantRole(ejector.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            ejector.revokeRole(ejector.DEFAULT_ADMIN_ROLE(), deployer);
+
+            parametersRegistry.grantRole(
+                parametersRegistry.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            parametersRegistry.revokeRole(
+                parametersRegistry.DEFAULT_ADMIN_ROLE(),
+                deployer
+            );
+
+            vettedGate.grantRole(
+                vettedGate.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            vettedGate.grantRole(
+                vettedGate.SET_TREE_ROLE(),
+                config.identifiedCommunityStakersGateManager
+            );
+            vettedGate.grantRole(
+                vettedGate.START_REFERRAL_SEASON_ROLE(),
+                config.aragonAgent
+            );
+            vettedGate.grantRole(
+                vettedGate.END_REFERRAL_SEASON_ROLE(),
+                config.identifiedCommunityStakersGateManager
+            );
+            vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
+
+            permissionlessGate.grantRole(
+                permissionlessGate.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            permissionlessGate.revokeRole(
+                permissionlessGate.DEFAULT_ADMIN_ROLE(),
+                deployer
+            );
+
+            verifier.grantRole(
+                verifier.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            verifier.revokeRole(verifier.DEFAULT_ADMIN_ROLE(), deployer);
 
             accounting.grantRole(
                 accounting.DEFAULT_ADMIN_ROLE(),
@@ -318,18 +609,39 @@ abstract contract DeployBase is Script {
                 deployer
             );
 
+            strikes.grantRole(strikes.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            strikes.revokeRole(strikes.DEFAULT_ADMIN_ROLE(), deployer);
+
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("ChainId", chainId);
             deployJson.set("CSModule", address(csm));
-            deployJson.set("CSEarlyAdoption", address(earlyAdoption));
+            deployJson.set("CSModuleImpl", address(csmImpl));
+            deployJson.set("CSParametersRegistry", address(parametersRegistry));
+            deployJson.set(
+                "CSParametersRegistryImpl",
+                address(parametersRegistryImpl)
+            );
             deployJson.set("CSAccounting", address(accounting));
+            deployJson.set("CSAccountingImpl", address(accountingImpl));
             deployJson.set("CSFeeOracle", address(oracle));
+            deployJson.set("CSFeeOracleImpl", address(oracleImpl));
             deployJson.set("CSFeeDistributor", address(feeDistributor));
+            deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
+            deployJson.set("CSExitPenalties", address(exitPenalties));
+            deployJson.set("CSExitPenaltiesImpl", address(exitPenaltiesImpl));
+            deployJson.set("CSEjector", address(ejector));
+            deployJson.set("CSStrikes", address(strikes));
+            deployJson.set("CSStrikesImpl", address(strikesImpl));
             deployJson.set("HashConsensus", address(hashConsensus));
             deployJson.set("CSVerifier", address(verifier));
+            deployJson.set("PermissionlessGate", address(permissionlessGate));
+            deployJson.set("VettedGateFactory", address(vettedGateFactory));
+            deployJson.set("VettedGate", address(vettedGate));
+            deployJson.set("VettedGateImpl", address(vettedGateImpl));
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
             deployJson.set("GateSeal", gateSeal);
             deployJson.set("DeployParams", abi.encode(config));
+            deployJson.set("git-ref", gitRef);
             vm.writeJson(deployJson.str, _deployJsonFilename());
         }
 
@@ -349,14 +661,12 @@ abstract contract DeployBase is Script {
         return address(proxy);
     }
 
-    function _deployGateSeal() internal returns (address) {
+    function _deployGateSeal(
+        address[] memory sealables
+    ) internal returns (address) {
         IGateSealFactory gateSealFactory = IGateSealFactory(
             config.gateSealFactory
         );
-        address[] memory sealables = new address[](3);
-        sealables[0] = address(csm);
-        sealables[1] = address(accounting);
-        sealables[2] = address(oracle);
 
         address committee = config.sealingCommittee == address(0)
             ? deployer
@@ -386,7 +696,7 @@ abstract contract DeployBase is Script {
         }
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.secondAdminAddress);
         accounting.grantRole(
-            csm.DEFAULT_ADMIN_ROLE(),
+            accounting.DEFAULT_ADMIN_ROLE(),
             config.secondAdminAddress
         );
         oracle.grantRole(
@@ -399,6 +709,30 @@ abstract contract DeployBase is Script {
         );
         hashConsensus.grantRole(
             hashConsensus.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        parametersRegistry.grantRole(
+            parametersRegistry.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        vettedGate.grantRole(
+            vettedGate.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        permissionlessGate.grantRole(
+            permissionlessGate.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        ejector.grantRole(
+            ejector.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        verifier.grantRole(
+            verifier.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        strikes.grantRole(
+            strikes.DEFAULT_ADMIN_ROLE(),
             config.secondAdminAddress
         );
     }
