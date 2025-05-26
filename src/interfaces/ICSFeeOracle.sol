@@ -64,8 +64,4 @@ interface ICSFeeOracle is IAssetRecovererLib {
     /// @notice Pause accepting oracle reports for a `duration` seconds
     /// @param duration Duration of the pause in seconds
     function pauseFor(uint256 duration) external;
-
-    /// @notice Pause accepting oracle reports until a timestamp
-    /// @param pauseUntilInclusive Timestamp until which the oracle reports are paused
-    function pauseUntil(uint256 pauseUntilInclusive) external;
 }

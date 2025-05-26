@@ -54,21 +54,15 @@ contract CSAccounting is
 
     /// @param lidoLocator Lido locator contract address
     /// @param module Community Staking Module contract address
-    /// @param maxCurveLength Max number of the intervals in the bond curves
     /// @param minBondLockPeriod Min time in seconds for the bondLock period
     /// @param maxBondLockPeriod Max time in seconds for the bondLock period
     constructor(
         address lidoLocator,
         address module,
         address _feeDistributor,
-        uint256 maxCurveLength,
         uint256 minBondLockPeriod,
         uint256 maxBondLockPeriod
-    )
-        CSBondCore(lidoLocator)
-        CSBondCurve(maxCurveLength)
-        CSBondLock(minBondLockPeriod, maxBondLockPeriod)
-    {
+    ) CSBondCore(lidoLocator) CSBondLock(minBondLockPeriod, maxBondLockPeriod) {
         if (module == address(0)) {
             revert ZeroModuleAddress();
         }
@@ -483,6 +477,7 @@ contract CSAccounting is
         return current > required ? current - required : 0;
     }
 
+    /// @dev TODO: Remove in the next major release
     /// @inheritdoc ICSAccounting
     function feeDistributor() external view returns (ICSFeeDistributor) {
         return FEE_DISTRIBUTOR;

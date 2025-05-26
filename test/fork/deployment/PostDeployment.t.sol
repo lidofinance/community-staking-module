@@ -260,10 +260,6 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             deployParams.maxBondLockPeriod
         );
         assertEq(
-            accountingImpl.MAX_CURVE_LENGTH(),
-            deployParams.maxCurveLength
-        );
-        assertEq(
             address(accountingImpl.FEE_DISTRIBUTOR()),
             address(feeDistributor)
         );

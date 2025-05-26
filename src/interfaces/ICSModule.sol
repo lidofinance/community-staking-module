@@ -141,33 +141,33 @@ interface ICSModule is
     );
     event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 
-    function DEPOSIT_SIZE() external view returns (uint256);
-
-    function LIDO_LOCATOR() external view returns (ILidoLocator);
-
     function PAUSE_ROLE() external view returns (bytes32);
 
-    function RECOVERER_ROLE() external view returns (bytes32);
+    function RESUME_ROLE() external view returns (bytes32);
+
+    function STAKING_ROUTER_ROLE() external view returns (bytes32);
 
     function REPORT_EL_REWARDS_STEALING_PENALTY_ROLE()
         external
         view
         returns (bytes32);
 
-    function RESUME_ROLE() external view returns (bytes32);
-
     function SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE()
         external
         view
         returns (bytes32);
 
-    function STAKING_ROUTER_ROLE() external view returns (bytes32);
-
-    function STETH() external view returns (IStETH);
-
     function VERIFIER_ROLE() external view returns (bytes32);
 
+    function RECOVERER_ROLE() external view returns (bytes32);
+
     function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
+
+    function DEPOSIT_SIZE() external view returns (uint256);
+
+    function LIDO_LOCATOR() external view returns (ILidoLocator);
+
+    function STETH() external view returns (IStETH);
 
     function PARAMETERS_REGISTRY()
         external
@@ -179,6 +179,10 @@ interface ICSModule is
     function EXIT_PENALTIES() external view returns (ICSExitPenalties);
 
     function FEE_DISTRIBUTOR() external view returns (address);
+
+    function QUEUE_LOWEST_PRIORITY() external view returns (uint256);
+
+    function QUEUE_LEGACY_PRIORITY() external view returns (uint256);
 
     /// @notice Returns the address of the accounting contract
     function accounting() external view returns (ICSAccounting);

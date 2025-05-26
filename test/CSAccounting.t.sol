@@ -162,7 +162,6 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             address(locator),
             address(stakingModule),
             address(feeDistributor),
-            10,
             4 weeks,
             365 days
         );
@@ -179,7 +178,6 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             address(locator),
             address(stakingModule),
             address(feeDistributor),
-            10,
             4 weeks,
             365 days
         );
@@ -206,7 +204,6 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             address(locator),
             address(0),
             address(feeDistributor),
-            10,
             4 weeks,
             365 days
         );
@@ -218,7 +215,6 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             address(locator),
             address(stakingModule),
             address(0),
-            10,
             4 weeks,
             365 days
         );
@@ -232,7 +228,6 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             address(locator),
             address(0),
             address(feeDistributor),
-            10,
             4 weeks,
             2 weeks
         );
@@ -246,21 +241,8 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             address(locator),
             address(0),
             address(feeDistributor),
-            10,
             4 weeks,
             uint256(type(uint64).max) + 1
-        );
-    }
-
-    function test_constructor_RevertWhen_InvalidMaxBondCurveLength() public {
-        vm.expectRevert(ICSBondCurve.InvalidBondCurveMaxLength.selector);
-        accounting = new CSAccounting(
-            address(locator),
-            address(0),
-            address(feeDistributor),
-            0,
-            4 weeks,
-            365 days
         );
     }
 }
@@ -282,7 +264,6 @@ contract CSAccountingBaseInitTest is CSAccountingFixtures {
             address(locator),
             address(stakingModule),
             address(feeDistributor),
-            10,
             4 weeks,
             365 days
         );
@@ -431,7 +412,6 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
             address(locator),
             address(stakingModule),
             address(feeDistributor),
-            10,
             4 weeks,
             365 days
         );

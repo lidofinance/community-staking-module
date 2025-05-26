@@ -13,8 +13,6 @@ import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 import { console } from "forge-std/console.sol";
 
 contract CSBondCurveTestable is CSBondCurve {
-    constructor(uint256 maxCurveLength) CSBondCurve(maxCurveLength) {}
-
     function initialize(
         ICSBondCurve.BondCurveIntervalInput[] calldata bondCurve
     ) public initializer {
@@ -43,7 +41,7 @@ contract CSBondCurveInitTest is Test {
     CSBondCurveTestable public bondCurve;
 
     function setUp() public {
-        bondCurve = new CSBondCurveTestable(10);
+        bondCurve = new CSBondCurveTestable();
     }
 
     function test_initialize_revertWhen_InvalidInitializationCurveId() public {
@@ -66,7 +64,7 @@ contract CSBondCurveTest is Test {
             memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](2);
         _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(1, 2 ether);
         _bondCurve[1] = ICSBondCurve.BondCurveIntervalInput(3, 1 ether);
-        bondCurve = new CSBondCurveTestable(10);
+        bondCurve = new CSBondCurveTestable();
         vm.startSnapshotGas("bondCurve.initialize");
         bondCurve.initialize(_bondCurve);
         vm.stopSnapshotGas();
@@ -148,7 +146,7 @@ contract CSBondCurveTest is Test {
 
     function test_addBondCurve_RevertWhen_MoreThanMaxBondCurveLength() public {
         vm.expectRevert(ICSBondCurve.InvalidBondCurveLength.selector);
-        bondCurve.addBondCurve(new ICSBondCurve.BondCurveIntervalInput[](21));
+        bondCurve.addBondCurve(new ICSBondCurve.BondCurveIntervalInput[](101));
     }
 
     function test_addBondCurve_RevertWhen_ZeroTrend() public {
@@ -263,7 +261,7 @@ contract CSBondCurveTest is Test {
         vm.expectRevert(ICSBondCurve.InvalidBondCurveLength.selector);
         bondCurve.updateBondCurve(
             0,
-            new ICSBondCurve.BondCurveIntervalInput[](21)
+            new ICSBondCurve.BondCurveIntervalInput[](101)
         );
     }
 
@@ -627,7 +625,7 @@ contract CSBondCurveTest is Test {
 contract CSBondCurveFuzz is Test {
     CSBondCurveTestable public bondCurve;
 
-    uint256 public constant MAX_BOND_CURVE_INTERVALS_COUNT = 150;
+    uint256 public constant MAX_BOND_CURVE_INTERVALS_COUNT = 100;
     uint256 public constant MAX_FROM_KEYS_COUNT_VALUE = 10000;
     uint256 public constant MAX_TREND_VALUE = 1000 ether;
 
@@ -644,7 +642,7 @@ contract CSBondCurveFuzz is Test {
             keysToCheck,
             bondToCheck
         );
-        bondCurve = new CSBondCurveTestable(MAX_BOND_CURVE_INTERVALS_COUNT);
+        bondCurve = new CSBondCurveTestable();
         ICSBondCurve.BondCurveIntervalInput[]
             memory bondCurveInput = new ICSBondCurve.BondCurveIntervalInput[](
                 _bondCurve.length

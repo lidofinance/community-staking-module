@@ -42,7 +42,6 @@ contract DeployMainnet is DeployBase {
         config.verifierSupportedEpoch = 269568;
 
         // Accounting
-        config.maxCurveLength = 10;
         // 2.4 -> 1.3
         config.bondCurve.push([1, 2.4 ether]);
         config.bondCurve.push([2, 1.3 ether]);

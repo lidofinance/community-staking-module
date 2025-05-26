@@ -49,6 +49,8 @@ interface ICSAccounting is
 
     function MODULE() external view returns (ICSModule);
 
+    function FEE_DISTRIBUTOR() external view returns (ICSFeeDistributor);
+
     function feeDistributor() external view returns (ICSFeeDistributor);
 
     function chargePenaltyRecipient() external view returns (address);

@@ -210,43 +210,6 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.submitReportData({ data: data, contractVersion: 2 });
     }
 
-    function test_submitReport_RevertWhen_PausedUntil() public {
-        {
-            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
-            _grantAllRolesToAdmin();
-            _assertNoReportOnInit();
-            _setInitialEpoch();
-            _seedMembers(3);
-        }
-
-        vm.prank(ORACLE_ADMIN);
-        oracle.pauseUntil(block.timestamp + 1000);
-
-        uint256 startSlot;
-        uint256 refSlot;
-
-        (, startSlot, , ) = oracle.getConsensusReport();
-        (refSlot, ) = consensus.getCurrentFrame();
-        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
-        assertNotEq(startSlot, refSlot);
-
-        ICSFeeOracle.ReportData memory data = ICSFeeOracle.ReportData({
-            consensusVersion: oracle.getConsensusVersion(),
-            refSlot: refSlot,
-            treeRoot: keccak256("root"),
-            treeCid: someCIDv0(),
-            logCid: someCIDv0(),
-            distributed: 1337,
-            rebate: 154,
-            strikesTreeRoot: keccak256("strikesRoot"),
-            strikesTreeCid: someCIDv0()
-        });
-
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        vm.prank(members[0]);
-        oracle.submitReportData({ data: data, contractVersion: 2 });
-    }
-
     function test_happyPath_whenResumed() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
@@ -316,34 +279,6 @@ contract CSFeeOracleTest is Test, Utilities {
         vm.expectRevert(PausableUntil.PausedExpected.selector);
         vm.prank(ORACLE_ADMIN);
         oracle.resume();
-    }
-
-    function test_pauseUntil_revertWhen_PauseUntilMustBeInFuture() public {
-        {
-            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
-            _grantAllRolesToAdmin();
-            _assertNoReportOnInit();
-            _setInitialEpoch();
-            _seedMembers(3);
-        }
-
-        vm.expectRevert(PausableUntil.PauseUntilMustBeInFuture.selector);
-        vm.prank(ORACLE_ADMIN);
-        oracle.pauseUntil(block.timestamp - 1);
-    }
-
-    function test_pauseUntil_indefinitely() public {
-        {
-            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
-            _grantAllRolesToAdmin();
-            _assertNoReportOnInit();
-            _setInitialEpoch();
-            _seedMembers(3);
-        }
-
-        vm.prank(ORACLE_ADMIN);
-        oracle.pauseUntil(type(uint256).max);
-        assertEq(oracle.getResumeSinceTimestamp(), type(uint256).max);
     }
 
     function test_constructor() public {
