@@ -119,11 +119,11 @@ contract CSAccounting is
         if (bondCurvesInputs.length != _getLegacyBondCurvesLength()) {
             revert InvalidBondCurvesLength();
         }
-        for (uint256 i = 0; i < bondCurvesInputs.length; i++) {
-            uint256 addedCurveId = _addBondCurve(bondCurvesInputs[i]);
-            if (addedCurveId != i) {
-                revert InvalidInitializationCurveId();
-            }
+
+        // NOTE: Re-init `CSBondCurve` due to the new format. Contains a check that the first added curve id is `DEFAULT_BOND_CURVE_ID`
+        __CSBondCurve_init(bondCurvesInputs[0]);
+        for (uint256 i = 1; i < bondCurvesInputs.length; ++i) {
+            _addBondCurve(bondCurvesInputs[i]);
         }
     }
 
