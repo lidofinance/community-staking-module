@@ -120,7 +120,10 @@ contract CSAccounting is
             revert InvalidBondCurvesLength();
         }
         for (uint256 i = 0; i < bondCurvesInputs.length; i++) {
-            _addBondCurve(bondCurvesInputs[i]);
+            uint256 addedCurveId = _addBondCurve(bondCurvesInputs[i]);
+            if (addedCurveId != i) {
+                revert InvalidInitializationCurveId();
+            }
         }
     }
 

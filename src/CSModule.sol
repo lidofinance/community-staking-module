@@ -78,7 +78,7 @@ contract CSModule is
 
     /// @dev Legacy queue (priority=QUEUE_LEGACY_PRIORITY), that should be removed in the future once there are no more batches in it.
     /// @custom:oz-renamed-from depositQueue
-    QueueLib.Queue public legacyQueue;
+    QueueLib.Queue internal _legacyQueue;
 
     /// @dev Unused. Nullified in the finalizeUpgradeV2
     ICSAccounting internal _accountingOld;
@@ -1334,7 +1334,7 @@ contract CSModule is
             }
 
             // solhint-disable-next-line func-named-parameters
-            SigningKeys.saveKeysSigs(
+            uint256 newTotalAddedKeys = SigningKeys.saveKeysSigs(
                 nodeOperatorId,
                 totalAddedKeys,
                 keysCount,
@@ -1352,12 +1352,14 @@ contract CSModule is
                 );
             }
 
-            totalAddedKeys += keysCount;
-
             // @dev No need to safe cast due to internal logic
-            no.totalAddedKeys = uint32(totalAddedKeys);
+            no.totalAddedKeys = uint32(newTotalAddedKeys);
+
+            emit TotalSigningKeysCountChanged(
+                nodeOperatorId,
+                newTotalAddedKeys
+            );
         }
-        emit TotalSigningKeysCountChanged(nodeOperatorId, totalAddedKeys);
 
         // Nonce is updated below since in case of target limit depositable keys might not change
         _updateDepositableValidatorsCount({
@@ -1526,14 +1528,14 @@ contract CSModule is
         return map.get(nodeOperatorId) == 1;
     }
 
-    /// @dev Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.
+    /// @dev Acts as a proxy to `_queueByPriority` till `_legacyQueue` deprecation.
     /// @dev TODO: Remove the method in the next major release.
     function _getQueue(
         uint256 priority
     ) internal view returns (QueueLib.Queue storage q) {
         if (priority == QUEUE_LEGACY_PRIORITY) {
             assembly {
-                q.slot := legacyQueue.slot
+                q.slot := _legacyQueue.slot
             }
         } else {
             q = _queueByPriority[priority];

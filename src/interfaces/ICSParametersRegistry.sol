@@ -130,7 +130,6 @@ interface ICSParametersRegistry {
     error ZeroMaxDeposits();
     error ZeroAdminAddress();
     error QueueCannotBeUsed();
-    error InvalidExitDelayPenalty();
     error InvalidAllowedExitDelay();
     error ZeroQueueLowestPriority();
 

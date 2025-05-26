@@ -140,10 +140,6 @@ interface ICSModule is
         uint256 amount
     );
     event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
-    event DelayedValidatorExitPenalized(
-        uint256 indexed nodeOperatorId,
-        uint256 penaltyValue
-    );
 
     function DEPOSIT_SIZE() external view returns (uint256);
 

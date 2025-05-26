@@ -142,7 +142,6 @@ abstract contract DeployBase is Script {
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
     error HashConsensusMismatch();
-    error IsNotReadyForDeployment();
     error CannotBeUsedInMainnet();
     error InvalidSecondAdmin();
 
