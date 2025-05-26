@@ -4,14 +4,16 @@
 pragma solidity 0.8.24;
 
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
+import { ExitTypes } from "./abstract/ExitTypes.sol";
+
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
+import { SigningKeys } from "./lib/SigningKeys.sol";
 
 import { ICSEjector } from "./interfaces/ICSEjector.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
-import { PausableUntil } from "./lib/utils/PausableUntil.sol";
-import { SigningKeys } from "./lib/SigningKeys.sol";
 import { ITriggerableWithdrawalsGateway, ValidatorData } from "./interfaces/ITriggerableWithdrawalsGateway.sol";
-import { ExitTypes } from "./abstract/ExitTypes.sol";
 
 contract CSEjector is
     ICSEjector,
@@ -26,7 +28,6 @@ contract CSEjector is
 
     uint256 public immutable STAKING_MODULE_ID;
     ICSModule public immutable MODULE;
-    ITriggerableWithdrawalsGateway public immutable TWG;
     address public immutable STRIKES;
 
     modifier onlyStrikes() {
@@ -40,7 +41,6 @@ contract CSEjector is
     constructor(
         address module,
         address strikes,
-        address twg,
         uint256 stakingModuleId,
         address admin
     ) {
@@ -50,16 +50,12 @@ contract CSEjector is
         if (strikes == address(0)) {
             revert ZeroStrikesAddress();
         }
-        if (twg == address(0)) {
-            revert ZeroTWGAddress();
-        }
         if (admin == address(0)) {
             revert ZeroAdminAddress();
         }
 
         STRIKES = strikes;
         MODULE = ICSModule(module);
-        TWG = ITriggerableWithdrawalsGateway(twg);
         STAKING_MODULE_ID = stakingModuleId;
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -126,7 +122,9 @@ contract CSEjector is
             });
         }
 
-        TWG.triggerFullWithdrawals{ value: msg.value }(
+        triggerableWithdrawalsGateway().triggerFullWithdrawals{
+            value: msg.value
+        }(
             exitsData,
             refundRecipient == address(0) ? msg.sender : refundRecipient,
             VOLUNTARY_EXIT_TYPE_ID
@@ -174,7 +172,9 @@ contract CSEjector is
             });
         }
 
-        TWG.triggerFullWithdrawals{ value: msg.value }(
+        triggerableWithdrawalsGateway().triggerFullWithdrawals{
+            value: msg.value
+        }(
             exitsData,
             refundRecipient == address(0) ? msg.sender : refundRecipient,
             VOLUNTARY_EXIT_TYPE_ID
@@ -214,11 +214,21 @@ contract CSEjector is
             pubkey: pubkey
         });
 
-        TWG.triggerFullWithdrawals{ value: msg.value }(
-            exitsData,
-            refundRecipient,
-            STRIKES_EXIT_TYPE_ID
-        );
+        triggerableWithdrawalsGateway().triggerFullWithdrawals{
+            value: msg.value
+        }(exitsData, refundRecipient, STRIKES_EXIT_TYPE_ID);
+    }
+
+    /// @inheritdoc ICSEjector
+    function triggerableWithdrawalsGateway()
+        public
+        view
+        returns (ITriggerableWithdrawalsGateway)
+    {
+        return
+            ITriggerableWithdrawalsGateway(
+                MODULE.LIDO_LOCATOR().triggerableWithdrawalsGateway()
+            );
     }
 
     /// @dev Verifies that the sender is the owner of the node operator

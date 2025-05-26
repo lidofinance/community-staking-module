@@ -6,11 +6,12 @@ pragma solidity 0.8.24;
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import { ExitTypes } from "./abstract/ExitTypes.sol";
+
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSExitPenalties, MarkedUint248, ExitPenaltyInfo } from "./interfaces/ICSExitPenalties.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
-import { ExitTypes } from "./abstract/ExitTypes.sol";
 
 contract CSExitPenalties is ICSExitPenalties, ExitTypes {
     using SafeCast for uint256;

@@ -182,6 +182,8 @@ interface ICSModule is
 
     function EXIT_PENALTIES() external view returns (ICSExitPenalties);
 
+    function FEE_DISTRIBUTOR() external view returns (address);
+
     /// @notice Returns the address of the accounting contract
     function accounting() external view returns (ICSAccounting);
 

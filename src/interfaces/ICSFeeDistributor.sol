@@ -98,23 +98,23 @@ interface ICSFeeDistributor is IAssetRecovererLib {
 
     /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Total Amount of stETH shares earned as fees
+    /// @param cumulativeFeeShares Total Amount of stETH shares earned as fees
     /// @param proof Merkle proof of the leaf
     /// @return sharesToDistribute Amount of stETH shares that can be distributed
     function getFeesToDistribute(
         uint256 nodeOperatorId,
-        uint256 shares,
+        uint256 cumulativeFeeShares,
         bytes32[] calldata proof
     ) external view returns (uint256);
 
     /// @notice Distribute fees to the Accounting in favor of the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Total Amount of stETH shares earned as fees
+    /// @param cumulativeFeeShares Total Amount of stETH shares earned as fees
     /// @param proof Merkle proof of the leaf
     /// @return sharesToDistribute Amount of stETH shares distributed
     function distributeFees(
         uint256 nodeOperatorId,
-        uint256 shares,
+        uint256 cumulativeFeeShares,
         bytes32[] calldata proof
     ) external returns (uint256);
 

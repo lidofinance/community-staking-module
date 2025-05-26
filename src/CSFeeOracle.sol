@@ -1,14 +1,15 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
+
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { BaseOracle } from "./lib/base-oracle/BaseOracle.sol";
 
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { ICSStrikes } from "./interfaces/ICSStrikes.sol";
-import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { ICSFeeOracle } from "./interfaces/ICSFeeOracle.sol";
 
 contract CSFeeOracle is
@@ -143,10 +144,13 @@ contract CSFeeOracle is
     }
 
     function _checkMsgSenderIsAllowedToSubmitData() internal view {
-        address sender = _msgSender();
-        if (!_isConsensusMember(sender) && !hasRole(SUBMIT_DATA_ROLE, sender)) {
-            revert SenderNotAllowed();
+        if (
+            _isConsensusMember(msg.sender) ||
+            hasRole(SUBMIT_DATA_ROLE, msg.sender)
+        ) {
+            return;
         }
+        revert SenderNotAllowed();
     }
 
     function _onlyRecoverer() internal view override {

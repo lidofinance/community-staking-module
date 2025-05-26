@@ -273,6 +273,7 @@ contract StakingRouterIntegrationTest is
     }
 
     function test_unsafeSetExitedValidatorsCount() public assertInvariants {
+        vm.skip(true, "Protocol upgrade needed");
         hugeDeposit();
         uint256 noId;
         uint256 keysCount;

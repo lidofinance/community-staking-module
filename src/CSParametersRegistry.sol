@@ -3,10 +3,11 @@
 
 pragma solidity 0.8.24;
 
-import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
+import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 
 // solhint-disable-next-line max-states-count
 contract CSParametersRegistry is
@@ -16,9 +17,13 @@ contract CSParametersRegistry is
 {
     using SafeCast for uint256;
 
+    /// @dev Maximal value for basis points (BP)
+    ///      1 BP = 0.01%
     uint256 internal constant MAX_BP = 10000;
 
+    /// @dev QUEUE_LOWEST_PRIORITY identifies the range of available priorities: [0; QUEUE_LOWEST_PRIORITY].
     uint256 public immutable QUEUE_LOWEST_PRIORITY;
+    /// @dev QUEUE_LEGACY_PRIORITY is the priority for the CSM v1 queue.
     uint256 public immutable QUEUE_LEGACY_PRIORITY;
 
     ////////////////////////
@@ -36,30 +41,32 @@ contract CSParametersRegistry is
     mapping(uint256 curveId => MarkedUint248) internal _keysLimits;
 
     QueueConfig public defaultQueueConfig;
-    mapping(uint256 curveId => MarkedQueueConfig) internal _queueConfigs;
+    mapping(uint256 curveId => QueueConfig) internal _queueConfigs;
 
     /// @dev Default value for the reward share. Can be only be set as a flat value due to possible sybil attacks
     ///      Decreased reward share for some validators > N will promote sybils. Increased reward share for validators > N will give large operators an advantage
     uint256 public defaultRewardShare;
-    mapping(uint256 curveId => KeyNumberValue) internal _rewardShareData;
+    mapping(uint256 curveId => KeyNumberValueInterval[])
+        internal _rewardShareData;
 
     /// @dev Default value for the performance leeway. Can be only be set as a flat value due to possible sybil attacks
     ///      Decreased performance leeway for some validators > N will promote sybils. Increased performance leeway for validators > N will give large operators an advantage
     uint256 public defaultPerformanceLeeway;
-    mapping(uint256 curveId => KeyNumberValue) internal _performanceLeewayData;
+    mapping(uint256 curveId => KeyNumberValueInterval[])
+        internal _performanceLeewayData;
 
     StrikesParams public defaultStrikesParams;
-    mapping(uint256 curveId => MarkedStrikesParams) internal _strikesParams;
+    mapping(uint256 curveId => StrikesParams) internal _strikesParams;
 
     uint256 public defaultBadPerformancePenalty;
     mapping(uint256 curveId => MarkedUint248) internal _badPerformancePenalties;
 
     PerformanceCoefficients public defaultPerformanceCoefficients;
-    mapping(uint256 curveId => MarkedPerformanceCoefficients)
+    mapping(uint256 curveId => PerformanceCoefficients)
         internal _performanceCoefficients;
 
     uint256 public defaultAllowedExitDelay;
-    mapping(uint256 => MarkedUint248) internal _allowedExitDelay;
+    mapping(uint256 => uint256) internal _allowedExitDelay;
 
     uint256 public defaultExitDelayPenalty;
     mapping(uint256 => MarkedUint248) internal _exitDelayPenalties;
@@ -68,6 +75,10 @@ contract CSParametersRegistry is
     mapping(uint256 => MarkedUint248) internal _maxWithdrawalRequestFees;
 
     constructor(uint256 queueLowestPriority) {
+        if (queueLowestPriority == 0) {
+            revert ZeroQueueLowestPriority();
+        }
+
         QUEUE_LOWEST_PRIORITY = queueLowestPriority;
         QUEUE_LEGACY_PRIORITY = queueLowestPriority - 1;
 
@@ -106,6 +117,7 @@ contract CSParametersRegistry is
         _setDefaultMaxWithdrawalRequestFee(data.defaultMaxWithdrawalRequestFee);
 
         __AccessControlEnumerable_init();
+
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
@@ -264,8 +276,7 @@ contract CSParametersRegistry is
         KeyNumberValueInterval[] calldata data
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateKeyNumberValueIntervals(data);
-        KeyNumberValueInterval[] storage intervals = _rewardShareData[curveId]
-            .intervals;
+        KeyNumberValueInterval[] storage intervals = _rewardShareData[curveId];
         if (intervals.length > 0) {
             delete _rewardShareData[curveId];
         }
@@ -291,7 +302,7 @@ contract CSParametersRegistry is
         _validateKeyNumberValueIntervals(data);
         KeyNumberValueInterval[] storage intervals = _performanceLeewayData[
             curveId
-        ].intervals;
+        ];
         if (intervals.length > 0) {
             delete _performanceLeewayData[curveId];
         }
@@ -316,10 +327,9 @@ contract CSParametersRegistry is
         uint256 threshold
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateStrikesParams(lifetime, threshold);
-        _strikesParams[curveId] = MarkedStrikesParams(
+        _strikesParams[curveId] = StrikesParams(
             lifetime.toUint32(),
-            threshold.toUint32(),
-            true
+            threshold.toUint32()
         );
         emit StrikesParamsSet(curveId, lifetime, threshold);
     }
@@ -364,11 +374,10 @@ contract CSParametersRegistry is
             blocksWeight,
             syncWeight
         );
-        _performanceCoefficients[curveId] = MarkedPerformanceCoefficients(
+        _performanceCoefficients[curveId] = PerformanceCoefficients(
             attestationsWeight.toUint32(),
             blocksWeight.toUint32(),
-            syncWeight.toUint32(),
-            true
+            syncWeight.toUint32()
         );
         emit PerformanceCoefficientsSet(
             curveId,
@@ -389,14 +398,13 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setQueueConfig(
         uint256 curveId,
-        uint32 priority,
-        uint32 maxDeposits
+        uint256 priority,
+        uint256 maxDeposits
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateQueueConfig(priority, maxDeposits);
-        _queueConfigs[curveId] = MarkedQueueConfig({
-            priority: priority,
-            maxDeposits: maxDeposits,
-            isValue: true
+        _queueConfigs[curveId] = QueueConfig({
+            priority: priority.toUint32(),
+            maxDeposits: maxDeposits.toUint32()
         });
         emit QueueConfigSet(curveId, priority, maxDeposits);
     }
@@ -414,7 +422,8 @@ contract CSParametersRegistry is
         uint256 curveId,
         uint256 delay
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _allowedExitDelay[curveId] = MarkedUint248(delay.toUint248(), true);
+        _validateAllowedExitDelay(delay);
+        _allowedExitDelay[curveId] = delay;
         emit AllowedExitDelaySet(curveId, delay);
     }
 
@@ -491,25 +500,22 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function getRewardShareData(
         uint256 curveId
-    ) external view returns (KeyNumberValue memory data) {
+    ) external view returns (KeyNumberValueInterval[] memory data) {
         data = _rewardShareData[curveId];
-        if (data.intervals.length == 0) {
-            data.intervals = new KeyNumberValueInterval[](1);
-            data.intervals[0] = KeyNumberValueInterval(1, defaultRewardShare);
+        if (data.length == 0) {
+            data = new KeyNumberValueInterval[](1);
+            data[0] = KeyNumberValueInterval(1, defaultRewardShare);
         }
     }
 
     /// @inheritdoc ICSParametersRegistry
     function getPerformanceLeewayData(
         uint256 curveId
-    ) external view returns (KeyNumberValue memory data) {
+    ) external view returns (KeyNumberValueInterval[] memory data) {
         data = _performanceLeewayData[curveId];
-        if (data.intervals.length == 0) {
-            data.intervals = new KeyNumberValueInterval[](1);
-            data.intervals[0] = KeyNumberValueInterval(
-                1,
-                defaultPerformanceLeeway
-            );
+        if (data.length == 0) {
+            data = new KeyNumberValueInterval[](1);
+            data[0] = KeyNumberValueInterval(1, defaultPerformanceLeeway);
         }
     }
 
@@ -517,8 +523,8 @@ contract CSParametersRegistry is
     function getStrikesParams(
         uint256 curveId
     ) external view returns (uint256 lifetime, uint256 threshold) {
-        MarkedStrikesParams storage params = _strikesParams[curveId];
-        if (!params.isValue) {
+        StrikesParams storage params = _strikesParams[curveId];
+        if (params.threshold == 0) {
             return (
                 defaultStrikesParams.lifetime,
                 defaultStrikesParams.threshold
@@ -547,9 +553,14 @@ contract CSParametersRegistry is
             uint256 syncWeight
         )
     {
-        MarkedPerformanceCoefficients
-            storage coefficients = _performanceCoefficients[curveId];
-        if (!coefficients.isValue) {
+        PerformanceCoefficients storage coefficients = _performanceCoefficients[
+            curveId
+        ];
+        if (
+            coefficients.attestationsWeight == 0 &&
+            coefficients.blocksWeight == 0 &&
+            coefficients.syncWeight == 0
+        ) {
             return (
                 defaultPerformanceCoefficients.attestationsWeight,
                 defaultPerformanceCoefficients.blocksWeight,
@@ -567,9 +578,9 @@ contract CSParametersRegistry is
     function getQueueConfig(
         uint256 curveId
     ) external view returns (uint32 queuePriority, uint32 maxDeposits) {
-        MarkedQueueConfig storage config = _queueConfigs[curveId];
+        QueueConfig storage config = _queueConfigs[curveId];
 
-        if (!config.isValue) {
+        if (config.maxDeposits == 0) {
             return (
                 defaultQueueConfig.priority,
                 defaultQueueConfig.maxDeposits
@@ -583,8 +594,10 @@ contract CSParametersRegistry is
     function getAllowedExitDelay(
         uint256 curveId
     ) external view returns (uint256 delay) {
-        MarkedUint248 memory data = _allowedExitDelay[curveId];
-        return data.isValue ? data.value : defaultAllowedExitDelay;
+        delay = _allowedExitDelay[curveId];
+        if (delay == 0) {
+            return defaultAllowedExitDelay;
+        }
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -685,12 +698,15 @@ contract CSParametersRegistry is
         uint256 maxDeposits
     ) internal {
         _validateQueueConfig(priority, maxDeposits);
-        defaultQueueConfig.priority = priority.toUint32();
-        defaultQueueConfig.maxDeposits = maxDeposits.toUint32();
+        defaultQueueConfig = QueueConfig({
+            priority: priority.toUint32(),
+            maxDeposits: maxDeposits.toUint32()
+        });
         emit DefaultQueueConfigSet(priority, maxDeposits);
     }
 
     function _setDefaultAllowedExitDelay(uint256 delay) internal {
+        _validateAllowedExitDelay(delay);
         defaultAllowedExitDelay = delay;
         emit DefaultAllowedExitDelaySet(delay);
     }
@@ -726,6 +742,12 @@ contract CSParametersRegistry is
     ) internal pure {
         if (threshold == 0 || lifetime == 0) {
             revert InvalidStrikesParams();
+        }
+    }
+
+    function _validateAllowedExitDelay(uint256 delay) internal pure {
+        if (delay == 0) {
+            revert InvalidAllowedExitDelay();
         }
     }
 

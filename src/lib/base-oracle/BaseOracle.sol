@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { UnstructuredStorage } from "../UnstructuredStorage.sol";
 import { Versioned } from "../utils/Versioned.sol";
-import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 import { IReportAsyncProcessor } from "./interfaces/IReportAsyncProcessor.sol";
 import { IConsensusContract } from "./interfaces/IConsensusContract.sol";
