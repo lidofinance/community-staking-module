@@ -124,6 +124,11 @@ library QueueLib {
             bool reachedOutOfQueue
         )
     {
+        removed = 0;
+        lastRemovedAtDepth = 0;
+        visited = 0;
+        reachedOutOfQueue = false;
+
         if (maxItems == 0) {
             revert IQueueLib.QueueLookupNoLimit();
         }

@@ -22,7 +22,6 @@ struct ExitPenaltyInfo {
 interface ICSExitPenalties is IExitTypes {
     error ZeroModuleAddress();
     error ZeroParametersRegistryAddress();
-    error ZeroAccountingAddress();
     error ZeroStrikesAddress();
     error SenderIsNotModule();
     error SenderIsNotStrikes();

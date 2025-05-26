@@ -22,8 +22,6 @@ interface ICSStrikes {
     error ZeroExitPenaltiesAddress();
     error ZeroParametersRegistryAddress();
     error ZeroAdminAddress();
-    error ZeroEjectionFeeAmount();
-    error ZeroBadPerformancePenaltyAmount();
     error SenderIsNotOracle();
     error ValueNotEvenlyDivisible();
 

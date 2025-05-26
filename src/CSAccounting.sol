@@ -120,7 +120,10 @@ contract CSAccounting is
         if (bondCurvesInputs.length != _getLegacyBondCurvesLength()) {
             revert InvalidBondCurvesLength();
         }
-        for (uint256 i = 0; i < bondCurvesInputs.length; i++) {
+
+        // NOTE: Re-init `CSBondCurve` due to the new format. Contains a check that the first added curve id is `DEFAULT_BOND_CURVE_ID`
+        __CSBondCurve_init(bondCurvesInputs[0]);
+        for (uint256 i = 1; i < bondCurvesInputs.length; ++i) {
             _addBondCurve(bondCurvesInputs[i]);
         }
     }
@@ -336,6 +339,8 @@ contract CSAccounting is
     function settleLockedBondETH(
         uint256 nodeOperatorId
     ) external onlyModule returns (bool applied) {
+        applied = false;
+
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
             CSBondCore._burn(nodeOperatorId, lockedAmount);
