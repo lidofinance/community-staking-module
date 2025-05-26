@@ -36,8 +36,10 @@ contract CSFeeOracle is
     ICSStrikes public immutable STRIKES;
 
     /// @dev DEPRECATED
+    /// @custom:oz-renamed-from feeDistributor
     ICSFeeDistributor internal _feeDistributor;
     /// @dev DEPRECATED
+    /// @custom:oz-renamed-from avgPerfLeewayBP
     uint256 internal _avgPerfLeewayBP;
 
     constructor(
