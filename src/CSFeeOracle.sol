@@ -90,6 +90,16 @@ contract CSFeeOracle is
     }
 
     /// @inheritdoc ICSFeeOracle
+    function resume() external onlyRole(RESUME_ROLE) {
+        _resume();
+    }
+
+    /// @inheritdoc ICSFeeOracle
+    function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
+        _pauseFor(duration);
+    }
+
+    /// @inheritdoc ICSFeeOracle
     function submitReportData(
         ReportData calldata data,
         uint256 contractVersion
@@ -104,23 +114,6 @@ contract CSFeeOracle is
         );
         _startProcessing();
         _handleConsensusReportData(data);
-    }
-
-    /// @inheritdoc ICSFeeOracle
-    function resume() external onlyRole(RESUME_ROLE) {
-        _resume();
-    }
-
-    /// @inheritdoc ICSFeeOracle
-    function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
-        _pauseFor(duration);
-    }
-
-    /// @inheritdoc ICSFeeOracle
-    function pauseUntil(
-        uint256 pauseUntilInclusive
-    ) external onlyRole(PAUSE_ROLE) {
-        _pauseUntil(pauseUntilInclusive);
     }
 
     /// @dev Called in `submitConsensusReport` after a consensus is reached.

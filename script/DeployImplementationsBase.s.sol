@@ -82,7 +82,6 @@ abstract contract DeployImplementationsBase is DeployBase {
                 lidoLocator: config.lidoLocatorAddress,
                 module: address(csm),
                 _feeDistributor: address(feeDistributor),
-                maxCurveLength: config.maxCurveLength,
                 minBondLockPeriod: config.minBondLockPeriod,
                 maxBondLockPeriod: config.maxBondLockPeriod
             });

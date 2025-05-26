@@ -1164,6 +1164,7 @@ contract CSModule is
             uint256 depositableValidatorsCount
         )
     {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 totalUnbondedKeys = accounting().getUnbondedKeysCountToEject(
             nodeOperatorId

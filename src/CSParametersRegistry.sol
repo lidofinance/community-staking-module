@@ -9,6 +9,8 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 
+/// @dev There are no upper limit checks except for the basis points (BP) values
+///      since with the introduction of Dual Governance any malicious changes to the parameters can be objected by stETH holders.
 // solhint-disable-next-line max-states-count
 contract CSParametersRegistry is
     ICSParametersRegistry,

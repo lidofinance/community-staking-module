@@ -64,30 +64,31 @@ contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
 
     function test_CSAccountingUpgradeTo() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(accounting)));
-        uint256 currentMaxCurveLength = accounting.MAX_CURVE_LENGTH();
+        uint256 currentMaxBondLockPeriod = accounting.MAX_BOND_LOCK_PERIOD();
         CSAccounting newAccounting = new CSAccounting({
             lidoLocator: address(accounting.LIDO_LOCATOR()),
             module: address(csm),
             _feeDistributor: address(feeDistributor),
-            maxCurveLength: currentMaxCurveLength + 10,
             minBondLockPeriod: accounting.MIN_BOND_LOCK_PERIOD(),
-            maxBondLockPeriod: accounting.MAX_BOND_LOCK_PERIOD()
+            maxBondLockPeriod: currentMaxBondLockPeriod + 10
         });
         vm.prank(proxy.proxy__getAdmin());
         proxy.proxy__upgradeTo(address(newAccounting));
-        assertEq(accounting.MAX_CURVE_LENGTH(), currentMaxCurveLength + 10);
+        assertEq(
+            accounting.MAX_BOND_LOCK_PERIOD(),
+            currentMaxBondLockPeriod + 10
+        );
     }
 
     function test_CSAccountingUpgradeToAndCall() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(accounting)));
-        uint256 currentMaxCurveLength = accounting.MAX_CURVE_LENGTH();
+        uint256 currentMaxBondLockPeriod = accounting.MAX_BOND_LOCK_PERIOD();
         CSAccounting newAccounting = new CSAccounting({
             lidoLocator: address(accounting.LIDO_LOCATOR()),
             module: address(csm),
             _feeDistributor: address(feeDistributor),
-            maxCurveLength: currentMaxCurveLength + 10,
             minBondLockPeriod: accounting.MIN_BOND_LOCK_PERIOD(),
-            maxBondLockPeriod: accounting.MAX_BOND_LOCK_PERIOD()
+            maxBondLockPeriod: currentMaxBondLockPeriod + 10
         });
         address contractAdmin = accounting.getRoleMember(
             accounting.DEFAULT_ADMIN_ROLE(),
@@ -105,7 +106,10 @@ contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
             address(newAccounting),
             abi.encodeWithSelector(newAccounting.pauseFor.selector, 100500)
         );
-        assertEq(accounting.MAX_CURVE_LENGTH(), currentMaxCurveLength + 10);
+        assertEq(
+            accounting.MAX_BOND_LOCK_PERIOD(),
+            currentMaxBondLockPeriod + 10
+        );
         assertTrue(accounting.isPaused());
     }
 

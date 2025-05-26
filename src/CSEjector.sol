@@ -122,6 +122,7 @@ contract CSEjector is
             });
         }
 
+        // @dev This call might revert if the limits are exceeded on the protocol side.
         triggerableWithdrawalsGateway().triggerFullWithdrawals{
             value: msg.value
         }(
@@ -172,6 +173,7 @@ contract CSEjector is
             });
         }
 
+        // @dev This call might revert if the limits are exceeded on the protocol side.
         triggerableWithdrawalsGateway().triggerFullWithdrawals{
             value: msg.value
         }(
@@ -214,6 +216,7 @@ contract CSEjector is
             pubkey: pubkey
         });
 
+        // @dev This call might revert if the limits are exceeded on the protocol side.
         triggerableWithdrawalsGateway().triggerFullWithdrawals{
             value: msg.value
         }(exitsData, refundRecipient, STRIKES_EXIT_TYPE_ID);

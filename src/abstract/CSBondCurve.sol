@@ -41,15 +41,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     uint256 public constant MIN_CURVE_LENGTH = 1;
     uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
-    uint256 public immutable MAX_CURVE_LENGTH;
-
-    constructor(uint256 maxCurveLength) {
-        if (maxCurveLength < MIN_CURVE_LENGTH) {
-            revert InvalidBondCurveMaxLength();
-        }
-
-        MAX_CURVE_LENGTH = maxCurveLength;
-    }
+    uint256 public constant MAX_CURVE_LENGTH = 100;
 
     // @inheritdoc ICSBondCurve
     function getCurvesCount() external view returns (uint256) {
@@ -253,9 +245,20 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         }
     }
 
+    function _getCurveInfo(
+        uint256 curveId
+    ) private view returns (BondCurve storage) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        if (curveId > $.bondCurves.length - 1) {
+            revert InvalidBondCurveId();
+        }
+
+        return $.bondCurves[curveId];
+    }
+
     function _checkBondCurve(
         BondCurveIntervalInput[] calldata intervals
-    ) private view {
+    ) private pure {
         if (
             intervals.length < MIN_CURVE_LENGTH ||
             intervals.length > MAX_CURVE_LENGTH
@@ -283,17 +286,6 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                 }
             }
         }
-    }
-
-    function _getCurveInfo(
-        uint256 curveId
-    ) private view returns (BondCurve storage) {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        if (curveId > $.bondCurves.length - 1) {
-            revert InvalidBondCurveId();
-        }
-
-        return $.bondCurves[curveId];
     }
 
     function _getCSBondCurveStorage()

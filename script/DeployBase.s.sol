@@ -55,7 +55,6 @@ struct DeployParams {
     GIndex gIFirstValidator;
     uint256 verifierSupportedEpoch;
     // Accounting
-    uint256 maxCurveLength;
     uint256[2][] bondCurve;
     uint256 minBondLockPeriod;
     uint256 maxBondLockPeriod;
@@ -260,7 +259,6 @@ abstract contract DeployBase is Script {
                 lidoLocator: config.lidoLocatorAddress,
                 module: address(csm),
                 _feeDistributor: address(feeDistributor),
-                maxCurveLength: config.maxCurveLength,
                 minBondLockPeriod: config.minBondLockPeriod,
                 maxBondLockPeriod: config.maxBondLockPeriod
             });
