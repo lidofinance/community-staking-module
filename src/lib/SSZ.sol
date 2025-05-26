@@ -14,6 +14,8 @@ library SSZ {
     function hashTreeRoot(
         BeaconBlockHeader memory header
     ) internal view returns (bytes32 root) {
+        root = bytes32(0);
+
         bytes32[8] memory nodes = [
             toLittleEndian(header.slot.unwrap()),
             toLittleEndian(header.proposerIndex),
@@ -84,8 +86,9 @@ library SSZ {
     function hashTreeRoot(
         Validator memory validator
     ) internal view returns (bytes32 root) {
-        bytes32 pubkeyRoot;
+        root = bytes32(0);
 
+        bytes32 pubkeyRoot;
         assembly {
             // Dynamic data types such as bytes are stored at the specified offset.
             let offset := mload(validator)

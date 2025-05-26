@@ -982,6 +982,13 @@ contract CSModule is
     function cleanDepositQueue(
         uint256 maxItems
     ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
+        removed = 0;
+        lastRemovedAtDepth = 0;
+
+        if (maxItems == 0) {
+            return (0, 0);
+        }
+
         // NOTE: We need one unique hash map per function invocation to be able to track batches of
         // the same operator across multiple queues.
         TransientUintUintMap queueLookup = TransientUintUintMapLib.create();

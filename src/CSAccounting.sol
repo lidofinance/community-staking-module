@@ -338,6 +338,8 @@ contract CSAccounting is
     function settleLockedBondETH(
         uint256 nodeOperatorId
     ) external onlyModule returns (bool applied) {
+        applied = false;
+
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
             CSBondCore._burn(nodeOperatorId, lockedAmount);
