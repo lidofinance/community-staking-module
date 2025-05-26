@@ -1,8 +1,8 @@
 # CSExitPenalties
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSExitPenalties.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSExitPenalties.sol)
 
 **Inherits:**
-[ICSExitPenalties](/src/interfaces/ICSExitPenalties.sol/interface.ICSExitPenalties.md), [ExitTypes](/src/abstract/ExitTypes.sol/abstract.ExitTypes.md), Initializable
+[ICSExitPenalties](/src/interfaces/ICSExitPenalties.sol/interface.ICSExitPenalties.md), [ExitTypes](/src/abstract/ExitTypes.sol/abstract.ExitTypes.md)
 
 
 ## State Variables
@@ -27,17 +27,17 @@ ICSAccounting public immutable ACCOUNTING;
 ```
 
 
-### strikes
+### STRIKES
 
 ```solidity
-address public strikes;
+address public immutable STRIKES;
 ```
 
 
 ### _exitPenaltyInfo
 
 ```solidity
-mapping(bytes32 => ExitPenaltyInfo) private _exitPenaltyInfo;
+mapping(bytes32 keyPointer => ExitPenaltyInfo) private _exitPenaltyInfo;
 ```
 
 
@@ -60,17 +60,14 @@ modifier onlyStrikes();
 
 
 ```solidity
-constructor(address module, address parametersRegistry, address accounting);
-```
-
-### initialize
-
-
-```solidity
-function initialize(address _strikes) external initializer;
+constructor(address module, address parametersRegistry, address strikes);
 ```
 
 ### processExitDelayReport
+
+Handles tracking and penalization logic for a validator that remains active beyond its eligible exit window.
+
+*see IStakingModule.reportValidatorExitDelay for details*
 
 
 ```solidity
@@ -78,6 +75,14 @@ function processExitDelayReport(uint256 nodeOperatorId, bytes calldata publicKey
     external
     onlyModule;
 ```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|The ID of the node operator whose validator's status is being delivered.|
+|`publicKey`|`bytes`|The public key of the validator being reported.|
+|`eligibleToExitInSec`|`uint256`|The duration (in seconds) indicating how long the validator has been eligible to exit but has not exited.|
+
 
 ### processTriggeredExit
 
@@ -124,7 +129,7 @@ Determines whether a validator exit status should be updated and will have affec
 
 *there is a `onlyModule` modifier to prevent using it from outside
 as it gives a false-positive information for non-existent node operators.
-use `isValidatorExitDelayPenaltyApplicable` in the CSModule instead*
+use `isValidatorExitDelayPenaltyApplicable` in the CSModule.sol instead*
 
 
 ```solidity
@@ -149,13 +154,13 @@ function isValidatorExitDelayPenaltyApplicable(
 |`<none>`|`bool`|bool Returns true if contract should receive updated validator's status.|
 
 
-### getDelayedExitPenaltyInfo
+### getExitPenaltyInfo
 
 get delayed exit penalty info for the given Node Operator
 
 
 ```solidity
-function getDelayedExitPenaltyInfo(uint256 nodeOperatorId, bytes calldata publicKey)
+function getExitPenaltyInfo(uint256 nodeOperatorId, bytes calldata publicKey)
     external
     view
     returns (ExitPenaltyInfo memory);

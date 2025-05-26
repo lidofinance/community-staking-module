@@ -1,5 +1,5 @@
 # CSBondLock
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/abstract/CSBondLock.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/abstract/CSBondLock.sol)
 
 **Inherits:**
 [ICSBondLock](/src/interfaces/ICSBondLock.sol/interface.ICSBondLock.md), Initializable
@@ -75,7 +75,7 @@ Get information about the locked bond for the given Node Operator
 
 
 ```solidity
-function getLockedBondInfo(uint256 nodeOperatorId) public view returns (BondLock memory);
+function getLockedBondInfo(uint256 nodeOperatorId) external view returns (BondLock memory);
 ```
 **Parameters**
 

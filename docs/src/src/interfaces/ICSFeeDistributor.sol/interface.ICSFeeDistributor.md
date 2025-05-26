@@ -1,5 +1,5 @@
 # ICSFeeDistributor
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSFeeDistributor.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSFeeDistributor.sol)
 
 **Inherits:**
 [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
@@ -113,7 +113,7 @@ Get the Amount of stETH shares that can be distributed in favor of the Node Oper
 
 
 ```solidity
-function getFeesToDistribute(uint256 nodeOperatorId, uint256 shares, bytes32[] calldata proof)
+function getFeesToDistribute(uint256 nodeOperatorId, uint256 cumulativeFeeShares, bytes32[] calldata proof)
     external
     view
     returns (uint256);
@@ -123,7 +123,7 @@ function getFeesToDistribute(uint256 nodeOperatorId, uint256 shares, bytes32[] c
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`shares`|`uint256`|Total Amount of stETH shares earned as fees|
+|`cumulativeFeeShares`|`uint256`|Total Amount of stETH shares earned as fees|
 |`proof`|`bytes32[]`|Merkle proof of the leaf|
 
 **Returns**
@@ -139,14 +139,16 @@ Distribute fees to the Accounting in favor of the Node Operator
 
 
 ```solidity
-function distributeFees(uint256 nodeOperatorId, uint256 shares, bytes32[] calldata proof) external returns (uint256);
+function distributeFees(uint256 nodeOperatorId, uint256 cumulativeFeeShares, bytes32[] calldata proof)
+    external
+    returns (uint256);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`shares`|`uint256`|Total Amount of stETH shares earned as fees|
+|`cumulativeFeeShares`|`uint256`|Total Amount of stETH shares earned as fees|
 |`proof`|`bytes32[]`|Merkle proof of the leaf|
 
 **Returns**
@@ -317,16 +319,16 @@ error ZeroOracleAddress();
 error ZeroRebateRecipientAddress();
 ```
 
-### NotAccounting
+### SenderIsNotAccounting
 
 ```solidity
-error NotAccounting();
+error SenderIsNotAccounting();
 ```
 
-### NotOracle
+### SenderIsNotOracle
 
 ```solidity
-error NotOracle();
+error SenderIsNotOracle();
 ```
 
 ### InvalidReportData

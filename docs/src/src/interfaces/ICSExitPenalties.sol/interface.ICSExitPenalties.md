@@ -1,5 +1,5 @@
 # ICSExitPenalties
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSExitPenalties.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSExitPenalties.sol)
 
 **Inherits:**
 [IExitTypes](/src/interfaces/IExitTypes.sol/interface.IExitTypes.md)
@@ -20,16 +20,25 @@ function MODULE() external view returns (ICSModule);
 function ACCOUNTING() external view returns (ICSAccounting);
 ```
 
-### strikes
+### PARAMETERS_REGISTRY
 
 
 ```solidity
-function strikes() external view returns (address);
+function PARAMETERS_REGISTRY() external view returns (ICSParametersRegistry);
+```
+
+### STRIKES
+
+
+```solidity
+function STRIKES() external view returns (address);
 ```
 
 ### processExitDelayReport
 
-Process the delayed exit report
+Handles tracking and penalization logic for a validator that remains active beyond its eligible exit window.
+
+*see IStakingModule.reportValidatorExitDelay for details*
 
 
 ```solidity
@@ -40,9 +49,9 @@ function processExitDelayReport(uint256 nodeOperatorId, bytes calldata publicKey
 
 |Name|Type|Description|
 |----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`publicKey`|`bytes`|Public key of the validator|
-|`eligibleToExitInSec`|`uint256`|The time in seconds when the validator is eligible to exit|
+|`nodeOperatorId`|`uint256`|The ID of the node operator whose validator's status is being delivered.|
+|`publicKey`|`bytes`|The public key of the validator being reported.|
+|`eligibleToExitInSec`|`uint256`|The duration (in seconds) indicating how long the validator has been eligible to exit but has not exited.|
 
 
 ### processTriggeredExit
@@ -113,13 +122,13 @@ function isValidatorExitDelayPenaltyApplicable(
 |`<none>`|`bool`|bool Returns true if contract should receive updated validator's status.|
 
 
-### getDelayedExitPenaltyInfo
+### getExitPenaltyInfo
 
 get delayed exit penalty info for the given Node Operator
 
 
 ```solidity
-function getDelayedExitPenaltyInfo(uint256 nodeOperatorId, bytes calldata publicKey)
+function getExitPenaltyInfo(uint256 nodeOperatorId, bytes calldata publicKey)
     external
     view
     returns (ExitPenaltyInfo memory penaltyInfo);
@@ -149,7 +158,11 @@ event ValidatorExitDelayProcessed(uint256 indexed nodeOperatorId, bytes pubkey, 
 
 ```solidity
 event TriggeredExitFeeRecorded(
-    uint256 indexed nodeOperatorId, uint256 indexed exitType, bytes pubkey, uint256 withdrawalRequestFee
+    uint256 indexed nodeOperatorId,
+    uint256 indexed exitType,
+    bytes pubkey,
+    uint256 withdrawalRequestPaidFee,
+    uint256 withdrawalRequestRecordedFee
 );
 ```
 
@@ -170,12 +183,6 @@ error ZeroModuleAddress();
 
 ```solidity
 error ZeroParametersRegistryAddress();
-```
-
-### ZeroAccountingAddress
-
-```solidity
-error ZeroAccountingAddress();
 ```
 
 ### ZeroStrikesAddress

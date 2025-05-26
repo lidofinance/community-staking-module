@@ -1,5 +1,5 @@
 # CSModule
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSModule.sol)
 
 **Inherits:**
 [ICSModule](/src/interfaces/ICSModule.sol/interface.ICSModule.md), Initializable, AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -65,7 +65,7 @@ bytes32 public constant CREATE_NODE_OPERATOR_ROLE = keccak256("CREATE_NODE_OPERA
 ### DEPOSIT_SIZE
 
 ```solidity
-uint256 private constant DEPOSIT_SIZE = 32 ether;
+uint256 public constant DEPOSIT_SIZE = 32 ether;
 ```
 
 
@@ -73,6 +73,14 @@ uint256 private constant DEPOSIT_SIZE = 32 ether;
 
 ```solidity
 uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
+```
+
+
+### OPERATORS_CREATED_IN_TX_MAP_TSLOT
+
+```solidity
+bytes32 private constant OPERATORS_CREATED_IN_TX_MAP_TSLOT =
+    0x1b07bc0838fdc4254cbabb5dd0c94d936f872c6758547168d513d8ad1dc3a500;
 ```
 
 
@@ -104,6 +112,27 @@ ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
 ```
 
 
+### ACCOUNTING
+
+```solidity
+ICSAccounting public immutable ACCOUNTING;
+```
+
+
+### EXIT_PENALTIES
+
+```solidity
+ICSExitPenalties public immutable EXIT_PENALTIES;
+```
+
+
+### FEE_DISTRIBUTOR
+
+```solidity
+address public immutable FEE_DISTRIBUTOR;
+```
+
+
 ### QUEUE_LOWEST_PRIORITY
 *QUEUE_LOWEST_PRIORITY identifies the range of available priorities: [0; QUEUE_LOWEST_PRIORITY].*
 
@@ -114,6 +143,8 @@ uint256 public immutable QUEUE_LOWEST_PRIORITY;
 
 
 ### QUEUE_LEGACY_PRIORITY
+*QUEUE_LEGACY_PRIORITY is the priority for the CSM v1 queue.*
+
 
 ```solidity
 uint256 public immutable QUEUE_LEGACY_PRIORITY;
@@ -132,7 +163,7 @@ mapping(uint256 queuePriority => QueueLib.Queue queue) internal _queueByPriority
 ```
 
 
-### legacyQueue
+### _legacyQueue
 *Legacy queue (priority=QUEUE_LEGACY_PRIORITY), that should be removed in the future once there are no more batches in it.*
 
 **Note:**
@@ -140,24 +171,43 @@ oz-renamed-from: depositQueue
 
 
 ```solidity
-QueueLib.Queue public legacyQueue;
+QueueLib.Queue internal _legacyQueue;
 ```
 
 
-### accounting
+### _accountingOld
+*Unused. Nullified in the finalizeUpgradeV2*
+
+**Note:**
+oz-renamed-from: accounting
+
 
 ```solidity
-ICSAccounting public accounting;
+ICSAccounting internal _accountingOld;
 ```
 
 
-### exitPenalties
+### _earlyAdoption
+*Unused. Nullified in the finalizeUpgradeV2*
+
 **Note:**
 oz-renamed-from: earlyAdoption
 
 
 ```solidity
-ICSExitPenalties public exitPenalties;
+address internal _earlyAdoption;
+```
+
+
+### _publicRelease
+*deprecated. Nullified in the finalizeUpgradeV2*
+
+**Note:**
+oz-renamed-from: publicRelease
+
+
+```solidity
+bool internal _publicRelease;
 ```
 
 
@@ -226,7 +276,13 @@ uint64 private _nodeOperatorsCount;
 
 
 ```solidity
-constructor(bytes32 moduleType, address lidoLocator, address parametersRegistry);
+constructor(
+    bytes32 moduleType,
+    address lidoLocator,
+    address parametersRegistry,
+    address _accounting,
+    address exitPenalties
+);
 ```
 
 ### initialize
@@ -235,7 +291,7 @@ initialize the module from scratch
 
 
 ```solidity
-function initialize(address _accounting, address _exitPenalties, address admin) external reinitializer(2);
+function initialize(address admin) external reinitializer(2);
 ```
 
 ### finalizeUpgradeV2
@@ -244,7 +300,7 @@ function initialize(address _accounting, address _exitPenalties, address admin) 
 
 
 ```solidity
-function finalizeUpgradeV2(address _exitPenalties) external reinitializer(2);
+function finalizeUpgradeV2() external reinitializer(2);
 ```
 
 ### resume
@@ -290,7 +346,7 @@ function createNodeOperator(
 
 |Name|Type|Description|
 |----|----|-----------|
-|`from`|`address`|Sender address. Initial sender address to be used as a default manager and reward addresses|
+|`from`|`address`|Sender address. Initial sender address to be used as a default manager and reward addresses. Gates must pass the correct address in order to specify which address should be the owner of the Node Operator|
 |`managementProperties`|`NodeOperatorManagementProperties`|Optional. Management properties to be used for the Node Operator. managerAddress: Used as `managerAddress` for the Node Operator. If not passed `from` will be used. rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `from` will be used. extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`. If set to true `resetNodeOperatorManagerAddress` method will be disabled|
 |`referrer`|`address`|Optional. Referrer address. Should be passed when Node Operator is created using partners integration|
 
@@ -535,9 +591,11 @@ is the same as StakingRouter expects based on the total count received from the 
 
 *This method is not used in CSM, hence it is do nothing*
 
+*NOTE: No role checks because of empty body to save bytecode.*
+
 
 ```solidity
-function onExitedAndStuckValidatorsCountsUpdated() external onlyRole(STAKING_ROUTER_ROLE);
+function onExitedAndStuckValidatorsCountsUpdated() external;
 ```
 
 ### unsafeUpdateValidatorsCount
@@ -547,19 +605,16 @@ Unsafely updates the number of validators in the EXITED/STUCK states for node op
 
 
 ```solidity
-function unsafeUpdateValidatorsCount(
-    uint256 nodeOperatorId,
-    uint256 exitedValidatorsKeysCount,
-    uint256 stuckValidatorsKeysCount
-) external onlyRole(STAKING_ROUTER_ROLE);
+function unsafeUpdateValidatorsCount(uint256 nodeOperatorId, uint256 exitedValidatorsKeysCount)
+    external
+    onlyRole(STAKING_ROUTER_ROLE);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`nodeOperatorId`|`uint256`|Id of the node operator|
+|`nodeOperatorId`|`uint256`||
 |`exitedValidatorsKeysCount`|`uint256`||
-|`stuckValidatorsKeysCount`|`uint256`||
 
 
 ### decreaseVettedSigningKeysCount
@@ -726,8 +781,6 @@ function submitWithdrawals(ValidatorWithdrawalInfo[] calldata withdrawalsInfo) e
 
 Called by StakingRouter when withdrawal credentials are changed.
 
-*Does nothing*
-
 *Changing the WC means that the current deposit data in the queue is not valid anymore and can't be deposited.
 DSM will unvet current keys.
 The key removal charge should be reset to 0 to allow Node Operators to remove the keys without any charge.
@@ -740,11 +793,12 @@ function onWithdrawalCredentialsChanged() external onlyRole(STAKING_ROUTER_ROLE)
 
 ### reportValidatorExitDelay
 
-Handles tracking and penalization logic for validators that remain active beyond their eligible exit window.
+Handles tracking and penalization logic for a validator that remains active beyond its eligible exit window.
 
-*This function is called to report the current exit-related status of validator belonging to a specific node operator.
-It accepts a validator public key associated with the duration (in seconds) they was eligible to exit but have not.
-This data could be used to trigger penalties for the node operator if validator has been non-exiting for too long.*
+*This function is called by the StakingRouter to report the current exit-related status of a validator
+belonging to a specific node operator. It accepts a validator's public key, associated
+with the duration (in seconds) it was eligible to exit but has not exited.
+This data could be used to trigger penalties for the node operator if the validator has exceeded the allowed exit window.*
 
 
 ```solidity
@@ -759,17 +813,18 @@ function reportValidatorExitDelay(
 
 |Name|Type|Description|
 |----|----|-----------|
-|`nodeOperatorId`|`uint256`|The ID of the node operator whose validator status being delivered.|
+|`nodeOperatorId`|`uint256`||
 |`<none>`|`uint256`||
-|`publicKey`|`bytes`|Public key of the validator being reported.|
-|`eligibleToExitInSec`|`uint256`|Duration (in seconds) indicating how long a validator has been eligible to exit but hasn't.|
+|`publicKey`|`bytes`||
+|`eligibleToExitInSec`|`uint256`||
 
 
 ### onValidatorExitTriggered
 
-Handles the triggerable exit event validator belonging to a specific node operator.
+Handles the triggerable exit event for a validator belonging to a specific node operator.
 
-*This function is called when a validator is exited using the triggerable exit request on EL.*
+*This function is called by the StakingRouter when a validator is exited using the triggerable
+exit request on the Execution Layer (EL).*
 
 
 ```solidity
@@ -886,13 +941,13 @@ function depositQueueItem(uint256 queuePriority, uint128 index) external view re
 |Name|Type|Description|
 |----|----|-----------|
 |`queuePriority`|`uint256`|Priority of the queue to get an item from|
-|`index`|`uint128`|Index of a queue item (continuous numbering)|
+|`index`|`uint128`|Index of a queue item|
 
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`Batch`|Deposit queue item and the priority of the queue|
+|`<none>`|`Batch`|Deposit queue item from the priority queue|
 
 
 ### isValidatorWithdrawn
@@ -914,7 +969,7 @@ function isValidatorWithdrawn(uint256 nodeOperatorId, uint256 keyIndex) external
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`bool`|Validator reported as withdrawn flag|
+|`<none>`|`bool`|Is validator reported as withdrawn or not|
 
 
 ### getType
@@ -997,6 +1052,27 @@ function getNodeOperatorManagementProperties(uint256 nodeOperatorId)
 |`<none>`|`NodeOperatorManagementProperties`|Node Operator management properties|
 
 
+### getNodeOperatorOwner
+
+Get Node Operator owner. Owner is manager address if `extendedManagerPermissions` is enabled and reward address otherwise
+
+
+```solidity
+function getNodeOperatorOwner(uint256 nodeOperatorId) external view returns (address);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`address`|Node Operator owner|
+
+
 ### getNodeOperatorNonWithdrawnKeys
 
 Get Node Operator non-withdrawn keys
@@ -1027,7 +1103,6 @@ depositableValidatorsCount depends on:
 - targetLimitMode
 - targetValidatorsCount
 - totalUnbondedKeys
-- totalStuckKeys
 
 
 ```solidity
@@ -1141,7 +1216,18 @@ function getSigningKeysWithSignatures(uint256 nodeOperatorId, uint256 startIndex
 
 ### getNonce
 
-Get nonce of the module
+Returns a counter that MUST change its value whenever the deposit data set changes.
+Below is the typical list of actions that requires an update of the nonce:
+1. a node operator's deposit data is added
+2. a node operator's deposit data is removed
+3. a node operator's ready-to-deposit data size is changed
+4. a node operator was activated/deactivated
+5. a node operator's deposit data is used for the deposit
+Note: Depending on the StakingModule implementation above list might be extended
+
+*In some scenarios, it's allowed to update nonce without actual change of the deposit
+data subset, but it MUST NOT lead to the DOS of the staking module via continuous
+update of the nonce by the malicious actor*
 
 
 ```solidity
@@ -1196,7 +1282,7 @@ function getNodeOperatorIds(uint256 offset, uint256 limit) external view returns
 
 ### isValidatorExitDelayPenaltyApplicable
 
-Determines whether a validator exit status should be updated and will have affect on Node Operator.
+Determines whether a validator's exit status should be updated and will have an effect on the Node Operator.
 
 
 ```solidity
@@ -1220,23 +1306,38 @@ function isValidatorExitDelayPenaltyApplicable(
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`bool`|bool Returns true if contract should receive updated validator's status.|
+|`<none>`|`bool`|bool Returns true if the contract should receive the updated status of the validator.|
 
 
 ### exitDeadlineThreshold
 
-Returns the delay after which a validator is considered late.
+Returns the number of seconds after which a validator is considered late.
 
 
 ```solidity
 function exitDeadlineThreshold(uint256 nodeOperatorId) external view returns (uint256);
 ```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`||
+
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`uint256`|The exit deadline threshold.|
+|`<none>`|`uint256`|The exit deadline threshold in seconds.|
 
+
+### accounting
+
+*This function is used to get the accounting contract from immutables to save bytecode and for backwards compatibility*
+
+
+```solidity
+function accounting() public view returns (ICSAccounting);
+```
 
 ### _incrementModuleNonce
 
@@ -1290,9 +1391,23 @@ function _enqueueNodeOperatorKeys(uint256 nodeOperatorId) internal;
 function _enqueueNodeOperatorKeys(uint256 nodeOperatorId, uint256 queuePriority, uint32 maxKeys) internal;
 ```
 
+### _markOperatorIsCreatedInTX
+
+
+```solidity
+function _markOperatorIsCreatedInTX(uint256 nodeOperatorId) internal;
+```
+
+### _isOperatorCreatedInTX
+
+
+```solidity
+function _isOperatorCreatedInTX(uint256 nodeOperatorId) internal view returns (bool);
+```
+
 ### _getQueue
 
-*Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.*
+*Acts as a proxy to `_queueByPriority` till `_legacyQueue` deprecation.*
 
 *TODO: Remove the method in the next major release.*
 

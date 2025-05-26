@@ -1,5 +1,5 @@
 # CSBondCore
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/abstract/CSBondCore.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/abstract/CSBondCore.sol)
 
 **Inherits:**
 [ICSBondCore](/src/interfaces/ICSBondCore.sol/interface.ICSBondCore.md)
@@ -193,7 +193,7 @@ function _claimWstETH(uint256 nodeOperatorId, uint256 requestedAmountToClaim, ad
 
 *Burn Node Operator's bond shares (stETH). Shares will be burned on the next stETH rebase*
 
-*The method sender should be granted as `Burner.REQUEST_BURN_MY_STETH_ROLE` and make stETH allowance for `Burner`*
+*The contract that uses this implementation should be granted `Burner.REQUEST_BURN_MY_STETH_ROLE` and have stETH allowance for `Burner`*
 
 
 ```solidity
@@ -209,11 +209,11 @@ function _burn(uint256 nodeOperatorId, uint256 amount) internal;
 
 ### _charge
 
-*Transfer Node Operator's bond shares (stETH) to charge recipient to pay some fee*
+*Transfer Node Operator's bond shares (stETH) to charge recipient*
 
 
 ```solidity
-function _charge(uint256 nodeOperatorId, uint256 amount, address recipient) internal returns (uint256 chargedShares);
+function _charge(uint256 nodeOperatorId, uint256 amount, address recipient) internal;
 ```
 **Parameters**
 
@@ -221,7 +221,7 @@ function _charge(uint256 nodeOperatorId, uint256 amount, address recipient) inte
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`||
 |`amount`|`uint256`|Bond amount to charge in ETH (stETH)|
-|`recipient`|`address`||
+|`recipient`|`address`|Address to send charged shares|
 
 
 ### _getClaimableBondShares

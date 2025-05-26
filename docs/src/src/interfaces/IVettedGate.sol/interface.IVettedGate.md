@@ -1,5 +1,5 @@
 # IVettedGate
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/IVettedGate.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/IVettedGate.sol)
 
 
 ## Functions
@@ -15,6 +15,13 @@ function PAUSE_ROLE() external view returns (bytes32);
 
 ```solidity
 function RESUME_ROLE() external view returns (bytes32);
+```
+
+### RECOVERER_ROLE
+
+
+```solidity
+function RECOVERER_ROLE() external view returns (bytes32);
 ```
 
 ### SET_TREE_ROLE
@@ -45,6 +52,13 @@ function END_REFERRAL_SEASON_ROLE() external view returns (bytes32);
 function MODULE() external view returns (ICSModule);
 ```
 
+### ACCOUNTING
+
+
+```solidity
+function ACCOUNTING() external view returns (ICSAccounting);
+```
+
 ### curveId
 
 
@@ -64,6 +78,34 @@ function treeRoot() external view returns (bytes32);
 
 ```solidity
 function treeCid() external view returns (string memory);
+```
+
+### isReferralProgramSeasonActive
+
+
+```solidity
+function isReferralProgramSeasonActive() external view returns (bool);
+```
+
+### referralProgramSeasonNumber
+
+
+```solidity
+function referralProgramSeasonNumber() external view returns (uint256);
+```
+
+### referralCurveId
+
+
+```solidity
+function referralCurveId() external view returns (uint256);
+```
+
+### referralsThreshold
+
+
+```solidity
+function referralsThreshold() external view returns (uint256);
 ```
 
 ### pauseFor
@@ -98,7 +140,9 @@ Start referral program season
 
 
 ```solidity
-function startNewReferralProgramSeason(uint256 _referralCurveId, uint256 _referralsThreshold) external;
+function startNewReferralProgramSeason(uint256 _referralCurveId, uint256 _referralsThreshold)
+    external
+    returns (uint256 season);
 ```
 **Parameters**
 
@@ -106,6 +150,12 @@ function startNewReferralProgramSeason(uint256 _referralCurveId, uint256 _referr
 |----|----|-----------|
 |`_referralCurveId`|`uint256`|Curve Id for the referral curve|
 |`_referralsThreshold`|`uint256`|Minimum number of referrals to be eligible to claim the curve|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`season`|`uint256`|Id of the started season|
 
 
 ### endCurrentReferralProgramSeason
@@ -367,12 +417,46 @@ function setTreeParams(bytes32 _treeRoot, string calldata _treeCid) external;
 
 ### getReferralsCount
 
-Get the number of referrals for the given referrer
+Get the number of referrals for the given referrer in the current or last season
 
 
 ```solidity
 function getReferralsCount(address referrer) external view returns (uint256);
 ```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`referrer`|`address`|Referrer address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Number of referrals for the given referrer in the current or last season|
+
+
+### getReferralsCount
+
+Get the number of referrals for the given referrer in the given season
+
+
+```solidity
+function getReferralsCount(address referrer, uint256 season) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`referrer`|`address`|Referrer address|
+|`season`|`uint256`|Season number|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Number of referrals for the given referrer in the given season|
+
 
 ### getInitializedVersion
 
@@ -399,7 +483,7 @@ event Consumed(address indexed member);
 ### ReferrerConsumed
 
 ```solidity
-event ReferrerConsumed(address indexed referrer);
+event ReferrerConsumed(address indexed referrer, uint256 indexed season);
 ```
 
 ### ReferralProgramSeasonStarted
@@ -412,6 +496,12 @@ event ReferralProgramSeasonStarted(uint256 indexed season, uint256 referralCurve
 
 ```solidity
 event ReferralProgramSeasonEnded(uint256 indexed season);
+```
+
+### ReferralRecorded
+
+```solidity
+event ReferralRecorded(address indexed referrer, uint256 indexed season, uint256 indexed referralNodeOperatorId);
 ```
 
 ## Errors
@@ -461,6 +551,12 @@ error ZeroAdminAddress();
 
 ```solidity
 error NotAllowedToClaim();
+```
+
+### NodeOperatorDoesNotExist
+
+```solidity
+error NodeOperatorDoesNotExist();
 ```
 
 ### NotEnoughReferrals

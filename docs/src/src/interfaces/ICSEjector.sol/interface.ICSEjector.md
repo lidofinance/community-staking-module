@@ -1,5 +1,5 @@
 # ICSEjector
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSEjector.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSEjector.sol)
 
 **Inherits:**
 [IExitTypes](/src/interfaces/IExitTypes.sol/interface.IExitTypes.md)
@@ -20,6 +20,13 @@ function PAUSE_ROLE() external view returns (bytes32);
 function RESUME_ROLE() external view returns (bytes32);
 ```
 
+### RECOVERER_ROLE
+
+
+```solidity
+function RECOVERER_ROLE() external view returns (bytes32);
+```
+
 ### STAKING_MODULE_ID
 
 
@@ -34,11 +41,11 @@ function STAKING_MODULE_ID() external view returns (uint256);
 function MODULE() external view returns (ICSModule);
 ```
 
-### strikes
+### STRIKES
 
 
 ```solidity
-function strikes() external view returns (address);
+function STRIKES() external view returns (address);
 ```
 
 ### pauseFor
@@ -117,18 +124,25 @@ See `CSStrikes.processBadPerformanceProof` to use this method permissionless
 
 
 ```solidity
-function ejectBadPerformer(uint256 nodeOperatorId, bytes calldata publicKeys, address refundRecipient)
-    external
-    payable;
+function ejectBadPerformer(uint256 nodeOperatorId, uint256 keyIndex, address refundRecipient) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`publicKeys`|`bytes`|Concatenated public keys of the Node Operator's validators|
+|`keyIndex`|`uint256`|index of deposited key to eject|
 |`refundRecipient`|`address`|Address to send the refund to|
 
+
+### triggerableWithdrawalsGateway
+
+TriggerableWithdrawalsGateway implementation used by the contract.
+
+
+```solidity
+function triggerableWithdrawalsGateway() external view returns (ITriggerableWithdrawalsGateway);
+```
 
 ## Errors
 ### SigningKeysInvalidOffset

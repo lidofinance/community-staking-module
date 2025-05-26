@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 // Usage: forge script --private-key=$PRIVATE_KEY ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Mainnet|Hoodi|DevNet]

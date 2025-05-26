@@ -1,8 +1,8 @@
 # VettedGate
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/VettedGate.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/VettedGate.sol)
 
 **Inherits:**
-[IVettedGate](/src/interfaces/IVettedGate.sol/interface.IVettedGate.md), AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md)
+[IVettedGate](/src/interfaces/IVettedGate.sol/interface.IVettedGate.md), AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
 
 
 ## State Variables
@@ -17,6 +17,13 @@ bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
 
 ```solidity
 bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
+```
+
+
+### RECOVERER_ROLE
+
+```solidity
+bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 ```
 
 
@@ -127,12 +134,12 @@ uint256 public referralsThreshold;
 ```
 
 
-### referralCounts
+### _referralCounts
 *Referral counts for referrers for seasons*
 
 
 ```solidity
-mapping(bytes32 => uint256) public referralCounts;
+mapping(bytes32 => uint256) internal _referralCounts;
 ```
 
 
@@ -164,8 +171,6 @@ function initialize(uint256 _curveId, bytes32 _treeRoot, string calldata _treeCi
 
 Resume the contract
 
-*there is no check for curve existence as this contract might be created before the curve is added*
-
 
 ```solidity
 function resume() external onlyRole(RESUME_ROLE);
@@ -196,7 +201,8 @@ Start referral program season
 ```solidity
 function startNewReferralProgramSeason(uint256 _referralCurveId, uint256 _referralsThreshold)
     external
-    onlyRole(START_REFERRAL_SEASON_ROLE);
+    onlyRole(START_REFERRAL_SEASON_ROLE)
+    returns (uint256 season);
 ```
 **Parameters**
 
@@ -204,6 +210,12 @@ function startNewReferralProgramSeason(uint256 _referralCurveId, uint256 _referr
 |----|----|-----------|
 |`_referralCurveId`|`uint256`|Curve Id for the referral curve|
 |`_referralsThreshold`|`uint256`|Minimum number of referrals to be eligible to claim the curve|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`season`|`uint256`|Id of the started season|
 
 
 ### endCurrentReferralProgramSeason
@@ -229,7 +241,7 @@ function addNodeOperatorETH(
     NodeOperatorManagementProperties calldata managementProperties,
     bytes32[] calldata proof,
     address referrer
-) external payable returns (uint256 nodeOperatorId);
+) external payable whenResumed returns (uint256 nodeOperatorId);
 ```
 **Parameters**
 
@@ -264,7 +276,7 @@ function addNodeOperatorStETH(
     ICSAccounting.PermitInput calldata permit,
     bytes32[] calldata proof,
     address referrer
-) external returns (uint256 nodeOperatorId);
+) external whenResumed returns (uint256 nodeOperatorId);
 ```
 **Parameters**
 
@@ -300,7 +312,7 @@ function addNodeOperatorWstETH(
     ICSAccounting.PermitInput calldata permit,
     bytes32[] calldata proof,
     address referrer
-) external returns (uint256 nodeOperatorId);
+) external whenResumed returns (uint256 nodeOperatorId);
 ```
 **Parameters**
 
@@ -330,7 +342,7 @@ In case of the extended manager permissions, should be called by the manager add
 
 
 ```solidity
-function claimBondCurve(uint256 nodeOperatorId, bytes32[] calldata proof) external;
+function claimBondCurve(uint256 nodeOperatorId, bytes32[] calldata proof) external whenResumed;
 ```
 **Parameters**
 
@@ -346,7 +358,7 @@ Claim the referral program bond curve for the eligible Node Operator
 
 
 ```solidity
-function claimReferrerBondCurve(uint256 nodeOperatorId, bytes32[] calldata proof) external;
+function claimReferrerBondCurve(uint256 nodeOperatorId, bytes32[] calldata proof) external whenResumed;
 ```
 **Parameters**
 
@@ -372,6 +384,79 @@ function setTreeParams(bytes32 _treeRoot, string calldata _treeCid) external onl
 |`_treeCid`|`string`|New CID of the Merkle Tree|
 
 
+### getReferralsCount
+
+Get the number of referrals for the given referrer in the current or last season
+
+
+```solidity
+function getReferralsCount(address referrer) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`referrer`|`address`|Referrer address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Number of referrals for the given referrer in the current or last season|
+
+
+### getReferralsCount
+
+Get the number of referrals for the given referrer in the current or last season
+
+
+```solidity
+function getReferralsCount(address referrer, uint256 season) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`referrer`|`address`|Referrer address|
+|`season`|`uint256`||
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Number of referrals for the given referrer in the current or last season|
+
+
+### getInitializedVersion
+
+Returns the initialized version of the contract
+
+
+```solidity
+function getInitializedVersion() external view returns (uint64);
+```
+
+### isReferrerConsumed
+
+Check if the address has already consumed referral program bond curve
+
+
+```solidity
+function isReferrerConsumed(address referrer) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`referrer`|`address`|Address to check|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Consumed flag|
+
+
 ### isConsumed
 
 Check if the address has already consumed the curve
@@ -392,36 +477,6 @@ function isConsumed(address member) public view returns (bool);
 |----|----|-----------|
 |`<none>`|`bool`|Consumed flag|
 
-
-### isReferrerConsumed
-
-Check if the address has already consumed referral program bond curve
-
-
-```solidity
-function isReferrerConsumed(address referrer) public view returns (bool);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`referrer`|`address`|Address to check|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Consumed flag|
-
-
-### getReferralsCount
-
-Get the number of referrals for the given referrer
-
-
-```solidity
-function getReferralsCount(address referrer) public view returns (uint256);
-```
 
 ### verifyProof
 
@@ -444,15 +499,6 @@ function verifyProof(address member, bytes32[] calldata proof) public view retur
 |----|----|-----------|
 |`<none>`|`bool`|Boolean flag if the proof is valid or not|
 
-
-### getInitializedVersion
-
-Returns the initialized version of the contract
-
-
-```solidity
-function getInitializedVersion() external view returns (uint64);
-```
 
 ### hashLeaf
 
@@ -481,7 +527,7 @@ function hashLeaf(address member) public pure returns (bytes32);
 
 
 ```solidity
-function _consume(bytes32[] calldata proof) internal whenResumed;
+function _consume(bytes32[] calldata proof) internal;
 ```
 
 ### _setTreeParams
@@ -495,7 +541,7 @@ function _setTreeParams(bytes32 _treeRoot, string calldata _treeCid) internal;
 
 
 ```solidity
-function _bumpReferralCount(address referrer) internal;
+function _bumpReferralCount(address referrer, uint256 referralNodeOperatorId) internal;
 ```
 
 ### _seasonedAddress
@@ -505,12 +551,26 @@ function _bumpReferralCount(address referrer) internal;
 function _seasonedAddress(address referrer) internal view returns (bytes32);
 ```
 
-### _verifySender
+### _onlyNodeOperatorOwner
 
 *Verifies that the sender is the owner of the node operator*
 
 
 ```solidity
-function _verifySender(uint256 nodeOperatorId) internal view;
+function _onlyNodeOperatorOwner(uint256 nodeOperatorId) internal view;
+```
+
+### _onlyRecoverer
+
+
+```solidity
+function _onlyRecoverer() internal view override;
+```
+
+### _seasonedAddress
+
+
+```solidity
+function _seasonedAddress(address referrer, uint256 season) internal pure returns (bytes32);
 ```
 

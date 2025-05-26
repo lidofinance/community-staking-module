@@ -1,5 +1,5 @@
 # ICSParametersRegistry
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSParametersRegistry.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSParametersRegistry.sol)
 
 
 ## Functions
@@ -226,7 +226,7 @@ function defaultPerformanceCoefficients() external returns (uint32, uint32, uint
 
 ### setDefaultAllowedExitDelay
 
-set default value for allowed exit delay in seconds. Default value is used if a specific value is not set for the curveId
+set default value for allowed delay before the exit was initiated exit delay in seconds. Default value is used if a specific value is not set for the curveId
 
 
 ```solidity
@@ -444,8 +444,8 @@ function getKeysLimit(uint256 curveId) external view returns (uint256 limit);
 
 Set reward share parameters for the curveId
 
-*KeyIndexValueIntervals = [[0, 10000], [10, 8000], [50, 5000]] stands for
-100% rewards for the keys 1-10, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50*
+*KeyNumberValueInterval = [[1, 10000], [11, 8000], [51, 5000]] stands for
+100% rewards for the first 10 keys, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50*
 
 
 ```solidity
@@ -456,7 +456,7 @@ function setRewardShareData(uint256 curveId, KeyNumberValueInterval[] calldata d
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to associate reward share data with|
-|`data`|`KeyNumberValueInterval[]`|Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])|
+|`data`|`KeyNumberValueInterval[]`|Interval values for keys count and reward share percentages in BP (ex. [[1, 10000], [11, 8000], [51, 5000]])|
 
 
 ### unsetRewardShareData
@@ -478,10 +478,10 @@ function unsetRewardShareData(uint256 curveId) external;
 
 Get reward share parameters by the curveId.
 
-*Returns [[0, defaultRewardShare]] if no intervals are set for the given curveId.*
+*Returns [[1, defaultRewardShare]] if no intervals are set for the given curveId.*
 
-*KeyIndexValueIntervals = [[0, 10000], [10, 8000], [50, 5000]] stands for
-100% rewards for the keys 1-10, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50*
+*KeyNumberValueInterval = [[1, 10000], [11, 8000], [51, 5000]] stands for
+100% rewards for the first 10 keys, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50*
 
 
 ```solidity
@@ -516,14 +516,15 @@ Sets the provided config to the given curve.
 
 
 ```solidity
-function setQueueConfig(uint256 curveId, QueueConfig memory config) external;
+function setQueueConfig(uint256 curveId, uint256 priority, uint256 maxDeposits) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to set the config.|
-|`config`|`QueueConfig`|Config to be used for the curve.|
+|`priority`|`uint256`|Priority of the queue|
+|`maxDeposits`|`uint256`|Max deposits in prioritized queue|
 
 
 ### unsetQueueConfig
@@ -567,10 +568,10 @@ function getQueueConfig(uint256 curveId) external view returns (uint32 priority,
 
 Set performance leeway parameters for the curveId
 
-*Returns [[0, defaultPerformanceLeeway]] if no intervals are set for the given curveId.*
+*Returns [[1, defaultPerformanceLeeway]] if no intervals are set for the given curveId.*
 
-*KeyIndexValueIntervals = [[0, 500], [100, 450], [500, 400]] stands for
-5% performance leeway for the keys 1-100, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500*
+*KeyNumberValueInterval = [[1, 500], [101, 450], [501, 400]] stands for
+5% performance leeway for the first 100 keys, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500*
 
 
 ```solidity
@@ -581,7 +582,7 @@ function setPerformanceLeewayData(uint256 curveId, KeyNumberValueInterval[] call
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to associate performance leeway data with|
-|`data`|`KeyNumberValueInterval[]`|Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])|
+|`data`|`KeyNumberValueInterval[]`|Interval values for keys count and performance leeway percentages in BP (ex. [[1, 500], [101, 450], [501, 400]])|
 
 
 ### unsetPerformanceLeewayData
@@ -603,10 +604,10 @@ function unsetPerformanceLeewayData(uint256 curveId) external;
 
 Get performance leeway parameters by the curveId
 
-*Returns [[0, defaultPerformanceLeeway]] if no intervals are set for the given curveId.*
+*Returns [[1, defaultPerformanceLeeway]] if no intervals are set for the given curveId.*
 
-*KeyIndexValueIntervals = [[0, 500], [100, 450], [500, 400]] stands for
-5% performance leeway for the keys 1-100, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500*
+*KeyNumberValueInterval = [[1, 500], [101, 450], [501, 400]] stands for
+5% performance leeway for the first 100 keys, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500*
 
 
 ```solidity
@@ -941,6 +942,15 @@ function getMaxWithdrawalRequestFee(uint256 curveId) external view returns (uint
 |`curveId`|`uint256`|Curve Id to get max withdrawal request fee for|
 
 
+### getInitializedVersion
+
+Returns the initialized version of the contract
+
+
+```solidity
+function getInitializedVersion() external view returns (uint64);
+```
+
 ## Events
 ### DefaultKeyRemovalChargeSet
 
@@ -1173,10 +1183,10 @@ error InvalidRewardShareData();
 error InvalidPerformanceLeewayData();
 ```
 
-### InvalidKeyIndexValueIntervals
+### InvalidKeyNumberValueIntervals
 
 ```solidity
-error InvalidKeyIndexValueIntervals();
+error InvalidKeyNumberValueIntervals();
 ```
 
 ### InvalidPerformanceCoefficients
@@ -1209,10 +1219,16 @@ error ZeroAdminAddress();
 error QueueCannotBeUsed();
 ```
 
-### InvalidExitDelayPenalty
+### InvalidAllowedExitDelay
 
 ```solidity
-error InvalidExitDelayPenalty();
+error InvalidAllowedExitDelay();
+```
+
+### ZeroQueueLowestPriority
+
+```solidity
+error ZeroQueueLowestPriority();
 ```
 
 ## Structs
@@ -1221,16 +1237,6 @@ error InvalidExitDelayPenalty();
 ```solidity
 struct MarkedUint248 {
     uint248 value;
-    bool isValue;
-}
-```
-
-### MarkedQueueConfig
-
-```solidity
-struct MarkedQueueConfig {
-    uint32 priority;
-    uint32 maxDeposits;
     bool isValue;
 }
 ```
@@ -1253,16 +1259,6 @@ struct StrikesParams {
 }
 ```
 
-### MarkedStrikesParams
-
-```solidity
-struct MarkedStrikesParams {
-    uint32 lifetime;
-    uint32 threshold;
-    bool isValue;
-}
-```
-
 ### PerformanceCoefficients
 
 ```solidity
@@ -1270,17 +1266,6 @@ struct PerformanceCoefficients {
     uint32 attestationsWeight;
     uint32 blocksWeight;
     uint32 syncWeight;
-}
-```
-
-### MarkedPerformanceCoefficients
-
-```solidity
-struct MarkedPerformanceCoefficients {
-    uint32 attestationsWeight;
-    uint32 blocksWeight;
-    uint32 syncWeight;
-    bool isValue;
 }
 ```
 
@@ -1308,16 +1293,16 @@ struct InitializationData {
 ```
 
 ### KeyNumberValueInterval
-*Defines a value interval starting from `minKeyIndex`.
-All keys with indices >= `minKeyIndex` are assigned the corresponding `value`
-until the next interval begins. Intervals must be sorted by ascending `minKeyIndex`
-and must start from zero (i.e., the first interval must have minKeyIndex == 0).
-Example: [{0, 10000}, {10, 8000}] means keys indexes 0–9 with 10000, keys indexes 10+ with 8000.*
+*Defines a value interval starting from `minKeyNumber`.
+All keys with number >= `minKeyNumber` are assigned the corresponding `value`
+until the next interval begins. Intervals must be sorted by ascending `minKeyNumber`
+and must start from one (i.e., the first interval must have minKeyNumber == 1).
+Example: [{1, 10000}, {11, 8000}] means first 10 keys with 10000, other keys with 8000.*
 
 
 ```solidity
 struct KeyNumberValueInterval {
-    uint256 minKeyIndex;
+    uint256 minKeyNumber;
     uint256 value;
 }
 ```

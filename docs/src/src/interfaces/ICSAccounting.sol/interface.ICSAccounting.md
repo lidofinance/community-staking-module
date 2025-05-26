@@ -1,5 +1,5 @@
 # ICSAccounting
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSAccounting.sol)
 
 **Inherits:**
 [ICSBondCore](/src/interfaces/ICSBondCore.sol/interface.ICSBondCore.md), [ICSBondCurve](/src/interfaces/ICSBondCurve.sol/interface.ICSBondCurve.md), [ICSBondLock](/src/interfaces/ICSBondLock.sol/interface.ICSBondLock.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
@@ -46,6 +46,13 @@ function RECOVERER_ROLE() external view returns (bytes32);
 
 ```solidity
 function MODULE() external view returns (ICSModule);
+```
+
+### FEE_DISTRIBUTOR
+
+
+```solidity
+function FEE_DISTRIBUTOR() external view returns (ICSFeeDistributor);
 ```
 
 ### feeDistributor
@@ -135,13 +142,13 @@ Add a new bond curve
 
 
 ```solidity
-function addBondCurve(uint256[2][] calldata bondCurve) external returns (uint256 id);
+function addBondCurve(BondCurveIntervalInput[] calldata bondCurve) external returns (uint256 id);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`bondCurve`|`uint256[2][]`|Bond curve definition to add|
+|`bondCurve`|`BondCurveIntervalInput[]`|Bond curve definition to add|
 
 **Returns**
 
@@ -159,14 +166,14 @@ Extensive checks should be performed to avoid inconsistency in the keys accounti
 
 
 ```solidity
-function updateBondCurve(uint256 curveId, uint256[2][] calldata bondCurve) external;
+function updateBondCurve(uint256 curveId, BondCurveIntervalInput[] calldata bondCurve) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Bond curve ID to update|
-|`bondCurve`|`uint256[2][]`|Bond curve definition|
+|`bondCurve`|`BondCurveIntervalInput[]`|Bond curve definition|
 
 
 ### getRequiredBondForNextKeys
@@ -383,7 +390,7 @@ function getClaimableRewardsAndBondShares(
 
 Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
 
-*Called by CSM exclusively*
+*Called by CSM exclusively. CSM should check node operator existence and update depositable validators count*
 
 
 ```solidity
@@ -423,7 +430,7 @@ function depositWstETH(uint256 nodeOperatorId, uint256 wstETHAmount, PermitInput
 
 Deposit user's stETH to the bond for the given Node Operator
 
-*Called by CSM exclusively*
+*Called by CSM exclusively. CSM should check node operator existence and update depositable validators count*
 
 
 ```solidity
@@ -434,7 +441,7 @@ function depositStETH(address from, uint256 nodeOperatorId, uint256 stETHAmount,
 
 |Name|Type|Description|
 |----|----|-----------|
-|`from`|`address`|Address to deposit stETH from|
+|`from`|`address`|Address to deposit stETH from.|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
 |`stETHAmount`|`uint256`|Amount of stETH to deposit|
 |`permit`|`PermitInput`|stETH permit for the contract|
@@ -463,7 +470,7 @@ function depositStETH(uint256 nodeOperatorId, uint256 stETHAmount, PermitInput c
 
 Stake user's ETH with Lido and deposit stETH to the bond
 
-*Called by CSM exclusively*
+*Called by CSM exclusively. CSM should check node operator existence and update depositable validators count*
 
 
 ```solidity
@@ -574,7 +581,7 @@ off-chain tooling, e.g. to make sure a tree has at least 2 leafs.*
 ```solidity
 function claimRewardsUnstETH(
     uint256 nodeOperatorId,
-    uint256 stEthAmount,
+    uint256 stETHAmount,
     uint256 cumulativeFeeShares,
     bytes32[] calldata rewardsProof
 ) external returns (uint256 requestId);
@@ -584,7 +591,7 @@ function claimRewardsUnstETH(
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`stEthAmount`|`uint256`|Amount of ETH to request|
+|`stETHAmount`|`uint256`|Amount of ETH to request|
 |`cumulativeFeeShares`|`uint256`|Cumulative fee stETH shares for the Node Operator|
 |`rewardsProof`|`bytes32[]`|Merkle proof of the rewards|
 
@@ -639,7 +646,7 @@ Settle locked bond ETH for the given Node Operator
 
 
 ```solidity
-function settleLockedBondETH(uint256 nodeOperatorId) external;
+function settleLockedBondETH(uint256 nodeOperatorId) external returns (bool);
 ```
 **Parameters**
 
@@ -804,6 +811,12 @@ error NodeOperatorDoesNotExist();
 
 ```solidity
 error ElRewardsVaultReceiveFailed();
+```
+
+### InvalidBondCurvesLength
+
+```solidity
+error InvalidBondCurvesLength();
 ```
 
 ## Structs

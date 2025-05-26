@@ -1,12 +1,18 @@
 # CSParametersRegistry
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSParametersRegistry.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSParametersRegistry.sol)
 
 **Inherits:**
 [ICSParametersRegistry](/src/interfaces/ICSParametersRegistry.sol/interface.ICSParametersRegistry.md), Initializable, AccessControlEnumerableUpgradeable
 
+*There are no upper limit checks except for the basis points (BP) values
+since with the introduction of Dual Governance any malicious changes to the parameters can be objected by stETH holders.*
+
 
 ## State Variables
 ### MAX_BP
+*Maximal value for basis points (BP)
+1 BP = 0.01%*
+
 
 ```solidity
 uint256 internal constant MAX_BP = 10000;
@@ -14,6 +20,8 @@ uint256 internal constant MAX_BP = 10000;
 
 
 ### QUEUE_LOWEST_PRIORITY
+*QUEUE_LOWEST_PRIORITY identifies the range of available priorities: [0; QUEUE_LOWEST_PRIORITY].*
+
 
 ```solidity
 uint256 public immutable QUEUE_LOWEST_PRIORITY;
@@ -21,6 +29,8 @@ uint256 public immutable QUEUE_LOWEST_PRIORITY;
 
 
 ### QUEUE_LEGACY_PRIORITY
+*QUEUE_LEGACY_PRIORITY is the priority for the CSM v1 queue.*
+
 
 ```solidity
 uint256 public immutable QUEUE_LEGACY_PRIORITY;
@@ -79,7 +89,7 @@ QueueConfig public defaultQueueConfig;
 ### _queueConfigs
 
 ```solidity
-mapping(uint256 curveId => MarkedQueueConfig) internal _queueConfigs;
+mapping(uint256 curveId => QueueConfig) internal _queueConfigs;
 ```
 
 
@@ -127,7 +137,7 @@ StrikesParams public defaultStrikesParams;
 ### _strikesParams
 
 ```solidity
-mapping(uint256 curveId => MarkedStrikesParams) internal _strikesParams;
+mapping(uint256 curveId => StrikesParams) internal _strikesParams;
 ```
 
 
@@ -155,7 +165,7 @@ PerformanceCoefficients public defaultPerformanceCoefficients;
 ### _performanceCoefficients
 
 ```solidity
-mapping(uint256 curveId => MarkedPerformanceCoefficients) internal _performanceCoefficients;
+mapping(uint256 curveId => PerformanceCoefficients) internal _performanceCoefficients;
 ```
 
 
@@ -169,7 +179,7 @@ uint256 public defaultAllowedExitDelay;
 ### _allowedExitDelay
 
 ```solidity
-mapping(uint256 => MarkedUint248) internal _allowedExitDelay;
+mapping(uint256 => uint256) internal _allowedExitDelay;
 ```
 
 
@@ -361,7 +371,7 @@ function setDefaultQueueConfig(uint256 priority, uint256 maxDeposits) external o
 
 ### setDefaultAllowedExitDelay
 
-set default value for allowed exit delay in seconds. Default value is used if a specific value is not set for the curveId
+set default value for allowed delay before the exit was initiated exit delay in seconds. Default value is used if a specific value is not set for the curveId
 
 
 ```solidity
@@ -501,8 +511,8 @@ function unsetKeysLimit(uint256 curveId) external onlyRole(DEFAULT_ADMIN_ROLE);
 
 Set reward share parameters for the curveId
 
-*KeyIndexValueIntervals = [[0, 10000], [10, 8000], [50, 5000]] stands for
-100% rewards for the keys 1-10, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50*
+*KeyNumberValueInterval = [[1, 10000], [11, 8000], [51, 5000]] stands for
+100% rewards for the first 10 keys, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50*
 
 
 ```solidity
@@ -515,7 +525,7 @@ function setRewardShareData(uint256 curveId, KeyNumberValueInterval[] calldata d
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to associate reward share data with|
-|`data`|`KeyNumberValueInterval[]`|Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])|
+|`data`|`KeyNumberValueInterval[]`|Interval values for keys count and reward share percentages in BP (ex. [[1, 10000], [11, 8000], [51, 5000]])|
 
 
 ### unsetRewardShareData
@@ -537,7 +547,7 @@ function unsetRewardShareData(uint256 curveId) external onlyRole(DEFAULT_ADMIN_R
 
 Set performance leeway parameters for the curveId
 
-*Returns [[0, defaultPerformanceLeeway]] if no intervals are set for the given curveId.*
+*Returns [[1, defaultPerformanceLeeway]] if no intervals are set for the given curveId.*
 
 
 ```solidity
@@ -550,7 +560,7 @@ function setPerformanceLeewayData(uint256 curveId, KeyNumberValueInterval[] call
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to associate performance leeway data with|
-|`data`|`KeyNumberValueInterval[]`|Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])|
+|`data`|`KeyNumberValueInterval[]`|Interval values for keys count and performance leeway percentages in BP (ex. [[1, 500], [101, 450], [501, 400]])|
 
 
 ### unsetPerformanceLeewayData
@@ -675,14 +685,15 @@ Sets the provided config to the given curve.
 
 
 ```solidity
-function setQueueConfig(uint256 curveId, QueueConfig calldata config) external onlyRole(DEFAULT_ADMIN_ROLE);
+function setQueueConfig(uint256 curveId, uint256 priority, uint256 maxDeposits) external onlyRole(DEFAULT_ADMIN_ROLE);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to set the config.|
-|`config`|`QueueConfig`|Config to be used for the curve.|
+|`priority`|`uint256`|Priority of the queue|
+|`maxDeposits`|`uint256`|Max deposits in prioritized queue|
 
 
 ### unsetQueueConfig
@@ -868,7 +879,7 @@ function getKeysLimit(uint256 curveId) external view returns (uint256 limit);
 
 Get reward share parameters by the curveId.
 
-*Returns [[0, defaultRewardShare]] if no intervals are set for the given curveId.*
+*Returns [[1, defaultRewardShare]] if no intervals are set for the given curveId.*
 
 
 ```solidity
@@ -885,7 +896,7 @@ function getRewardShareData(uint256 curveId) external view returns (KeyNumberVal
 
 Get performance leeway parameters by the curveId
 
-*Returns [[0, defaultPerformanceLeeway]] if no intervals are set for the given curveId.*
+*Returns [[1, defaultPerformanceLeeway]] if no intervals are set for the given curveId.*
 
 
 ```solidity
@@ -1046,6 +1057,15 @@ function getMaxWithdrawalRequestFee(uint256 curveId) external view returns (uint
 |`curveId`|`uint256`|Curve Id to get max withdrawal request fee for|
 
 
+### getInitializedVersion
+
+Returns the initialized version of the contract
+
+
+```solidity
+function getInitializedVersion() external view returns (uint64);
+```
+
 ### _setDefaultKeyRemovalCharge
 
 
@@ -1110,13 +1130,6 @@ function _setDefaultPerformanceCoefficients(uint256 attestationsWeight, uint256 
 function _setDefaultQueueConfig(uint256 priority, uint256 maxDeposits) internal;
 ```
 
-### _validateQueueConfig
-
-
-```solidity
-function _validateQueueConfig(uint256 priority, uint256 maxDeposits) internal view;
-```
-
 ### _setDefaultAllowedExitDelay
 
 
@@ -1138,11 +1151,25 @@ function _setDefaultExitDelayPenalty(uint256 penalty) internal;
 function _setDefaultMaxWithdrawalRequestFee(uint256 fee) internal;
 ```
 
+### _validateQueueConfig
+
+
+```solidity
+function _validateQueueConfig(uint256 priority, uint256 maxDeposits) internal view;
+```
+
 ### _validateStrikesParams
 
 
 ```solidity
 function _validateStrikesParams(uint256 lifetime, uint256 threshold) internal pure;
+```
+
+### _validateAllowedExitDelay
+
+
+```solidity
+function _validateAllowedExitDelay(uint256 delay) internal pure;
 ```
 
 ### _validatePerformanceCoefficients
@@ -1154,10 +1181,10 @@ function _validatePerformanceCoefficients(uint256 attestationsWeight, uint256 bl
     pure;
 ```
 
-### _validateKeysCountValueIntervals
+### _validateKeyNumberValueIntervals
 
 
 ```solidity
-function _validateKeysCountValueIntervals(KeyNumberValueInterval[] calldata intervals) private pure;
+function _validateKeyNumberValueIntervals(KeyNumberValueInterval[] calldata intervals) private pure;
 ```
 

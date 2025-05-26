@@ -1,5 +1,5 @@
 # ICSBondCore
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSBondCore.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSBondCore.sol)
 
 
 ## Functions
@@ -128,7 +128,7 @@ event BondClaimedWstETH(uint256 indexed nodeOperatorId, address to, uint256 amou
 ### BondBurned
 
 ```solidity
-event BondBurned(uint256 indexed nodeOperatorId, uint256 toBurnAmount, uint256 burnedAmount);
+event BondBurned(uint256 indexed nodeOperatorId, uint256 amountToBurn, uint256 burnedAmount);
 ```
 
 ### BondCharged

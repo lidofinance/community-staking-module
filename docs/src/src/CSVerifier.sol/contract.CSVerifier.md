@@ -1,5 +1,5 @@
 # CSVerifier
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSVerifier.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSVerifier.sol)
 
 **Inherits:**
 [ICSVerifier](/src/interfaces/ICSVerifier.sol/interface.ICSVerifier.md), AccessControlEnumerable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md)
