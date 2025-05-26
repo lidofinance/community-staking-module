@@ -1,5 +1,5 @@
 # CSFeeDistributor
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSFeeDistributor.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSFeeDistributor.sol)
 
 **Inherits:**
 [ICSFeeDistributor](/src/interfaces/ICSFeeDistributor.sol/interface.ICSFeeDistributor.md), Initializable, AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -69,7 +69,7 @@ Amount of stETH shares sent to the Accounting in favor of the NO
 
 
 ```solidity
-mapping(uint256 => uint256) public distributedShares;
+mapping(uint256 nodeOperatorId => uint256 distributed) public distributedShares;
 ```
 
 
@@ -87,7 +87,7 @@ Array of the distribution data history
 
 
 ```solidity
-mapping(uint256 => DistributionData) internal _distributionDataHistory;
+mapping(uint256 index => DistributionData) internal _distributionDataHistory;
 ```
 
 
@@ -110,6 +110,20 @@ address public rebateRecipient;
 
 
 ## Functions
+### onlyAccounting
+
+
+```solidity
+modifier onlyAccounting();
+```
+
+### onlyOracle
+
+
+```solidity
+modifier onlyOracle();
+```
+
 ### constructor
 
 
@@ -152,8 +166,9 @@ Distribute fees to the Accounting in favor of the Node Operator
 
 
 ```solidity
-function distributeFees(uint256 nodeOperatorId, uint256 shares, bytes32[] calldata proof)
+function distributeFees(uint256 nodeOperatorId, uint256 cumulativeFeeShares, bytes32[] calldata proof)
     external
+    onlyAccounting
     returns (uint256 sharesToDistribute);
 ```
 **Parameters**
@@ -161,7 +176,7 @@ function distributeFees(uint256 nodeOperatorId, uint256 shares, bytes32[] callda
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`shares`|`uint256`|Total Amount of stETH shares earned as fees|
+|`cumulativeFeeShares`|`uint256`|Total Amount of stETH shares earned as fees|
 |`proof`|`bytes32[]`|Merkle proof of the leaf|
 
 **Returns**
@@ -184,7 +199,7 @@ function processOracleReport(
     uint256 distributed,
     uint256 rebate,
     uint256 refSlot
-) external;
+) external onlyOracle;
 ```
 **Parameters**
 
@@ -259,7 +274,7 @@ Get the Amount of stETH shares that can be distributed in favor of the Node Oper
 
 
 ```solidity
-function getFeesToDistribute(uint256 nodeOperatorId, uint256 shares, bytes32[] calldata proof)
+function getFeesToDistribute(uint256 nodeOperatorId, uint256 cumulativeFeeShares, bytes32[] calldata proof)
     public
     view
     returns (uint256 sharesToDistribute);
@@ -269,7 +284,7 @@ function getFeesToDistribute(uint256 nodeOperatorId, uint256 shares, bytes32[] c
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`shares`|`uint256`|Total Amount of stETH shares earned as fees|
+|`cumulativeFeeShares`|`uint256`|Total Amount of stETH shares earned as fees|
 |`proof`|`bytes32[]`|Merkle proof of the leaf|
 
 **Returns**

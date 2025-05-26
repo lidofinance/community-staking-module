@@ -1,16 +1,23 @@
 # PermissionlessGate
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/PermissionlessGate.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/PermissionlessGate.sol)
 
 **Inherits:**
-[IPermissionlessGate](/src/interfaces/IPermissionlessGate.sol/interface.IPermissionlessGate.md)
+[IPermissionlessGate](/src/interfaces/IPermissionlessGate.sol/interface.IPermissionlessGate.md), AccessControlEnumerable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
 
-Contract for adding new Node Operators with no any restrictions
+Contract for adding new Node Operators without any restrictions
 
 
 ## State Variables
+### RECOVERER_ROLE
+
+```solidity
+bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
+```
+
+
 ### CURVE_ID
 *Curve ID is the default bond curve ID from the accounting contract
-No need to set it explicitly*
+This immutable variable is kept here for consistency with the other gates*
 
 
 ```solidity
@@ -19,6 +26,8 @@ uint256 public immutable CURVE_ID;
 
 
 ### MODULE
+*Address of the Staking Module*
+
 
 ```solidity
 ICSModule public immutable MODULE;
@@ -30,7 +39,7 @@ ICSModule public immutable MODULE;
 
 
 ```solidity
-constructor(address module);
+constructor(address module, address admin);
 ```
 
 ### addNodeOperatorETH
@@ -132,4 +141,11 @@ function addNodeOperatorWstETH(
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|Id of the created Node Operator|
 
+
+### _onlyRecoverer
+
+
+```solidity
+function _onlyRecoverer() internal view override;
+```
 

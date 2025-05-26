@@ -1,5 +1,5 @@
 # CSFeeOracle
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSFeeOracle.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSFeeOracle.sol)
 
 **Inherits:**
 [ICSFeeOracle](/src/interfaces/ICSFeeOracle.sol/interface.ICSFeeOracle.md), [BaseOracle](/src/lib/base-oracle/BaseOracle.sol/abstract.BaseOracle.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -44,20 +44,41 @@ bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 ```
 
 
-### feeDistributor
+### FEE_DISTRIBUTOR
 
 ```solidity
-ICSFeeDistributor public feeDistributor;
+ICSFeeDistributor public immutable FEE_DISTRIBUTOR;
 ```
 
 
-### strikes
+### STRIKES
+
+```solidity
+ICSStrikes public immutable STRIKES;
+```
+
+
+### _feeDistributor
+*DEPRECATED*
+
 **Note:**
-oz-retyped-from: uint256
+oz-renamed-from: feeDistributor
 
 
 ```solidity
-ICSStrikes public strikes;
+ICSFeeDistributor internal _feeDistributor;
+```
+
+
+### _avgPerfLeewayBP
+*DEPRECATED*
+
+**Note:**
+oz-renamed-from: avgPerfLeewayBP
+
+
+```solidity
+uint256 internal _avgPerfLeewayBP;
 ```
 
 
@@ -66,7 +87,8 @@ ICSStrikes public strikes;
 
 
 ```solidity
-constructor(uint256 secondsPerSlot, uint256 genesisTime) BaseOracle(secondsPerSlot, genesisTime);
+constructor(address feeDistributor, address strikes, uint256 secondsPerSlot, uint256 genesisTime)
+    BaseOracle(secondsPerSlot, genesisTime);
 ```
 
 ### initialize
@@ -75,75 +97,17 @@ constructor(uint256 secondsPerSlot, uint256 genesisTime) BaseOracle(secondsPerSl
 
 
 ```solidity
-function initialize(
-    address admin,
-    address feeDistributorContract,
-    address strikesContract,
-    address consensusContract,
-    uint256 consensusVersion
-) external;
+function initialize(address admin, address consensusContract, uint256 consensusVersion) external;
 ```
 
 ### finalizeUpgradeV2
-
-*_setFeeDistributorContract() reverts if zero address*
-
-*_setStrikesContract() reverts if zero address*
 
 *should be called after update on the proxy*
 
 
 ```solidity
-function finalizeUpgradeV2(uint256 consensusVersion, address strikesContract) external onlyRole(DEFAULT_ADMIN_ROLE);
+function finalizeUpgradeV2(uint256 consensusVersion) external;
 ```
-
-### setFeeDistributorContract
-
-Set a new fee distributor contract
-
-*_setStrikesContract() reverts if zero address*
-
-
-```solidity
-function setFeeDistributorContract(address feeDistributorContract) external onlyRole(DEFAULT_ADMIN_ROLE);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`feeDistributorContract`|`address`|Address of the new fee distributor contract|
-
-
-### setStrikesContract
-
-Set a new strikes contract
-
-
-```solidity
-function setStrikesContract(address strikesContract) external onlyRole(DEFAULT_ADMIN_ROLE);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`strikesContract`|`address`|Address of the new strikes contract|
-
-
-### submitReportData
-
-Submit the data for a committee report
-
-
-```solidity
-function submitReportData(ReportData calldata data, uint256 contractVersion) external whenResumed;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`data`|`ReportData`|Data for a committee report|
-|`contractVersion`|`uint256`|Version of the oracle consensus rules|
-
 
 ### resume
 
@@ -169,34 +133,21 @@ function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE);
 |`duration`|`uint256`|Duration of the pause in seconds|
 
 
-### pauseUntil
+### submitReportData
 
-Pause accepting oracle reports until a timestamp
+Submit the data for a committee report
 
 
 ```solidity
-function pauseUntil(uint256 pauseUntilInclusive) external onlyRole(PAUSE_ROLE);
+function submitReportData(ReportData calldata data, uint256 contractVersion) external whenResumed;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`pauseUntilInclusive`|`uint256`|Timestamp until which the oracle reports are paused|
+|`data`|`ReportData`|Data for a committee report|
+|`contractVersion`|`uint256`|Version of the oracle consensus rules|
 
-
-### _setFeeDistributorContract
-
-
-```solidity
-function _setFeeDistributorContract(address feeDistributorContract) internal;
-```
-
-### _setStrikesContract
-
-
-```solidity
-function _setStrikesContract(address strikesContract) internal;
-```
 
 ### _handleConsensusReport
 

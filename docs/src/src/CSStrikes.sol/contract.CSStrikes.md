@@ -1,5 +1,5 @@
 # CSStrikes
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSStrikes.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSStrikes.sol)
 
 **Inherits:**
 [ICSStrikes](/src/interfaces/ICSStrikes.sol/interface.ICSStrikes.md), Initializable, AccessControlEnumerableUpgradeable
@@ -70,11 +70,18 @@ string public treeCid;
 
 
 ## Functions
+### onlyOracle
+
+
+```solidity
+modifier onlyOracle();
+```
+
 ### constructor
 
 
 ```solidity
-constructor(address module, address oracle, address exitPenalties);
+constructor(address module, address oracle, address exitPenalties, address parametersRegistry);
 ```
 
 ### initialize
@@ -107,7 +114,7 @@ Receive the data of the Merkle tree from the Oracle contract and process it
 
 
 ```solidity
-function processOracleReport(bytes32 _treeRoot, string calldata _treeCid) external;
+function processOracleReport(bytes32 _treeRoot, string calldata _treeCid) external onlyOracle;
 ```
 **Parameters**
 
@@ -119,74 +126,81 @@ function processOracleReport(bytes32 _treeRoot, string calldata _treeCid) extern
 
 ### processBadPerformanceProof
 
-Report Node Operator's key as bad performing
-
-*should be both empty or not empty*
+Report multiple CSM keys as bad performing
 
 
 ```solidity
 function processBadPerformanceProof(
-    uint256 nodeOperatorId,
-    uint256 keyIndex,
-    uint256[] calldata strikesData,
+    KeyStrikes[] calldata keyStrikesList,
     bytes32[] calldata proof,
+    bool[] calldata proofFlags,
     address refundRecipient
-) external;
+) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`keyIndex`|`uint256`|Index of the withdrawn key in the Node Operator's keys storage|
-|`strikesData`|`uint256[]`|Strikes of the Node Operator's validator key. TODO: value is to be defined (timestamps or refSlots ?)|
-|`proof`|`bytes32[]`|Proof of the strikes|
+|`keyStrikesList`|`KeyStrikes[]`|List of KeyStrikes structs|
+|`proof`|`bytes32[]`|Multi-proof of the strikes|
+|`proofFlags`|`bool[]`|Flags to process the multi-proof, see OZ `processMultiProof`|
 |`refundRecipient`|`address`|Address to send the refund to|
 
 
+### getInitializedVersion
+
+Returns the initialized version of the contract
+
+
+```solidity
+function getInitializedVersion() external view returns (uint64);
+```
+
 ### verifyProof
 
-Check if Key is eligible to be ejected
+Check the contract accepts the provided multi-proof
 
 
 ```solidity
 function verifyProof(
-    uint256 nodeOperatorId,
-    bytes memory pubkey,
-    uint256[] calldata strikesData,
-    bytes32[] calldata proof
+    KeyStrikes[] calldata keyStrikesList,
+    bytes[] memory pubkeys,
+    bytes32[] calldata proof,
+    bool[] calldata proofFlags
 ) public view returns (bool);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`pubkey`|`bytes`|Pubkey of the Node Operator|
-|`strikesData`|`uint256[]`|Strikes of the Node Operator|
-|`proof`|`bytes32[]`|Merkle proof of the leaf|
+|`keyStrikesList`|`KeyStrikes[]`|List of KeyStrikes structs|
+|`pubkeys`|`bytes[]`||
+|`proof`|`bytes32[]`|Multi-proof of the strikes|
+|`proofFlags`|`bool[]`|Flags to process the multi-proof, see OZ `processMultiProof`|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|bool True if proof is accepted|
 
 
 ### hashLeaf
 
-Get a hash of a leaf
+Get a hash of a leaf a tree of strikes
 
 *Double hash the leaf to prevent second pre-image attacks*
 
 
 ```solidity
-function hashLeaf(uint256 nodeOperatorId, bytes memory pubkey, uint256[] calldata strikesData)
-    public
-    pure
-    returns (bytes32);
+function hashLeaf(KeyStrikes calldata keyStrikes, bytes memory pubkey) public pure returns (bytes32);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`pubkey`|`bytes`|pubkey of the Node Operator|
-|`strikesData`|`uint256[]`||
+|`keyStrikes`|`KeyStrikes`|KeyStrikes struct|
+|`pubkey`|`bytes`|Public key|
 
 **Returns**
 
@@ -200,5 +214,13 @@ function hashLeaf(uint256 nodeOperatorId, bytes memory pubkey, uint256[] calldat
 
 ```solidity
 function _setEjector(address _ejector) internal;
+```
+
+### _ejectByStrikes
+
+
+```solidity
+function _ejectByStrikes(KeyStrikes calldata keyStrikes, bytes memory pubkey, uint256 value, address refundRecipient)
+    internal;
 ```
 

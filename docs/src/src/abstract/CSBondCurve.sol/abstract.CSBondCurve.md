@@ -1,5 +1,5 @@
 # CSBondCurve
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/abstract/CSBondCurve.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/abstract/CSBondCurve.sol)
 
 **Inherits:**
 [ICSBondCurve](/src/interfaces/ICSBondCurve.sol/interface.ICSBondCurve.md), Initializable
@@ -48,18 +48,11 @@ uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
 ### MAX_CURVE_LENGTH
 
 ```solidity
-uint256 public immutable MAX_CURVE_LENGTH;
+uint256 public constant MAX_CURVE_LENGTH = 100;
 ```
 
 
 ## Functions
-### constructor
-
-
-```solidity
-constructor(uint256 maxCurveLength);
-```
-
 ### getCurvesCount
 
 
@@ -75,7 +68,7 @@ Return bond curve for the given curve id
 
 
 ```solidity
-function getCurveInfo(uint256 curveId) public view returns (BondCurveInterval[] memory);
+function getCurveInfo(uint256 curveId) external view returns (BondCurve memory);
 ```
 **Parameters**
 
@@ -87,7 +80,7 @@ function getCurveInfo(uint256 curveId) public view returns (BondCurveInterval[] 
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`BondCurveInterval[]`|Bond curve|
+|`<none>`|`BondCurve`|Bond curve|
 
 
 ### getBondCurve
@@ -96,7 +89,7 @@ Get bond curve for the given Node Operator
 
 
 ```solidity
-function getBondCurve(uint256 nodeOperatorId) public view returns (BondCurveInterval[] memory);
+function getBondCurve(uint256 nodeOperatorId) external view returns (BondCurve memory);
 ```
 **Parameters**
 
@@ -108,7 +101,7 @@ function getBondCurve(uint256 nodeOperatorId) public view returns (BondCurveInte
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`BondCurveInterval[]`|Bond curve|
+|`<none>`|`BondCurve`|Bond curve|
 
 
 ### getBondCurveId
@@ -179,31 +172,11 @@ function getKeysCountByBondAmount(uint256 amount, uint256 curveId) public view r
 |`<none>`|`uint256`|Keys count|
 
 
-### _getBondAmountByKeysCount
-
-
-```solidity
-function _getBondAmountByKeysCount(uint256 keys, BondCurveInterval[] storage intervals)
-    internal
-    view
-    returns (uint256);
-```
-
-### _getKeysCountByBondAmount
-
-
-```solidity
-function _getKeysCountByBondAmount(uint256 amount, BondCurveInterval[] storage intervals)
-    internal
-    view
-    returns (uint256);
-```
-
 ### __CSBondCurve_init
 
 
 ```solidity
-function __CSBondCurve_init(uint256[2][] calldata defaultBondCurveIntervals) internal onlyInitializing;
+function __CSBondCurve_init(BondCurveIntervalInput[] calldata defaultBondCurveIntervals) internal onlyInitializing;
 ```
 
 ### _addBondCurve
@@ -212,7 +185,7 @@ function __CSBondCurve_init(uint256[2][] calldata defaultBondCurveIntervals) int
 
 
 ```solidity
-function _addBondCurve(uint256[2][] calldata intervals) internal returns (uint256 curveId);
+function _addBondCurve(BondCurveIntervalInput[] calldata intervals) internal returns (uint256 curveId);
 ```
 
 ### _updateBondCurve
@@ -221,14 +194,7 @@ function _addBondCurve(uint256[2][] calldata intervals) internal returns (uint25
 
 
 ```solidity
-function _updateBondCurve(uint256 curveId, uint256[2][] calldata intervals) internal;
-```
-
-### _addIntervalsToBondCurve
-
-
-```solidity
-function _addIntervalsToBondCurve(BondCurveInterval[] storage bondCurve, uint256[2][] calldata intervals) private;
+function _updateBondCurve(uint256 curveId, BondCurveIntervalInput[] calldata intervals) internal;
 ```
 
 ### _setBondCurve
@@ -241,18 +207,46 @@ It will be used for the Node Operator instead of the previously set curve*
 function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal;
 ```
 
-### _checkBondCurve
+### _getBondAmountByKeysCount
 
 
 ```solidity
-function _checkBondCurve(uint256[2][] calldata intervals) private view;
+function _getBondAmountByKeysCount(uint256 keys, BondCurve storage curve) internal view returns (uint256);
+```
+
+### _getKeysCountByBondAmount
+
+
+```solidity
+function _getKeysCountByBondAmount(uint256 amount, BondCurve storage curve) internal view returns (uint256);
+```
+
+### _getLegacyBondCurvesLength
+
+
+```solidity
+function _getLegacyBondCurvesLength() internal view returns (uint256);
+```
+
+### _addIntervalsToBondCurve
+
+
+```solidity
+function _addIntervalsToBondCurve(BondCurve storage bondCurve, BondCurveIntervalInput[] calldata intervals) private;
 ```
 
 ### _getCurveInfo
 
 
 ```solidity
-function _getCurveInfo(uint256 curveId) private view returns (BondCurveInterval[] storage);
+function _getCurveInfo(uint256 curveId) private view returns (BondCurve storage);
+```
+
+### _checkBondCurve
+
+
+```solidity
+function _checkBondCurve(BondCurveIntervalInput[] calldata intervals) private pure;
 ```
 
 ### _getCSBondCurveStorage
@@ -270,9 +264,9 @@ storage-location: erc7201:CSBondCurve
 
 ```solidity
 struct CSBondCurveStorage {
-    bytes32 legacyBondCurves;
+    bytes32[] legacyBondCurves;
     mapping(uint256 nodeOperatorId => uint256 bondCurveId) operatorBondCurveId;
-    BondCurveInterval[][] bondCurves;
+    BondCurve[] bondCurves;
 }
 ```
 

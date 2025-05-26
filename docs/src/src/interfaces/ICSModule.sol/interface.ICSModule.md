@@ -1,37 +1,16 @@
 # ICSModule
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSModule.sol)
 
 **Inherits:**
 [IQueueLib](/src/lib/QueueLib.sol/interface.IQueueLib.md), [INOAddresses](/src/lib/NOAddresses.sol/interface.INOAddresses.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md), [IStakingModule](/src/interfaces/IStakingModule.sol/interface.IStakingModule.md)
 
 
 ## Functions
-### LIDO_LOCATOR
-
-
-```solidity
-function LIDO_LOCATOR() external view returns (ILidoLocator);
-```
-
 ### PAUSE_ROLE
 
 
 ```solidity
 function PAUSE_ROLE() external view returns (bytes32);
-```
-
-### RECOVERER_ROLE
-
-
-```solidity
-function RECOVERER_ROLE() external view returns (bytes32);
-```
-
-### REPORT_EL_REWARDS_STEALING_PENALTY_ROLE
-
-
-```solidity
-function REPORT_EL_REWARDS_STEALING_PENALTY_ROLE() external view returns (bytes32);
 ```
 
 ### RESUME_ROLE
@@ -41,13 +20,6 @@ function REPORT_EL_REWARDS_STEALING_PENALTY_ROLE() external view returns (bytes3
 function RESUME_ROLE() external view returns (bytes32);
 ```
 
-### SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE
-
-
-```solidity
-function SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE() external view returns (bytes32);
-```
-
 ### STAKING_ROUTER_ROLE
 
 
@@ -55,11 +27,18 @@ function SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE() external view returns (bytes3
 function STAKING_ROUTER_ROLE() external view returns (bytes32);
 ```
 
-### STETH
+### REPORT_EL_REWARDS_STEALING_PENALTY_ROLE
 
 
 ```solidity
-function STETH() external view returns (IStETH);
+function REPORT_EL_REWARDS_STEALING_PENALTY_ROLE() external view returns (bytes32);
+```
+
+### SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE
+
+
+```solidity
+function SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE() external view returns (bytes32);
 ```
 
 ### VERIFIER_ROLE
@@ -69,11 +48,39 @@ function STETH() external view returns (IStETH);
 function VERIFIER_ROLE() external view returns (bytes32);
 ```
 
+### RECOVERER_ROLE
+
+
+```solidity
+function RECOVERER_ROLE() external view returns (bytes32);
+```
+
 ### CREATE_NODE_OPERATOR_ROLE
 
 
 ```solidity
 function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
+```
+
+### DEPOSIT_SIZE
+
+
+```solidity
+function DEPOSIT_SIZE() external view returns (uint256);
+```
+
+### LIDO_LOCATOR
+
+
+```solidity
+function LIDO_LOCATOR() external view returns (ILidoLocator);
+```
+
+### STETH
+
+
+```solidity
+function STETH() external view returns (IStETH);
 ```
 
 ### PARAMETERS_REGISTRY
@@ -83,6 +90,41 @@ function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
 function PARAMETERS_REGISTRY() external view returns (ICSParametersRegistry);
 ```
 
+### ACCOUNTING
+
+
+```solidity
+function ACCOUNTING() external view returns (ICSAccounting);
+```
+
+### EXIT_PENALTIES
+
+
+```solidity
+function EXIT_PENALTIES() external view returns (ICSExitPenalties);
+```
+
+### FEE_DISTRIBUTOR
+
+
+```solidity
+function FEE_DISTRIBUTOR() external view returns (address);
+```
+
+### QUEUE_LOWEST_PRIORITY
+
+
+```solidity
+function QUEUE_LOWEST_PRIORITY() external view returns (uint256);
+```
+
+### QUEUE_LEGACY_PRIORITY
+
+
+```solidity
+function QUEUE_LEGACY_PRIORITY() external view returns (uint256);
+```
+
 ### accounting
 
 Returns the address of the accounting contract
@@ -90,15 +132,6 @@ Returns the address of the accounting contract
 
 ```solidity
 function accounting() external view returns (ICSAccounting);
-```
-
-### exitPenalties
-
-Returns the address of the ExitPenalties contract
-
-
-```solidity
-function exitPenalties() external view returns (ICSExitPenalties);
 ```
 
 ### pauseFor
@@ -153,7 +186,7 @@ function createNodeOperator(
 
 |Name|Type|Description|
 |----|----|-----------|
-|`from`|`address`|Sender address. Initial sender address to be used as a default manager and reward addresses|
+|`from`|`address`|Sender address. Initial sender address to be used as a default manager and reward addresses. Gates must pass the correct address in order to specify which address should be the owner of the Node Operator|
 |`managementProperties`|`NodeOperatorManagementProperties`|Optional. Management properties to be used for the Node Operator. managerAddress: Used as `managerAddress` for the Node Operator. If not passed `from` will be used. rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `from` will be used. extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`. If set to true `resetNodeOperatorManagerAddress` method will be disabled|
 |`referrer`|`address`|Optional. Referrer address. Should be passed when Node Operator is created using partners integration|
 
@@ -443,13 +476,13 @@ function depositQueueItem(uint256 queuePriority, uint128 index) external view re
 |Name|Type|Description|
 |----|----|-----------|
 |`queuePriority`|`uint256`|Priority of the queue to get an item from|
-|`index`|`uint128`|Index of a queue item (continuous numbering)|
+|`index`|`uint128`|Index of a queue item|
 
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`Batch`|Deposit queue item and the priority of the queue|
+|`<none>`|`Batch`|Deposit queue item from the priority queue|
 
 
 ### cleanDepositQueue
@@ -556,6 +589,27 @@ function getNodeOperatorManagementProperties(uint256 nodeOperatorId)
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`NodeOperatorManagementProperties`|Node Operator management properties|
+
+
+### getNodeOperatorOwner
+
+Get Node Operator owner. Owner is manager address if `extendedManagerPermissions` is enabled and reward address otherwise
+
+
+```solidity
+function getNodeOperatorOwner(uint256 nodeOperatorId) external view returns (address);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`address`|Node Operator owner|
 
 
 ### getNodeOperatorNonWithdrawnKeys
@@ -690,7 +744,7 @@ function isValidatorWithdrawn(uint256 nodeOperatorId, uint256 keyIndex) external
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`bool`|Validator reported as withdrawn flag|
+|`<none>`|`bool`|Is validator reported as withdrawn or not|
 
 
 ### removeKeys
@@ -714,7 +768,12 @@ function removeKeys(uint256 nodeOperatorId, uint256 startIndex, uint256 keysCoun
 ### NodeOperatorAdded
 
 ```solidity
-event NodeOperatorAdded(uint256 indexed nodeOperatorId, address indexed managerAddress, address indexed rewardAddress);
+event NodeOperatorAdded(
+    uint256 indexed nodeOperatorId,
+    address indexed managerAddress,
+    address indexed rewardAddress,
+    bool extendedManagerPermissions
+);
 ```
 
 ### ReferrerSet
@@ -809,17 +868,11 @@ event ELRewardsStealingPenaltyCompensated(uint256 indexed nodeOperatorId, uint25
 event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 ```
 
-### DelayedValidatorExitPenalized
-
-```solidity
-event DelayedValidatorExitPenalized(uint256 indexed nodeOperatorId, uint256 penaltyValue);
-```
-
 ## Errors
-### NodeOperatorHasKeys
+### CannotAddKeys
 
 ```solidity
-error NodeOperatorHasKeys();
+error CannotAddKeys();
 ```
 
 ### NodeOperatorDoesNotExist

@@ -1,8 +1,8 @@
 # CSEjector
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSEjector.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSEjector.sol)
 
 **Inherits:**
-[ICSEjector](/src/interfaces/ICSEjector.sol/interface.ICSEjector.md), [ExitTypes](/src/abstract/ExitTypes.sol/abstract.ExitTypes.md), Initializable, AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md)
+[ICSEjector](/src/interfaces/ICSEjector.sol/interface.ICSEjector.md), [ExitTypes](/src/abstract/ExitTypes.sol/abstract.ExitTypes.md), AccessControlEnumerable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
 
 
 ## State Variables
@@ -20,6 +20,13 @@ bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
 ```
 
 
+### RECOVERER_ROLE
+
+```solidity
+bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
+```
+
+
 ### STAKING_MODULE_ID
 
 ```solidity
@@ -34,17 +41,10 @@ ICSModule public immutable MODULE;
 ```
 
 
-### VEB
+### STRIKES
 
 ```solidity
-IValidatorsExitBus public immutable VEB;
-```
-
-
-### strikes
-
-```solidity
-address public strikes;
+address public immutable STRIKES;
 ```
 
 
@@ -60,16 +60,7 @@ modifier onlyStrikes();
 
 
 ```solidity
-constructor(address module, uint256 stakingModuleId);
-```
-
-### initialize
-
-initialize the contract from scratch
-
-
-```solidity
-function initialize(address admin, address _strikes) external initializer;
+constructor(address module, address strikes, uint256 stakingModuleId, address admin);
 ```
 
 ### resume
@@ -121,7 +112,8 @@ function voluntaryEject(uint256 nodeOperatorId, uint256 startFrom, uint256 keysC
 
 Withdraw the validator key from the Node Operator
 
-*this method is intentionally copy-pasted from the voluntaryEject method with keys changes*
+*Additional method for non-sequential keys to save gas and decrease fee amount compared
+to separate transactions.*
 
 
 ```solidity
@@ -145,7 +137,7 @@ Eject Node Operator's key as a bad performer
 
 
 ```solidity
-function ejectBadPerformer(uint256 nodeOperatorId, bytes calldata publicKeys, address refundRecipient)
+function ejectBadPerformer(uint256 nodeOperatorId, uint256 keyIndex, address refundRecipient)
     external
     payable
     whenResumed
@@ -156,7 +148,32 @@ function ejectBadPerformer(uint256 nodeOperatorId, bytes calldata publicKeys, ad
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`publicKeys`|`bytes`|Concatenated public keys of the Node Operator's validators|
+|`keyIndex`|`uint256`|index of deposited key to eject|
 |`refundRecipient`|`address`|Address to send the refund to|
 
+
+### triggerableWithdrawalsGateway
+
+TriggerableWithdrawalsGateway implementation used by the contract.
+
+
+```solidity
+function triggerableWithdrawalsGateway() public view returns (ITriggerableWithdrawalsGateway);
+```
+
+### _onlyNodeOperatorOwner
+
+*Verifies that the sender is the owner of the node operator*
+
+
+```solidity
+function _onlyNodeOperatorOwner(uint256 nodeOperatorId) internal view;
+```
+
+### _onlyRecoverer
+
+
+```solidity
+function _onlyRecoverer() internal view override;
+```
 

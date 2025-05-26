@@ -1,5 +1,5 @@
 # CSAccounting
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSAccounting.sol)
 
 **Inherits:**
 [ICSAccounting](/src/interfaces/ICSAccounting.sol/interface.ICSAccounting.md), [CSBondCore](/src/abstract/CSBondCore.sol/abstract.CSBondCore.md), [CSBondCurve](/src/abstract/CSBondCurve.sol/abstract.CSBondCurve.md), [CSBondLock](/src/abstract/CSBondLock.sol/abstract.CSBondLock.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -54,10 +54,22 @@ ICSModule public immutable MODULE;
 ```
 
 
-### feeDistributor
+### FEE_DISTRIBUTOR
 
 ```solidity
-ICSFeeDistributor public feeDistributor;
+ICSFeeDistributor public immutable FEE_DISTRIBUTOR;
+```
+
+
+### _feeDistributorOld
+*DEPRECATED*
+
+**Note:**
+oz-renamed-from: feeDistributor
+
+
+```solidity
+ICSFeeDistributor internal _feeDistributorOld;
 ```
 
 
@@ -83,10 +95,10 @@ modifier onlyModule();
 constructor(
     address lidoLocator,
     address module,
-    uint256 maxCurveLength,
+    address _feeDistributor,
     uint256 minBondLockPeriod,
     uint256 maxBondLockPeriod
-) CSBondCore(lidoLocator) CSBondCurve(maxCurveLength) CSBondLock(minBondLockPeriod, maxBondLockPeriod);
+) CSBondCore(lidoLocator) CSBondLock(minBondLockPeriod, maxBondLockPeriod);
 ```
 **Parameters**
 
@@ -94,7 +106,7 @@ constructor(
 |----|----|-----------|
 |`lidoLocator`|`address`|Lido locator contract address|
 |`module`|`address`|Community Staking Module contract address|
-|`maxCurveLength`|`uint256`|Max number of the points in the bond curves|
+|`_feeDistributor`|`address`||
 |`minBondLockPeriod`|`uint256`|Min time in seconds for the bondLock period|
 |`maxBondLockPeriod`|`uint256`|Max time in seconds for the bondLock period|
 
@@ -104,9 +116,8 @@ constructor(
 
 ```solidity
 function initialize(
-    uint256[2][] calldata bondCurve,
+    BondCurveIntervalInput[] calldata bondCurve,
     address admin,
-    address _feeDistributor,
     uint256 bondLockPeriod,
     address _chargePenaltyRecipient
 ) external reinitializer(2);
@@ -115,9 +126,8 @@ function initialize(
 
 |Name|Type|Description|
 |----|----|-----------|
-|`bondCurve`|`uint256[2][]`|Initial bond curve|
+|`bondCurve`|`BondCurveIntervalInput[]`|Initial bond curve|
 |`admin`|`address`|Admin role member address|
-|`_feeDistributor`|`address`|Fee Distributor contract address|
 |`bondLockPeriod`|`uint256`|Bond lock period in seconds|
 |`_chargePenaltyRecipient`|`address`|Recipient of the charge penalty type|
 
@@ -126,14 +136,12 @@ function initialize(
 
 
 ```solidity
-function finalizeUpgradeV2(uint256[2][] calldata defaultBondCurve, uint256[2][] calldata vettedBondCurve)
-    external
-    reinitializer(2);
+function finalizeUpgradeV2(BondCurveIntervalInput[][] calldata bondCurvesInputs) external reinitializer(2);
 ```
 
 ### resume
 
-NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
+Resume reward claims and deposits
 
 
 ```solidity
@@ -193,7 +201,7 @@ Add a new bond curve
 
 
 ```solidity
-function addBondCurve(uint256[2][] calldata bondCurve)
+function addBondCurve(BondCurveIntervalInput[] calldata bondCurve)
     external
     onlyRole(MANAGE_BOND_CURVES_ROLE)
     returns (uint256 id);
@@ -202,7 +210,7 @@ function addBondCurve(uint256[2][] calldata bondCurve)
 
 |Name|Type|Description|
 |----|----|-----------|
-|`bondCurve`|`uint256[2][]`|Bond curve definition to add|
+|`bondCurve`|`BondCurveIntervalInput[]`|Bond curve definition to add|
 
 **Returns**
 
@@ -220,14 +228,16 @@ Extensive checks should be performed to avoid inconsistency in the keys accounti
 
 
 ```solidity
-function updateBondCurve(uint256 curveId, uint256[2][] calldata bondCurve) external onlyRole(MANAGE_BOND_CURVES_ROLE);
+function updateBondCurve(uint256 curveId, BondCurveIntervalInput[] calldata bondCurve)
+    external
+    onlyRole(MANAGE_BOND_CURVES_ROLE);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Bond curve ID to update|
-|`bondCurve`|`uint256[2][]`|Bond curve definition|
+|`bondCurve`|`BondCurveIntervalInput[]`|Bond curve definition|
 
 
 ### setBondCurve
@@ -252,7 +262,7 @@ function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external onlyRole
 
 Stake user's ETH with Lido and deposit stETH to the bond
 
-*Called by CSM exclusively*
+*Called by CSM exclusively. CSM should check node operator existence and update depositable validators count*
 
 
 ```solidity
@@ -270,7 +280,7 @@ function depositETH(address from, uint256 nodeOperatorId) external payable whenR
 
 Stake user's ETH with Lido and deposit stETH to the bond
 
-*Called by CSM exclusively*
+*Called by CSM exclusively. CSM should check node operator existence and update depositable validators count*
 
 
 ```solidity
@@ -287,7 +297,7 @@ function depositETH(uint256 nodeOperatorId) external payable whenResumed;
 
 Deposit user's stETH to the bond for the given Node Operator
 
-*Called by CSM exclusively*
+*Called by CSM exclusively. CSM should check node operator existence and update depositable validators count*
 
 
 ```solidity
@@ -300,7 +310,7 @@ function depositStETH(address from, uint256 nodeOperatorId, uint256 stETHAmount,
 
 |Name|Type|Description|
 |----|----|-----------|
-|`from`|`address`|Address to deposit stETH from|
+|`from`|`address`|Address to deposit stETH from.|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
 |`stETHAmount`|`uint256`|Amount of stETH to deposit|
 |`permit`|`PermitInput`|stETH permit for the contract|
@@ -310,7 +320,7 @@ function depositStETH(address from, uint256 nodeOperatorId, uint256 stETHAmount,
 
 Deposit user's stETH to the bond for the given Node Operator
 
-*Called by CSM exclusively*
+*Called by CSM exclusively. CSM should check node operator existence and update depositable validators count*
 
 
 ```solidity
@@ -329,7 +339,7 @@ function depositStETH(uint256 nodeOperatorId, uint256 stETHAmount, PermitInput c
 
 Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
 
-*Called by CSM exclusively*
+*Called by CSM exclusively. CSM should check node operator existence and update depositable validators count*
 
 
 ```solidity
@@ -352,7 +362,7 @@ function depositWstETH(address from, uint256 nodeOperatorId, uint256 wstETHAmoun
 
 Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
 
-*Called by CSM exclusively*
+*Called by CSM exclusively. CSM should check node operator existence and update depositable validators count*
 
 
 ```solidity
@@ -446,7 +456,7 @@ Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node 
 ```solidity
 function claimRewardsUnstETH(
     uint256 nodeOperatorId,
-    uint256 stEthAmount,
+    uint256 stETHAmount,
     uint256 cumulativeFeeShares,
     bytes32[] calldata rewardsProof
 ) external whenResumed returns (uint256 requestId);
@@ -456,7 +466,7 @@ function claimRewardsUnstETH(
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`stEthAmount`|`uint256`|Amount of ETH to request|
+|`stETHAmount`|`uint256`|Amount of ETH to request|
 |`cumulativeFeeShares`|`uint256`|Cumulative fee stETH shares for the Node Operator|
 |`rewardsProof`|`bytes32[]`|Merkle proof of the rewards|
 
@@ -528,7 +538,7 @@ Settle locked bond ETH for the given Node Operator
 
 
 ```solidity
-function settleLockedBondETH(uint256 nodeOperatorId) external onlyModule;
+function settleLockedBondETH(uint256 nodeOperatorId) external onlyModule returns (bool applied);
 ```
 **Parameters**
 
@@ -643,7 +653,7 @@ To calculate missed bond amount subtract `current` from `required` value*
 
 
 ```solidity
-function getBondSummary(uint256 nodeOperatorId) public view returns (uint256 current, uint256 required);
+function getBondSummary(uint256 nodeOperatorId) external view returns (uint256 current, uint256 required);
 ```
 **Parameters**
 
@@ -658,6 +668,153 @@ function getBondSummary(uint256 nodeOperatorId) public view returns (uint256 cur
 |`current`|`uint256`|Current bond amount in ETH|
 |`required`|`uint256`|Required bond amount in ETH|
 
+
+### getUnbondedKeysCount
+
+Get the number of the unbonded keys
+
+
+```solidity
+function getUnbondedKeysCount(uint256 nodeOperatorId) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Unbonded keys count|
+
+
+### getUnbondedKeysCountToEject
+
+Get the number of the unbonded keys to be ejected using a forcedTargetLimit
+
+
+```solidity
+function getUnbondedKeysCountToEject(uint256 nodeOperatorId) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Unbonded keys count|
+
+
+### getBondAmountByKeysCountWstETH
+
+Get the bond amount in wstETH required for the `keysCount` keys using the default bond curve
+
+
+```solidity
+function getBondAmountByKeysCountWstETH(uint256 keysCount, uint256 curveId) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`keysCount`|`uint256`|Keys count to calculate the required bond amount|
+|`curveId`|`uint256`|Id of the curve to perform calculations against|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|wstETH amount required for the `keysCount`|
+
+
+### getRequiredBondForNextKeysWstETH
+
+Get the required bond in wstETH (inc. missed and excess) for the given Node Operator to upload new keys
+
+
+```solidity
+function getRequiredBondForNextKeysWstETH(uint256 nodeOperatorId, uint256 additionalKeys)
+    external
+    view
+    returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+|`additionalKeys`|`uint256`|Number of new keys to add|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Required bond in wstETH|
+
+
+### getClaimableBondShares
+
+Get current claimable bond in stETH shares for the given Node Operator
+
+
+```solidity
+function getClaimableBondShares(uint256 nodeOperatorId) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Current claimable bond in stETH shares|
+
+
+### getClaimableRewardsAndBondShares
+
+Get current claimable bond in stETH shares for the given Node Operator
+Includes potential rewards distributed by the Fee Distributor
+
+
+```solidity
+function getClaimableRewardsAndBondShares(
+    uint256 nodeOperatorId,
+    uint256 cumulativeFeeShares,
+    bytes32[] calldata rewardsProof
+) external view returns (uint256 claimableShares);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+|`cumulativeFeeShares`|`uint256`|Cumulative fee stETH shares for the Node Operator|
+|`rewardsProof`|`bytes32[]`|Merkle proof of the rewards|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`claimableShares`|`uint256`|Current claimable bond in stETH shares|
+
+
+### feeDistributor
+
+*TODO: Remove in the next major release*
+
+
+```solidity
+function feeDistributor() external view returns (ICSFeeDistributor);
+```
 
 ### getBondSummaryShares
 
@@ -684,48 +841,6 @@ function getBondSummaryShares(uint256 nodeOperatorId) public view returns (uint2
 |`required`|`uint256`|Required bond amount in stETH shares|
 
 
-### getUnbondedKeysCount
-
-Get the number of the unbonded keys
-
-
-```solidity
-function getUnbondedKeysCount(uint256 nodeOperatorId) public view returns (uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|Unbonded keys count|
-
-
-### getUnbondedKeysCountToEject
-
-Get the number of the unbonded keys to be ejected using a forcedTargetLimit
-
-
-```solidity
-function getUnbondedKeysCountToEject(uint256 nodeOperatorId) public view returns (uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|Unbonded keys count|
-
-
 ### getRequiredBondForNextKeys
 
 Get the required bond in ETH (inc. missed and excess) for the given Node Operator to upload new deposit data
@@ -746,102 +861,6 @@ function getRequiredBondForNextKeys(uint256 nodeOperatorId, uint256 additionalKe
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`uint256`|Required bond amount in ETH|
-
-
-### getBondAmountByKeysCountWstETH
-
-Get the bond amount in wstETH required for the `keysCount` keys using the default bond curve
-
-
-```solidity
-function getBondAmountByKeysCountWstETH(uint256 keysCount, uint256 curveId) public view returns (uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`keysCount`|`uint256`|Keys count to calculate the required bond amount|
-|`curveId`|`uint256`|Id of the curve to perform calculations against|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|wstETH amount required for the `keysCount`|
-
-
-### getRequiredBondForNextKeysWstETH
-
-Get the required bond in wstETH (inc. missed and excess) for the given Node Operator to upload new keys
-
-
-```solidity
-function getRequiredBondForNextKeysWstETH(uint256 nodeOperatorId, uint256 additionalKeys)
-    public
-    view
-    returns (uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`additionalKeys`|`uint256`|Number of new keys to add|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|Required bond in wstETH|
-
-
-### getClaimableBondShares
-
-Get current claimable bond in stETH shares for the given Node Operator
-
-
-```solidity
-function getClaimableBondShares(uint256 nodeOperatorId) public view returns (uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|Current claimable bond in stETH shares|
-
-
-### getClaimableRewardsAndBondShares
-
-Get current claimable bond in stETH shares for the given Node Operator
-Includes potential rewards distributed by the Fee Distributor
-
-
-```solidity
-function getClaimableRewardsAndBondShares(
-    uint256 nodeOperatorId,
-    uint256 cumulativeFeeShares,
-    bytes32[] calldata rewardsProof
-) public view returns (uint256 claimableShares);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`cumulativeFeeShares`|`uint256`|Cumulative fee stETH shares for the Node Operator|
-|`rewardsProof`|`bytes32[]`|Merkle proof of the rewards|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`claimableShares`|`uint256`|Current claimable bond in stETH shares|
 
 
 ### _pullFeeRewards
@@ -875,20 +894,30 @@ function _unwrapWstETHPermitIfRequired(address from, PermitInput calldata permit
 function _getClaimableBondShares(uint256 nodeOperatorId) internal view override returns (uint256);
 ```
 
-### _getUnbondedKeysCount
-
-*Unbonded stands for the amount of the keys not fully covered with the bond*
+### _getRequiredBond
 
 
 ```solidity
-function _getUnbondedKeysCount(uint256 nodeOperatorId, bool accountLockedBond) internal view returns (uint256);
+function _getRequiredBond(uint256 nodeOperatorId, uint256 additionalKeys) internal view returns (uint256);
+```
+
+### _getRequiredBondShares
+
+
+```solidity
+function _getRequiredBondShares(uint256 nodeOperatorId, uint256 additionalKeys) internal view returns (uint256);
+```
+
+### _getUnbondedKeysCount
+
+*Unbonded stands for the amount of keys not fully covered with bond*
+
+
+```solidity
+function _getUnbondedKeysCount(uint256 nodeOperatorId, bool includeLockedBond) internal view returns (uint256);
 ```
 
 ### _onlyRecoverer
-
-10 wei added to account for possible stETH rounding errors
-https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
-Should be sufficient for ~ 40 years
 
 
 ```solidity

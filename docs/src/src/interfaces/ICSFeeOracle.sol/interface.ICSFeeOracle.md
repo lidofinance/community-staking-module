@@ -1,5 +1,5 @@
 # ICSFeeOracle
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSFeeOracle.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSFeeOracle.sol)
 
 **Inherits:**
 [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
@@ -34,42 +34,19 @@ function RESUME_ROLE() external view returns (bytes32);
 function RECOVERER_ROLE() external view returns (bytes32);
 ```
 
-### feeDistributor
+### FEE_DISTRIBUTOR
 
 
 ```solidity
-function feeDistributor() external view returns (ICSFeeDistributor);
+function FEE_DISTRIBUTOR() external view returns (ICSFeeDistributor);
 ```
 
-### setFeeDistributorContract
-
-Set a new fee distributor contract
+### STRIKES
 
 
 ```solidity
-function setFeeDistributorContract(address feeDistributorContract) external;
+function STRIKES() external view returns (ICSStrikes);
 ```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`feeDistributorContract`|`address`|Address of the new fee distributor contract|
-
-
-### setStrikesContract
-
-Set a new strikes contract
-
-
-```solidity
-function setStrikesContract(address strikesContract) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`strikesContract`|`address`|Address of the new strikes contract|
-
 
 ### submitReportData
 
@@ -110,38 +87,6 @@ function pauseFor(uint256 duration) external;
 |----|----|-----------|
 |`duration`|`uint256`|Duration of the pause in seconds|
 
-
-### pauseUntil
-
-Pause accepting oracle reports until a timestamp
-
-
-```solidity
-function pauseUntil(uint256 pauseUntilInclusive) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`pauseUntilInclusive`|`uint256`|Timestamp until which the oracle reports are paused|
-
-
-## Events
-### FeeDistributorContractSet
-*Emitted when a new fee distributor contract is set*
-
-
-```solidity
-event FeeDistributorContractSet(address feeDistributorContract);
-```
-
-### StrikesContractSet
-*Emitted when a new strikes contract is set*
-
-
-```solidity
-event StrikesContractSet(address strikesContract);
-```
 
 ## Errors
 ### ZeroAdminAddress
