@@ -2776,9 +2776,12 @@ contract CsmQueueOps is CSMCommon {
         assertEq(toRemove, 0, "queue should be clean");
     }
 
-    function test_cleanup_RevertWhen_zeroDepth() public assertInvariants {
-        vm.expectRevert(IQueueLib.QueueLookupNoLimit.selector);
-        csm.cleanDepositQueue(0);
+    function test_cleanup_zeroMaxItems() public assertInvariants {
+        (uint256 removed, uint256 lastRemovedAtDepth) = csm.cleanDepositQueue(
+            0
+        );
+        assertEq(removed, 0, "should not remove any batches");
+        assertEq(lastRemovedAtDepth, 0, "lastRemovedAtDepth should be 0");
     }
 
     function test_cleanup_WhenMultipleInvalidBatchesInRow()
