@@ -40,6 +40,7 @@ contract CSAccounting is
     ICSModule public immutable MODULE;
     ICSFeeDistributor public immutable FEE_DISTRIBUTOR;
     /// @dev DEPRECATED
+    /// @custom:oz-renamed-from feeDistributor
     ICSFeeDistributor internal _feeDistributorOld;
     address public chargePenaltyRecipient;
 

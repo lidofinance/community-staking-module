@@ -81,6 +81,7 @@ contract CSModule is
     QueueLib.Queue internal _legacyQueue;
 
     /// @dev Unused. Nullified in the finalizeUpgradeV2
+    /// @custom:oz-renamed-from accounting
     ICSAccounting internal _accountingOld;
 
     /// @dev Unused. Nullified in the finalizeUpgradeV2

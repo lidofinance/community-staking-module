@@ -355,29 +355,6 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         accounting.initialize(curve, admin, 8 weeks, address(0));
     }
 
-    function test_finalizeUpgradeV2() public {
-        _enableInitializers(address(accounting));
-
-        ICSBondCurve.BondCurveIntervalInput[][]
-            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](0);
-
-        accounting.finalizeUpgradeV2(bondCurves);
-
-        assertEq(accounting.getInitializedVersion(), 2);
-    }
-
-    function test_finalizeUpgradeV2_revertWhen_InvalidBondCurvesLength()
-        public
-    {
-        _enableInitializers(address(accounting));
-
-        ICSBondCurve.BondCurveIntervalInput[][]
-            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](1);
-
-        vm.expectRevert(ICSAccounting.InvalidBondCurvesLength.selector);
-        accounting.finalizeUpgradeV2(bondCurves);
-    }
-
     function test_finalizeUpgradeV2_withLegacyCurves() public {
         _enableInitializers(address(accounting));
 
@@ -413,6 +390,18 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         accounting.finalizeUpgradeV2(bondCurves);
 
         assertEq(accounting.getInitializedVersion(), 2);
+    }
+
+    function test_finalizeUpgradeV2_revertWhen_InvalidBondCurvesLength()
+        public
+    {
+        _enableInitializers(address(accounting));
+
+        ICSBondCurve.BondCurveIntervalInput[][]
+            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](1);
+
+        vm.expectRevert(ICSAccounting.InvalidBondCurvesLength.selector);
+        accounting.finalizeUpgradeV2(bondCurves);
     }
 }
 
