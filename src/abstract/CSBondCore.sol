@@ -224,9 +224,9 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 nodeOperatorId,
         uint256 amount,
         address recipient
-    ) internal returns (uint256 chargedShares) {
+    ) internal {
         uint256 toChargeShares = _sharesByEth(amount);
-        chargedShares = _reduceBond(nodeOperatorId, toChargeShares);
+        uint256 chargedShares = _reduceBond(nodeOperatorId, toChargeShares);
         uint256 chargedEth = LIDO.transferShares(recipient, chargedShares);
         emit BondCharged(
             nodeOperatorId,
