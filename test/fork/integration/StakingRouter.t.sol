@@ -273,7 +273,6 @@ contract StakingRouterIntegrationTest is
     }
 
     function test_unsafeSetExitedValidatorsCount() public assertInvariants {
-        vm.skip(true, "Protocol upgrade needed");
         hugeDeposit();
         uint256 noId;
         uint256 keysCount;
@@ -305,12 +304,10 @@ contract StakingRouterIntegrationTest is
                 currentModuleExitedValidatorsCount: moduleInfo
                     .exitedValidatorsCount,
                 currentNodeOperatorExitedValidatorsCount: exited,
-                currentNodeOperatorStuckValidatorsCount: 0,
                 // dirty hack since prev call does not update total counts
                 newModuleExitedValidatorsCount: moduleInfo
                     .exitedValidatorsCount + unsafeExited,
-                newNodeOperatorExitedValidatorsCount: unsafeExited,
-                newNodeOperatorStuckValidatorsCount: 0
+                newNodeOperatorExitedValidatorsCount: unsafeExited
             });
         vm.prank(agent);
         stakingRouter.unsafeSetExitedValidatorsCount(

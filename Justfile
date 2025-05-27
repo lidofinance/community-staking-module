@@ -8,6 +8,8 @@ deploy_script_name := if chain == "mainnet" {
     "DeployLocalDevNet"
 } else if chain == "hoodi" {
     "DeployHoodi"
+} else if chain == "devnet2" {
+    "SCRIPT_IS_NOT_DEFINED"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -18,6 +20,8 @@ deploy_implementations_script_name := if chain == "mainnet" {
     "DeployImplementationsHoodi"
 } else if chain == "local-devnet" {
     "SCRIPT_IS_NOT_DEFINED"
+} else if chain == "devnet2" {
+    "DeployImplementationsDevnet2"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -28,6 +32,8 @@ deploy_config_path := if chain == "mainnet" {
     "artifacts/local-devnet/deploy-local-devnet.json"
 } else if chain == "hoodi" {
     "artifacts/hoodi/deploy-hoodi.json"
+} else if chain == "devnet2" {
+    "artifacts/devnet2/deploy-devnet2.json"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -222,7 +228,7 @@ _deploy-live-no-confirm *args:
 _deploy-impl *args:
     FOUNDRY_PROFILE=deploy \
         forge script {{deploy_impls_script_path}} --sig="deploy(string,string)" \
-            --rpc-url {{anvil_rpc_url}} --slow {{args}} \
+            --rpc-url ${RPC_URL} --slow {{args}} \
             -- {{deploy_config_path}} `git rev-parse HEAD`
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
