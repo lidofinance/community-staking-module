@@ -164,10 +164,8 @@ interface IStakingRouter {
     struct ValidatorsCountsCorrection {
         uint256 currentModuleExitedValidatorsCount;
         uint256 currentNodeOperatorExitedValidatorsCount;
-        uint256 currentNodeOperatorStuckValidatorsCount;
         uint256 newModuleExitedValidatorsCount;
         uint256 newNodeOperatorExitedValidatorsCount;
-        uint256 newNodeOperatorStuckValidatorsCount;
     }
 
     function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
