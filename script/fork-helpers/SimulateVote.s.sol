@@ -159,6 +159,15 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         vm.startBroadcast(admin);
 
         accounting.revokeRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
+        accounting.revokeRole(keccak256("RESET_BOND_CURVE_ROLE"), address(csm));
+        address csmCommittee = accounting.getRoleMember(
+            keccak256("RESET_BOND_CURVE_ROLE"),
+            0
+        );
+        accounting.revokeRole(
+            keccak256("RESET_BOND_CURVE_ROLE"),
+            address(csmCommittee)
+        );
         csm.grantRole(
             csm.CREATE_NODE_OPERATOR_ROLE(),
             deploymentConfig.permissionlessGate
@@ -210,16 +219,6 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         burner.grantRole(
             burner.REQUEST_BURN_MY_STETH_ROLE(),
             address(accounting)
-        );
-
-        accounting.revokeRole(keccak256("RESET_BOND_CURVE_ROLE"), address(csm));
-        address csmCommittee = accounting.getRoleMember(
-            keccak256("RESET_BOND_CURVE_ROLE"),
-            0
-        );
-        accounting.revokeRole(
-            keccak256("RESET_BOND_CURVE_ROLE"),
-            address(csmCommittee)
         );
 
         vm.stopBroadcast();

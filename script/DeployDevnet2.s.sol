@@ -13,8 +13,8 @@ contract DeployDevnet2 is DeployBase {
         config.lidoLocatorAddress = 0x9DC3b7C24965a90a8e2eacf48F4DB47c0A5f7Eb0;
         config.aragonAgent = 0x441A07D745d74A8Ce0c6b1F1Adef3C7ff263fb6c;
         config
-            .easyTrackEVMScriptExecutor = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53;
-        config.proxyAdmin = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+            .easyTrackEVMScriptExecutor = 0x8943545177806ED17B9F23F0a21ee5948eCaa776;
+        config.proxyAdmin = 0x8943545177806ED17B9F23F0a21ee5948eCaa776; // Dev team EOA
 
         // Oracle
         config.secondsPerSlot = 12;
@@ -53,14 +53,14 @@ contract DeployDevnet2 is DeployBase {
         config.maxBondLockPeriod = 365 days;
         config.bondLockPeriod = 8 weeks;
         config
-            .setResetBondCurveAddress = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+            .setResetBondCurveAddress = 0x8943545177806ED17B9F23F0a21ee5948eCaa776; // Dev team EOA
         config
             .chargePenaltyRecipient = 0x441A07D745d74A8Ce0c6b1F1Adef3C7ff263fb6c; // locator.treasury()
         // Module
         config.stakingModuleId = 3;
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
         config
-            .elRewardsStealingReporter = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+            .elRewardsStealingReporter = 0x8943545177806ED17B9F23F0a21ee5948eCaa776; // Dev team EOA
 
         // CSParameters
         config.keyRemovalCharge = 0.05 ether;
@@ -78,10 +78,12 @@ contract DeployDevnet2 is DeployBase {
         config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
         config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
+        config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
+        config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
 
         // VettedGate
         config
-            .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+            .identifiedCommunityStakersGateManager = 0x8943545177806ED17B9F23F0a21ee5948eCaa776; // Dev team EOA
         config
             .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
         config.identifiedCommunityStakersGateTreeCid = "Qm"; // TODO: to be set in the future
@@ -113,11 +115,11 @@ contract DeployDevnet2 is DeployBase {
 
         // GateSeal
         config.gateSealFactory = 0x38394C86870065a9DF8b81aCF9e4001f3FD1AA04;
-        config.sealingCommittee = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.sealingCommittee = 0x8943545177806ED17B9F23F0a21ee5948eCaa776; // Dev team EOA
         config.sealDuration = 6 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
-        config.secondAdminAddress = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.secondAdminAddress = 0x8943545177806ED17B9F23F0a21ee5948eCaa776; // Dev team EOA
         _setUp();
     }
 }
