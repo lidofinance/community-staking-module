@@ -61,23 +61,23 @@ contract DeployMainnet is DeployBase {
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
 
         // CSParameters
-        config.keyRemovalCharge = 0.05 ether;
+        config.keyRemovalCharge = 0.02 ether;
         config.elRewardsStealingAdditionalFine = 0.1 ether;
         config.keysLimit = type(uint256).max;
-        config.avgPerfLeewayBP = 450;
-        config.rewardShareBP = 10000;
+        config.avgPerfLeewayBP = 300;
+        config.rewardShareBP = 5834; // 58.34% of 6% = 3.5% of the total
         config.strikesLifetimeFrames = 6;
         config.strikesThreshold = 3;
         config.queueLowestPriority = 5;
         config.defaultQueuePriority = 5;
         config.defaultQueueMaxDeposits = type(uint32).max;
-        config.badPerformancePenalty = 0.1 ether; // TODO: to be reviewed
+        config.badPerformancePenalty = 0.24 ether;
         config.attestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
         config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
         config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
-        config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
-        config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
+        config.defaultExitDelayPenalty = 0.1 ether;
+        config.defaultMaxWithdrawalRequestFee = 0.1 ether;
 
         // VettedGate
         config
@@ -90,7 +90,6 @@ contract DeployMainnet is DeployBase {
         config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
 
         // Parameters for Identified Community Staker type
-        // TODO: Set proper values bellow
         config.identifiedCommunityStakersGateKeyRemovalCharge = 0.01 ether;
         config
             .identifiedCommunityStakersGateELRewardsStealingAdditionalFine = 0.05 ether;
@@ -98,18 +97,18 @@ contract DeployMainnet is DeployBase {
         config.identifiedCommunityStakersGateAvgPerfLeewayData.push([1, 500]);
         config.identifiedCommunityStakersGateRewardShareData.push([1, 10000]);
         config.identifiedCommunityStakersGateRewardShareData.push([17, 5834]);
-        config.identifiedCommunityStakersGateStrikesLifetimeFrames = 8;
+        config.identifiedCommunityStakersGateStrikesLifetimeFrames = 6;
         config.identifiedCommunityStakersGateStrikesThreshold = 4;
         config.identifiedCommunityStakersGateQueuePriority = 0;
         config.identifiedCommunityStakersGateQueueMaxDeposits = 10;
-        config.identifiedCommunityStakersGateBadPerformancePenalty = 0.05 ether;
+        config.identifiedCommunityStakersGateBadPerformancePenalty = 0.16 ether;
         config.identifiedCommunityStakersGateAttestationsWeight = 60;
         config.identifiedCommunityStakersGateBlocksWeight = 4;
         config.identifiedCommunityStakersGateSyncWeight = 0;
-        config.identifiedCommunityStakersGateAllowedExitDelay = 8 days;
+        config.identifiedCommunityStakersGateAllowedExitDelay = 5 days;
         config.identifiedCommunityStakersGateExitDelayPenalty = 0.05 ether;
         config
-            .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.05 ether;
+            .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.1 ether;
 
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
