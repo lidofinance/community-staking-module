@@ -384,8 +384,8 @@ contract VettedGate is
         uint256 season = referralProgramSeasonNumber;
         if (isReferralProgramSeasonActive && referrer != address(0)) {
             _referralCounts[_seasonedAddress(referrer, season)] += 1;
+            emit ReferralRecorded(referrer, season, referralNodeOperatorId);
         }
-        emit ReferralRecorded(referrer, season, referralNodeOperatorId);
     }
 
     function _seasonedAddress(
