@@ -31,6 +31,6 @@ interface ITriggerableWithdrawalsGateway {
     function triggerFullWithdrawals(
         ValidatorData[] calldata triggerableExitsData,
         address refundRecipient,
-        uint8 exitType
+        uint256 exitType
     ) external payable;
 }
