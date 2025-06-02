@@ -29,8 +29,6 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
         if (csm.isPaused()) {
             csm.resume();
         }
-
-        nodeOperatorId = getDepositedNodeOperator(nextAddress(), keysCount);
     }
 
     function _prepareWithdrawalRequestData(
@@ -46,6 +44,15 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_voluntaryEject() public {
+        uint256 startFrom;
+        (
+            nodeOperatorId,
+            startFrom
+        ) = getDepositedNodeOperatorWithSequentialActiveKeys(
+            nextAddress(),
+            keysCount
+        );
+
         uint256 initialBalance = 1 ether;
         NodeOperatorManagementProperties memory noProperties = csm
             .getNodeOperatorManagementProperties(nodeOperatorId);
@@ -58,9 +65,8 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
         bytes[] memory pubkeys = new bytes[](keysCount);
 
         for (uint256 i = 0; i < keysCount; i++) {
-            pubkeys[i] = csm.getSigningKeys(nodeOperatorId, i, 1);
+            pubkeys[i] = csm.getSigningKeys(nodeOperatorId, startFrom + i, 1);
         }
-
         for (uint256 i = 0; i < keysCount; i++) {
             vm.expectEmit(withdrawalVault);
             emit IWithdrawalVault.WithdrawalRequestAdded(
@@ -72,7 +78,7 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
         vm.startSnapshotGas("Ejector.voluntaryEject");
         ejector.voluntaryEject{ value: initialBalance }(
             nodeOperatorId,
-            0,
+            startFrom,
             keysCount,
             noProperties.managerAddress
         );
@@ -85,6 +91,8 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_voluntaryEjectByArray() public {
+        nodeOperatorId = getDepositedNodeOperator(nextAddress(), keysCount);
+
         uint256 initialBalance = 1 ether;
         NodeOperatorManagementProperties memory noProperties = csm
             .getNodeOperatorManagementProperties(nodeOperatorId);
@@ -100,9 +108,17 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
             locator.withdrawalVault()
         ).getWithdrawalRequestFee();
 
-        for (uint256 i = 0; i < keysCount; i++) {
-            keyIds[i] = i;
-            pubkeys[i] = csm.getSigningKeys(nodeOperatorId, i, 1);
+        uint256 i;
+        uint256 keyIndex;
+        while (i < keysCount) {
+            if (csm.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
+                keyIndex++;
+                continue;
+            }
+            keyIds[i] = keyIndex;
+            pubkeys[i] = csm.getSigningKeys(nodeOperatorId, keyIndex, 1);
+            i++;
+            keyIndex++;
         }
 
         for (uint256 i = 0; i < keysCount; i++) {

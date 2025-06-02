@@ -16,7 +16,7 @@ import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import { IGateSeal } from "../../src/interfaces/IGateSeal.sol";
-import { NodeOperatorManagementProperties } from "../../src/interfaces/ICSModule.sol";
+import { NodeOperator, NodeOperatorManagementProperties } from "../../src/interfaces/ICSModule.sol";
 import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
 import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
 import { CSModule } from "../../src/CSModule.sol";
@@ -492,10 +492,35 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         uint256 keysCount
     ) internal returns (uint256) {
         for (uint256 noId; ; ++noId) {
-            if (csm.getNodeOperatorTotalDepositedKeys(noId) >= keysCount) {
+            NodeOperator memory no = csm.getNodeOperator(noId);
+            if (no.totalDepositedKeys - no.totalWithdrawnKeys >= keysCount) {
                 return noId;
             }
         }
         return addNodeOperator(nodeOperatorAddress, keysCount);
+    }
+
+    function getDepositedNodeOperatorWithSequentialActiveKeys(
+        address nodeOperatorAddress,
+        uint256 keysCount
+    ) internal returns (uint256 noId, uint256 startIndex) {
+        for (uint256 noId; ; ++noId) {
+            NodeOperator memory no = csm.getNodeOperator(noId);
+            uint256 activeKeys = no.totalDepositedKeys - no.totalWithdrawnKeys;
+            if (activeKeys >= keysCount) {
+                uint256 sequentialKeys = 0;
+                for (uint256 i = 0; i < no.totalDepositedKeys; ++i) {
+                    if (!csm.isValidatorWithdrawn(noId, i)) {
+                        sequentialKeys++;
+                    } else {
+                        sequentialKeys = 0;
+                    }
+                    if (sequentialKeys == keysCount) {
+                        return (noId, i - keysCount + 1);
+                    }
+                }
+            }
+        }
+        return (addNodeOperator(nodeOperatorAddress, keysCount), 0);
     }
 }

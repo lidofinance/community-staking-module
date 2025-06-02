@@ -7,19 +7,19 @@ import { DeployBase } from "./DeployBase.s.sol";
 import { GIndicies } from "./constants/GIndicies.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
-contract DeployDevnet2 is DeployBase {
-    constructor() DeployBase("devnet2", 32382) {
+contract DeployDevnet3 is DeployBase {
+    constructor() DeployBase("devnet3", 32382) {
         // Lido addresses
-        config.lidoLocatorAddress = 0x9DC3b7C24965a90a8e2eacf48F4DB47c0A5f7Eb0;
-        config.aragonAgent = 0x441A07D745d74A8Ce0c6b1F1Adef3C7ff263fb6c;
+        config.lidoLocatorAddress = 0x3c0e871bB7337D5e6A18FDD73c4D9e7567961Ad3;
+        config.aragonAgent = 0x105031FEEa0162de118C5EdEEd626E08BD55B256;
         config
-            .easyTrackEVMScriptExecutor = 0x8943545177806ED17B9F23F0a21ee5948eCaa776;
+            .easyTrackEVMScriptExecutor = 0xE656cf6D6A75A8459a4aF9770b435BDBB2CA652F;
         config.proxyAdmin = 0x8943545177806ED17B9F23F0a21ee5948eCaa776; // Dev team EOA
 
         // Oracle
         config.secondsPerSlot = 12;
         config.slotsPerEpoch = 32;
-        config.clGenesisTime = 1747663937;
+        config.clGenesisTime = 1748602252;
         config.oracleReportEpochsPerFrame = 225; // 1 day
         config.fastLaneLengthSlots = 32;
         config.consensusVersion = 3;
@@ -44,10 +44,12 @@ contract DeployDevnet2 is DeployBase {
 
         config.verifierSupportedEpoch = 0;
         // Accounting
-        config.maxCurveLength = 10;
         // 2.4 -> 1.3
-        config.bondCurve.push([1, 2.4 ether]);
-        config.bondCurve.push([2, 1.3 ether]);
+        config.defaultBondCurve.push([1, 2.4 ether]);
+        config.defaultBondCurve.push([2, 1.3 ether]);
+        // 1.5 -> 1.3
+        config.legacyEaBondCurve.push([1, 1.5 ether]);
+        config.legacyEaBondCurve.push([2, 1.3 ether]);
 
         config.minBondLockPeriod = 0;
         config.maxBondLockPeriod = 365 days;
@@ -55,7 +57,7 @@ contract DeployDevnet2 is DeployBase {
         config
             .setResetBondCurveAddress = 0x8943545177806ED17B9F23F0a21ee5948eCaa776; // Dev team EOA
         config
-            .chargePenaltyRecipient = 0x441A07D745d74A8Ce0c6b1F1Adef3C7ff263fb6c; // locator.treasury()
+            .chargePenaltyRecipient = 0x105031FEEa0162de118C5EdEEd626E08BD55B256; // locator.treasury()
         // Module
         config.stakingModuleId = 3;
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
@@ -63,20 +65,20 @@ contract DeployDevnet2 is DeployBase {
             .elRewardsStealingReporter = 0x8943545177806ED17B9F23F0a21ee5948eCaa776; // Dev team EOA
 
         // CSParameters
-        config.keyRemovalCharge = 0.05 ether;
-        config.elRewardsStealingAdditionalFine = 0.1 ether;
-        config.keysLimit = type(uint256).max;
-        config.avgPerfLeewayBP = 450;
-        config.rewardShareBP = 10000;
-        config.strikesLifetimeFrames = 6;
-        config.strikesThreshold = 3;
+        config.defaultKeyRemovalCharge = 0.02 ether;
+        config.defaultElRewardsStealingAdditionalFine = 0.1 ether;
+        config.defaultKeysLimit = type(uint256).max;
+        config.defaultAvgPerfLeewayBP = 300;
+        config.defaultRewardShareBP = 5834; // 58.34% of 6% = 3.5% of the total
+        config.defaultStrikesLifetimeFrames = 6;
+        config.defaultStrikesThreshold = 3;
         config.queueLowestPriority = 5;
         config.defaultQueuePriority = 5;
         config.defaultQueueMaxDeposits = type(uint32).max;
-        config.badPerformancePenalty = 0.1 ether; // TODO: to be reviewed
-        config.attestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
-        config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
-        config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultBadPerformancePenalty = 0.24 ether; // TODO: to be reviewed
+        config.defaultAttestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultBlocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultSyncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
         config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
         config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
@@ -100,21 +102,21 @@ contract DeployDevnet2 is DeployBase {
         config.identifiedCommunityStakersGateAvgPerfLeewayData.push([1, 500]);
         config.identifiedCommunityStakersGateRewardShareData.push([1, 10000]);
         config.identifiedCommunityStakersGateRewardShareData.push([17, 5834]);
-        config.identifiedCommunityStakersGateStrikesLifetimeFrames = 8;
+        config.identifiedCommunityStakersGateStrikesLifetimeFrames = 6;
         config.identifiedCommunityStakersGateStrikesThreshold = 4;
         config.identifiedCommunityStakersGateQueuePriority = 0;
         config.identifiedCommunityStakersGateQueueMaxDeposits = 10;
-        config.identifiedCommunityStakersGateBadPerformancePenalty = 0.05 ether;
+        config.identifiedCommunityStakersGateBadPerformancePenalty = 0.16 ether;
         config.identifiedCommunityStakersGateAttestationsWeight = 60;
         config.identifiedCommunityStakersGateBlocksWeight = 4;
         config.identifiedCommunityStakersGateSyncWeight = 0;
-        config.identifiedCommunityStakersGateAllowedExitDelay = 8 days;
+        config.identifiedCommunityStakersGateAllowedExitDelay = 5 days;
         config.identifiedCommunityStakersGateExitDelayPenalty = 0.05 ether;
         config
-            .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.05 ether;
+            .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.1 ether;
 
         // GateSeal
-        config.gateSealFactory = 0x38394C86870065a9DF8b81aCF9e4001f3FD1AA04;
+        config.gateSealFactory = 0x5676715F8537DCbC5a13003Bf1bb7EF6a3196dB9;
         config.sealingCommittee = 0x8943545177806ED17B9F23F0a21ee5948eCaa776; // Dev team EOA
         config.sealDuration = 6 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;

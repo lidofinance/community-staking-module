@@ -13,11 +13,11 @@ import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
 import { DeploymentHelpers } from "../test/helpers/Fixtures.sol";
-import { DeployDevnet2 } from "./DeployDevnet2.s.sol";
+import { DeployDevnet3 } from "./DeployDevnet3.s.sol";
 
-contract DeployImplementationsDevnet2 is
+contract DeployImplementationsDevnet3 is
     DeployImplementationsBase,
-    DeployDevnet2,
+    DeployDevnet3,
     DeploymentHelpers
 {
     function deploy(
