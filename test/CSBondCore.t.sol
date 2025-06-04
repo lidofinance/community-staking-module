@@ -533,6 +533,33 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
         );
         assertEq(bondCore.totalBondShares(), 0);
     }
+
+    function test_burn_ZeroAmount() public {
+        _deposit(32 ether);
+
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        uint256 totalBondSharesBefore = bondCore.totalBondShares();
+
+        // Should not emit any events for zero burn
+        vm.recordLogs();
+        bondCore.burn(0, 0);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        // Verify no events were emitted
+        assertEq(logs.length, 0, "no events should be emitted for zero burn");
+
+        // Verify no state changes
+        assertEq(
+            bondCore.getBondShares(0),
+            bondSharesBefore,
+            "bond shares should remain unchanged for zero burn"
+        );
+        assertEq(
+            bondCore.totalBondShares(),
+            totalBondSharesBefore,
+            "total bond shares should remain unchanged for zero burn"
+        );
+    }
 }
 
 contract CSBondCoreChargeTest is CSBondCoreTestBase {
@@ -619,5 +646,32 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             "bond shares should be 0 after charging"
         );
         assertEq(bondCore.totalBondShares(), 0);
+    }
+
+    function test_charge_ZeroAmount() public {
+        _deposit(32 ether);
+
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        uint256 totalBondSharesBefore = bondCore.totalBondShares();
+
+        // Should not emit any events for zero charge
+        vm.recordLogs();
+        bondCore.charge(0, 0, testChargePenaltyRecipient);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        // Verify no events were emitted
+        assertEq(logs.length, 0, "no events should be emitted for zero charge");
+
+        // Verify no state changes
+        assertEq(
+            bondCore.getBondShares(0),
+            bondSharesBefore,
+            "bond shares should remain unchanged for zero charge"
+        );
+        assertEq(
+            bondCore.totalBondShares(),
+            totalBondSharesBefore,
+            "total bond shares should remain unchanged for zero charge"
+        );
     }
 }

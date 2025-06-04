@@ -202,7 +202,7 @@ abstract contract CSBondCore is ICSBondCore {
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
         uint256 sharesToBurn = _sharesByEth(amount);
         uint256 burnedShares = _reduceBond(nodeOperatorId, sharesToBurn);
-        // If no bond already
+        // If no bond already or the amount to burn is zero
         if (burnedShares == 0) {
             return;
         }
@@ -227,7 +227,13 @@ abstract contract CSBondCore is ICSBondCore {
     ) internal {
         uint256 toChargeShares = _sharesByEth(amount);
         uint256 chargedShares = _reduceBond(nodeOperatorId, toChargeShares);
+        // If no bond already or the amount to charge is zero
+        if (chargedShares == 0) {
+            return;
+        }
+
         uint256 chargedEth = LIDO.transferShares(recipient, chargedShares);
+
         emit BondCharged(
             nodeOperatorId,
             _ethByShares(toChargeShares),
