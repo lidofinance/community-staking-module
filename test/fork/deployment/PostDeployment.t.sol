@@ -166,19 +166,19 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
         uint256 defaultCurveId = accounting.DEFAULT_BOND_CURVE_ID();
         assertEq(
             accounting.getCurveInfo(defaultCurveId).intervals[0].minKeysCount,
-            deployParams.bondCurve[0][0]
+            deployParams.defaultBondCurve[0][0]
         );
         assertEq(
             accounting.getCurveInfo(defaultCurveId).intervals[0].trend,
-            deployParams.bondCurve[0][1]
+            deployParams.defaultBondCurve[0][1]
         );
         assertEq(
             accounting.getCurveInfo(defaultCurveId).intervals[1].minKeysCount,
-            deployParams.bondCurve[1][0]
+            deployParams.defaultBondCurve[1][0]
         );
         assertEq(
             accounting.getCurveInfo(defaultCurveId).intervals[1].trend,
-            deployParams.bondCurve[1][1]
+            deployParams.defaultBondCurve[1][1]
         );
 
         uint256 identifiedCommunityStakersGateBondCurveId = vettedGate
@@ -343,19 +343,19 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
 
     function test_proxy_onlyFull() public {
         ICSBondCurve.BondCurveIntervalInput[]
-            memory bondCurve = new ICSBondCurve.BondCurveIntervalInput[](
-                deployParams.bondCurve.length
+            memory defaultBondCurve = new ICSBondCurve.BondCurveIntervalInput[](
+                deployParams.defaultBondCurve.length
             );
-        for (uint256 i = 0; i < deployParams.bondCurve.length; i++) {
-            bondCurve[i] = ICSBondCurve.BondCurveIntervalInput({
-                minKeysCount: deployParams.bondCurve[i][0],
-                trend: deployParams.bondCurve[i][1]
+        for (uint256 i = 0; i < deployParams.defaultBondCurve.length; i++) {
+            defaultBondCurve[i] = ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: deployParams.defaultBondCurve[i][0],
+                trend: deployParams.defaultBondCurve[i][1]
             });
         }
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         accounting.initialize({
-            bondCurve: bondCurve,
+            bondCurve: defaultBondCurve,
             admin: address(deployParams.aragonAgent),
             bondLockPeriod: deployParams.bondLockPeriod,
             _chargePenaltyRecipient: address(0)
@@ -372,7 +372,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
         );
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         accountingImpl.initialize({
-            bondCurve: bondCurve,
+            bondCurve: defaultBondCurve,
             admin: address(deployParams.aragonAgent),
             bondLockPeriod: deployParams.bondLockPeriod,
             _chargePenaltyRecipient: address(0)

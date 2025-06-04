@@ -45,8 +45,8 @@ contract DeployHoodi is DeployBase {
         config.verifierSupportedEpoch = 0;
         // Accounting
         // 2.4 -> 1.3
-        config.bondCurve.push([1, 2.4 ether]);
-        config.bondCurve.push([2, 1.3 ether]);
+        config.defaultBondCurve.push([1, 2.4 ether]);
+        config.defaultBondCurve.push([2, 1.3 ether]);
         // 1.5 -> 1.3
         config.legacyEaBondCurve.push([1, 1.5 ether]);
         config.legacyEaBondCurve.push([2, 1.3 ether]);

@@ -55,7 +55,7 @@ struct DeployParams {
     GIndex gIFirstValidator;
     uint256 verifierSupportedEpoch;
     // Accounting
-    uint256[2][] bondCurve;
+    uint256[2][] defaultBondCurve;
     uint256[2][] legacyEaBondCurve;
     uint256 minBondLockPeriod;
     uint256 maxBondLockPeriod;
@@ -272,10 +272,10 @@ abstract contract DeployBase is Script {
             }
 
             ICSBondCurve.BondCurveIntervalInput[]
-                memory bondCurve = CommonScriptUtils
-                    .arraysToBondCurveIntervalsInputs(config.bondCurve);
+                memory defaultBondCurve = CommonScriptUtils
+                    .arraysToBondCurveIntervalsInputs(config.defaultBondCurve);
             accounting.initialize({
-                bondCurve: bondCurve,
+                bondCurve: defaultBondCurve,
                 admin: deployer,
                 bondLockPeriod: config.bondLockPeriod,
                 _chargePenaltyRecipient: config.chargePenaltyRecipient
