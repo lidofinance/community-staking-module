@@ -56,6 +56,7 @@ struct DeployParams {
     uint256 verifierSupportedEpoch;
     // Accounting
     uint256[2][] bondCurve;
+    uint256[2][] legacyEaBondCurve;
     uint256 minBondLockPeriod;
     uint256 maxBondLockPeriod;
     uint256 bondLockPeriod;
@@ -66,21 +67,20 @@ struct DeployParams {
     bytes32 moduleType;
     address elRewardsStealingReporter;
     // CSParameters
-    uint256 keyRemovalCharge;
-    uint256 elRewardsStealingAdditionalFine;
-    uint256 keysLimit;
-    uint256 avgPerfLeewayBP;
-    uint256 rewardShareBP;
-    uint256 strikesLifetimeFrames;
-    uint256 strikesThreshold;
     uint256 queueLowestPriority;
+    uint256 defaultKeyRemovalCharge;
+    uint256 defaultElRewardsStealingAdditionalFine;
+    uint256 defaultKeysLimit;
+    uint256 defaultAvgPerfLeewayBP;
+    uint256 defaultRewardShareBP;
+    uint256 defaultStrikesLifetimeFrames;
+    uint256 defaultStrikesThreshold;
     uint256 defaultQueuePriority;
     uint256 defaultQueueMaxDeposits;
-    uint256 badPerformancePenalty;
-    uint256 attestationsWeight;
-    uint256 blocksWeight;
-    uint256 syncWeight;
-    // TODO rename other default parameters to be consistent
+    uint256 defaultBadPerformancePenalty;
+    uint256 defaultAttestationsWeight;
+    uint256 defaultBlocksWeight;
+    uint256 defaultSyncWeight;
     uint256 defaultAllowedExitDelay;
     uint256 defaultExitDelayPenalty;
     uint256 defaultMaxWithdrawalRequestFee;
@@ -234,20 +234,20 @@ abstract contract DeployBase is Script {
             parametersRegistry.initialize({
                 admin: deployer,
                 data: ICSParametersRegistry.InitializationData({
-                    keyRemovalCharge: config.keyRemovalCharge,
+                    keyRemovalCharge: config.defaultKeyRemovalCharge,
                     elRewardsStealingAdditionalFine: config
-                        .elRewardsStealingAdditionalFine,
-                    keysLimit: config.keysLimit,
-                    rewardShare: config.rewardShareBP,
-                    performanceLeeway: config.avgPerfLeewayBP,
-                    strikesLifetime: config.strikesLifetimeFrames,
-                    strikesThreshold: config.strikesThreshold,
+                        .defaultElRewardsStealingAdditionalFine,
+                    keysLimit: config.defaultKeysLimit,
+                    rewardShare: config.defaultRewardShareBP,
+                    performanceLeeway: config.defaultAvgPerfLeewayBP,
+                    strikesLifetime: config.defaultStrikesLifetimeFrames,
+                    strikesThreshold: config.defaultStrikesThreshold,
                     defaultQueuePriority: config.defaultQueuePriority,
                     defaultQueueMaxDeposits: config.defaultQueueMaxDeposits,
-                    badPerformancePenalty: config.badPerformancePenalty,
-                    attestationsWeight: config.attestationsWeight,
-                    blocksWeight: config.blocksWeight,
-                    syncWeight: config.syncWeight,
+                    badPerformancePenalty: config.defaultBadPerformancePenalty,
+                    attestationsWeight: config.defaultAttestationsWeight,
+                    blocksWeight: config.defaultBlocksWeight,
+                    syncWeight: config.defaultSyncWeight,
                     defaultAllowedExitDelay: config.defaultAllowedExitDelay,
                     defaultExitDelayPenalty: config.defaultExitDelayPenalty,
                     defaultMaxWithdrawalRequestFee: config
@@ -285,6 +285,11 @@ abstract contract DeployBase is Script {
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
             );
+
+            ICSBondCurve.BondCurveIntervalInput[]
+                memory legacyEaBondCurve = CommonScriptUtils
+                    .arraysToBondCurveIntervalsInputs(config.legacyEaBondCurve);
+            accounting.addBondCurve(legacyEaBondCurve);
 
             ICSBondCurve.BondCurveIntervalInput[]
                 memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils
@@ -367,10 +372,12 @@ abstract contract DeployBase is Script {
                 })
             );
 
-            OssifiableProxy vettedGateProxy = OssifiableProxy(
-                payable(address(vettedGate))
-            );
-            vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
+            {
+                OssifiableProxy vettedGateProxy = OssifiableProxy(
+                    payable(address(vettedGate))
+                );
+                vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
+            }
 
             parametersRegistry.setKeyRemovalCharge(
                 identifiedCommunityStakersGateBondCurveId,

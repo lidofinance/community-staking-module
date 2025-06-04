@@ -211,6 +211,33 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
                 .trend,
             deployParams.identifiedCommunityStakersGateBondCurve[1][1]
         );
+
+        uint256 legacyEaBondCurveId = identifiedCommunityStakersGateBondCurveId -
+                1;
+
+        assertEq(
+            accounting
+                .getCurveInfo(legacyEaBondCurveId)
+                .intervals[0]
+                .minKeysCount,
+            deployParams.legacyEaBondCurve[0][0]
+        );
+        assertEq(
+            accounting.getCurveInfo(legacyEaBondCurveId).intervals[0].trend,
+            deployParams.legacyEaBondCurve[0][1]
+        );
+        assertEq(
+            accounting
+                .getCurveInfo(legacyEaBondCurveId)
+                .intervals[1]
+                .minKeysCount,
+            deployParams.legacyEaBondCurve[1][0]
+        );
+        assertEq(
+            accounting.getCurveInfo(legacyEaBondCurveId).intervals[1].trend,
+            deployParams.legacyEaBondCurve[1][1]
+        );
+
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
         assertEq(accounting.getBondLockPeriod(), deployParams.bondLockPeriod);
 
@@ -680,25 +707,28 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
     function test_state() public view {
         assertEq(
             parametersRegistry.defaultKeyRemovalCharge(),
-            deployParams.keyRemovalCharge
+            deployParams.defaultKeyRemovalCharge
         );
         assertEq(
             parametersRegistry.defaultElRewardsStealingAdditionalFine(),
-            deployParams.elRewardsStealingAdditionalFine
+            deployParams.defaultElRewardsStealingAdditionalFine
         );
-        assertEq(parametersRegistry.defaultKeysLimit(), deployParams.keysLimit);
+        assertEq(
+            parametersRegistry.defaultKeysLimit(),
+            deployParams.defaultKeysLimit
+        );
         assertEq(
             parametersRegistry.defaultRewardShare(),
-            deployParams.rewardShareBP
+            deployParams.defaultRewardShareBP
         );
         assertEq(
             parametersRegistry.defaultPerformanceLeeway(),
-            deployParams.avgPerfLeewayBP
+            deployParams.defaultAvgPerfLeewayBP
         );
         (uint256 strikesLifetime, uint256 strikesThreshold) = parametersRegistry
             .defaultStrikesParams();
-        assertEq(strikesLifetime, deployParams.strikesLifetimeFrames);
-        assertEq(strikesThreshold, deployParams.strikesThreshold);
+        assertEq(strikesLifetime, deployParams.defaultStrikesLifetimeFrames);
+        assertEq(strikesThreshold, deployParams.defaultStrikesThreshold);
 
         (uint256 priority, uint256 maxDeposits) = parametersRegistry
             .defaultQueueConfig();
@@ -707,7 +737,7 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
 
         assertEq(
             parametersRegistry.defaultBadPerformancePenalty(),
-            deployParams.badPerformancePenalty
+            deployParams.defaultBadPerformancePenalty
         );
 
         (
@@ -715,9 +745,9 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
             uint256 blocksWeight,
             uint256 syncWeight
         ) = parametersRegistry.defaultPerformanceCoefficients();
-        assertEq(attestationsWeight, deployParams.attestationsWeight);
-        assertEq(blocksWeight, deployParams.blocksWeight);
-        assertEq(syncWeight, deployParams.syncWeight);
+        assertEq(attestationsWeight, deployParams.defaultAttestationsWeight);
+        assertEq(blocksWeight, deployParams.defaultBlocksWeight);
+        assertEq(syncWeight, deployParams.defaultSyncWeight);
         assertEq(
             parametersRegistry.defaultAllowedExitDelay(),
             deployParams.defaultAllowedExitDelay
@@ -862,6 +892,84 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
             ),
             deployParams.identifiedCommunityStakersGateMaxWithdrawalRequestFee
         );
+        // Params for Legacy EA type
+        uint256 legacyEaBondCurveId = identifiedCommunityStakersGateCurveId - 1;
+        assertEq(
+            parametersRegistry.getKeyRemovalCharge(legacyEaBondCurveId),
+            deployParams.defaultKeyRemovalCharge
+        );
+        assertEq(
+            parametersRegistry.getElRewardsStealingAdditionalFine(
+                legacyEaBondCurveId
+            ),
+            deployParams.defaultElRewardsStealingAdditionalFine
+        );
+        assertEq(
+            parametersRegistry.getKeysLimit(legacyEaBondCurveId),
+            deployParams.defaultKeysLimit
+        );
+
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory legacyEaRewardShareData = parametersRegistry
+                .getRewardShareData(legacyEaBondCurveId);
+        assertEq(legacyEaRewardShareData.length, 1);
+        assertEq(legacyEaRewardShareData[0].minKeyNumber, 1);
+        assertEq(
+            legacyEaRewardShareData[0].value,
+            deployParams.defaultRewardShareBP
+        );
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory legacyEaPerformanceLeewayData = parametersRegistry
+                .getPerformanceLeewayData(legacyEaBondCurveId);
+        assertEq(legacyEaPerformanceLeewayData.length, 1);
+        assertEq(legacyEaPerformanceLeewayData[0].minKeyNumber, 1);
+        assertEq(
+            legacyEaPerformanceLeewayData[0].value,
+            deployParams.defaultAvgPerfLeewayBP
+        );
+
+        (
+            uint256 legacyEaLifetime,
+            uint256 legacyEaThreshold
+        ) = parametersRegistry.getStrikesParams(legacyEaBondCurveId);
+        assertEq(legacyEaLifetime, deployParams.defaultStrikesLifetimeFrames);
+        assertEq(legacyEaThreshold, deployParams.defaultStrikesThreshold);
+
+        (
+            uint256 legacyEaPriority,
+            uint256 legacyEaMaxDeposits
+        ) = parametersRegistry.getQueueConfig(legacyEaBondCurveId);
+        assertEq(legacyEaPriority, deployParams.defaultQueuePriority);
+        assertEq(legacyEaMaxDeposits, deployParams.defaultQueueMaxDeposits);
+
+        assertEq(
+            parametersRegistry.getBadPerformancePenalty(legacyEaBondCurveId),
+            deployParams.defaultBadPerformancePenalty
+        );
+        (
+            uint256 legacyEaAttestationsWeight,
+            uint256 legacyEaBlocksWeight,
+            uint256 legacyEaSyncWeight
+        ) = parametersRegistry.getPerformanceCoefficients(legacyEaBondCurveId);
+        assertEq(
+            legacyEaAttestationsWeight,
+            deployParams.defaultAttestationsWeight
+        );
+        assertEq(legacyEaBlocksWeight, deployParams.defaultBlocksWeight);
+        assertEq(legacyEaSyncWeight, deployParams.defaultSyncWeight);
+
+        assertEq(
+            parametersRegistry.getAllowedExitDelay(legacyEaBondCurveId),
+            deployParams.defaultAllowedExitDelay
+        );
+        assertEq(
+            parametersRegistry.getExitDelayPenalty(legacyEaBondCurveId),
+            deployParams.defaultExitDelayPenalty
+        );
+        assertEq(
+            parametersRegistry.getMaxWithdrawalRequestFee(legacyEaBondCurveId),
+            deployParams.defaultMaxWithdrawalRequestFee
+        );
     }
 
     function test_roles() public view {
@@ -884,20 +992,21 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
         parametersRegistry.initialize({
             admin: deployParams.aragonAgent,
             data: ICSParametersRegistry.InitializationData({
-                keyRemovalCharge: deployParams.keyRemovalCharge,
+                keyRemovalCharge: deployParams.defaultKeyRemovalCharge,
                 elRewardsStealingAdditionalFine: deployParams
-                    .elRewardsStealingAdditionalFine,
-                keysLimit: deployParams.keysLimit,
-                rewardShare: deployParams.rewardShareBP,
-                performanceLeeway: deployParams.avgPerfLeewayBP,
-                strikesLifetime: deployParams.strikesLifetimeFrames,
-                strikesThreshold: deployParams.strikesThreshold,
+                    .defaultElRewardsStealingAdditionalFine,
+                keysLimit: deployParams.defaultKeysLimit,
+                rewardShare: deployParams.defaultRewardShareBP,
+                performanceLeeway: deployParams.defaultAvgPerfLeewayBP,
+                strikesLifetime: deployParams.defaultStrikesLifetimeFrames,
+                strikesThreshold: deployParams.defaultStrikesThreshold,
                 defaultQueuePriority: deployParams.defaultQueuePriority,
                 defaultQueueMaxDeposits: deployParams.defaultQueueMaxDeposits,
-                badPerformancePenalty: deployParams.badPerformancePenalty,
-                attestationsWeight: deployParams.attestationsWeight,
-                blocksWeight: deployParams.blocksWeight,
-                syncWeight: deployParams.syncWeight,
+                badPerformancePenalty: deployParams
+                    .defaultBadPerformancePenalty,
+                attestationsWeight: deployParams.defaultAttestationsWeight,
+                blocksWeight: deployParams.defaultBlocksWeight,
+                syncWeight: deployParams.defaultSyncWeight,
                 defaultAllowedExitDelay: deployParams.defaultAllowedExitDelay,
                 defaultExitDelayPenalty: deployParams.defaultExitDelayPenalty,
                 defaultMaxWithdrawalRequestFee: deployParams
@@ -923,20 +1032,21 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
         parametersRegistryImpl.initialize({
             admin: deployParams.aragonAgent,
             data: ICSParametersRegistry.InitializationData({
-                keyRemovalCharge: deployParams.keyRemovalCharge,
+                keyRemovalCharge: deployParams.defaultKeyRemovalCharge,
                 elRewardsStealingAdditionalFine: deployParams
-                    .elRewardsStealingAdditionalFine,
-                keysLimit: deployParams.keysLimit,
-                rewardShare: deployParams.rewardShareBP,
-                performanceLeeway: deployParams.avgPerfLeewayBP,
-                strikesLifetime: deployParams.strikesLifetimeFrames,
-                strikesThreshold: deployParams.strikesThreshold,
+                    .defaultElRewardsStealingAdditionalFine,
+                keysLimit: deployParams.defaultKeysLimit,
+                rewardShare: deployParams.defaultRewardShareBP,
+                performanceLeeway: deployParams.defaultAvgPerfLeewayBP,
+                strikesLifetime: deployParams.defaultStrikesLifetimeFrames,
+                strikesThreshold: deployParams.defaultStrikesThreshold,
                 defaultQueuePriority: deployParams.defaultQueuePriority,
                 defaultQueueMaxDeposits: deployParams.defaultQueueMaxDeposits,
-                badPerformancePenalty: deployParams.badPerformancePenalty,
-                attestationsWeight: deployParams.attestationsWeight,
-                blocksWeight: deployParams.blocksWeight,
-                syncWeight: deployParams.syncWeight,
+                badPerformancePenalty: deployParams
+                    .defaultBadPerformancePenalty,
+                attestationsWeight: deployParams.defaultAttestationsWeight,
+                blocksWeight: deployParams.defaultBlocksWeight,
+                syncWeight: deployParams.defaultSyncWeight,
                 defaultAllowedExitDelay: deployParams.defaultAllowedExitDelay,
                 defaultExitDelayPenalty: deployParams.defaultExitDelayPenalty,
                 defaultMaxWithdrawalRequestFee: deployParams

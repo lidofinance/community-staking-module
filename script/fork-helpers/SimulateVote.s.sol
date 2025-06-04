@@ -92,8 +92,14 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             deployParams.bondCurve
         );
         bondCurves[1] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
-            deployParams.identifiedCommunityStakersGateBondCurve
+            deployParams.legacyEaBondCurve
         );
+
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils
+                .arraysToBondCurveIntervalsInputs(
+                    deployParams.identifiedCommunityStakersGateBondCurve
+                );
 
         address admin = _prepareAdmin(deploymentConfig.csm);
 
@@ -152,7 +158,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
 
         vm.startBroadcast(admin);
 
-        accounting.revokeRole(keccak256("SET_BOND_CURVE_ROLE"), address(csm));
+        accounting.revokeRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
         csm.grantRole(
             csm.CREATE_NODE_OPERATOR_ROLE(),
             deploymentConfig.permissionlessGate
@@ -165,6 +171,12 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             accounting.SET_BOND_CURVE_ROLE(),
             deploymentConfig.vettedGate
         );
+
+        accounting.grantRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
+
+        accounting.addBondCurve(identifiedCommunityStakersGateBondCurve);
+
+        accounting.revokeRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
 
         csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
         csm.grantRole(

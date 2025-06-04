@@ -45,6 +45,9 @@ contract DeployMainnet is DeployBase {
         // 2.4 -> 1.3
         config.bondCurve.push([1, 2.4 ether]);
         config.bondCurve.push([2, 1.3 ether]);
+        // 1.5 -> 1.3
+        config.legacyEaBondCurve.push([1, 1.5 ether]);
+        config.legacyEaBondCurve.push([2, 1.3 ether]);
 
         config.minBondLockPeriod = 4 weeks;
         config.maxBondLockPeriod = 365 days;
@@ -61,20 +64,20 @@ contract DeployMainnet is DeployBase {
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
 
         // CSParameters
-        config.keyRemovalCharge = 0.02 ether;
-        config.elRewardsStealingAdditionalFine = 0.1 ether;
-        config.keysLimit = type(uint256).max;
-        config.avgPerfLeewayBP = 300;
-        config.rewardShareBP = 5834; // 58.34% of 6% = 3.5% of the total
-        config.strikesLifetimeFrames = 6;
-        config.strikesThreshold = 3;
+        config.defaultKeyRemovalCharge = 0.02 ether;
+        config.defaultElRewardsStealingAdditionalFine = 0.1 ether;
+        config.defaultKeysLimit = type(uint256).max;
+        config.defaultAvgPerfLeewayBP = 300;
+        config.defaultRewardShareBP = 5834; // 58.34% of 6% = 3.5% of the total
+        config.defaultStrikesLifetimeFrames = 6;
+        config.defaultStrikesThreshold = 3;
         config.queueLowestPriority = 5;
         config.defaultQueuePriority = 5;
         config.defaultQueueMaxDeposits = type(uint32).max;
-        config.badPerformancePenalty = 0.24 ether;
-        config.attestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
-        config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
-        config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultBadPerformancePenalty = 0.24 ether;
+        config.defaultAttestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultBlocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultSyncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
         config.defaultExitDelayPenalty = 0.1 ether;
         config.defaultMaxWithdrawalRequestFee = 0.1 ether;
