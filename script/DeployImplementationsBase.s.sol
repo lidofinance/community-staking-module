@@ -57,20 +57,20 @@ abstract contract DeployImplementationsBase is DeployBase {
             parametersRegistry.initialize({
                 admin: deployer,
                 data: ICSParametersRegistry.InitializationData({
-                    keyRemovalCharge: config.keyRemovalCharge,
+                    keyRemovalCharge: config.defaultKeyRemovalCharge,
                     elRewardsStealingAdditionalFine: config
-                        .elRewardsStealingAdditionalFine,
-                    keysLimit: config.keysLimit,
-                    rewardShare: config.rewardShareBP,
-                    performanceLeeway: config.avgPerfLeewayBP,
-                    strikesLifetime: config.strikesLifetimeFrames,
-                    strikesThreshold: config.strikesThreshold,
+                        .defaultElRewardsStealingAdditionalFine,
+                    keysLimit: config.defaultKeysLimit,
+                    rewardShare: config.defaultRewardShareBP,
+                    performanceLeeway: config.defaultAvgPerfLeewayBP,
+                    strikesLifetime: config.defaultStrikesLifetimeFrames,
+                    strikesThreshold: config.defaultStrikesThreshold,
                     defaultQueuePriority: config.defaultQueuePriority,
                     defaultQueueMaxDeposits: config.defaultQueueMaxDeposits,
-                    badPerformancePenalty: config.badPerformancePenalty,
-                    attestationsWeight: config.attestationsWeight,
-                    blocksWeight: config.blocksWeight,
-                    syncWeight: config.syncWeight,
+                    badPerformancePenalty: config.defaultBadPerformancePenalty,
+                    attestationsWeight: config.defaultAttestationsWeight,
+                    blocksWeight: config.defaultBlocksWeight,
+                    syncWeight: config.defaultSyncWeight,
                     defaultAllowedExitDelay: config.defaultAllowedExitDelay,
                     defaultExitDelayPenalty: config.defaultExitDelayPenalty,
                     defaultMaxWithdrawalRequestFee: config
@@ -90,9 +90,10 @@ abstract contract DeployImplementationsBase is DeployBase {
 
             address vettedGateImpl = address(new VettedGate(address(csm)));
             vettedGateFactory = new VettedGateFactory(vettedGateImpl);
+            // We use the early adoption contract to get the curve ID and add 1 since the new curve for ICS will be added in the vote
             vettedGate = VettedGate(
                 vettedGateFactory.create({
-                    curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID(),
+                    curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID() + 1,
                     treeRoot: config.identifiedCommunityStakersGateTreeRoot,
                     treeCid: config.identifiedCommunityStakersGateTreeCid,
                     admin: deployer
