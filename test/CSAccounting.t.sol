@@ -435,6 +435,20 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         vm.stopPrank();
     }
+
+    function _operator(uint256 ongoing, uint256 withdrawn) internal virtual {
+        mock_getNodeOperatorNonWithdrawnKeys(ongoing - withdrawn);
+        mock_getNodeOperatorsCount(1);
+    }
+
+    function _deposit(uint256 bond) internal virtual {
+        vm.deal(address(stakingModule), bond);
+        vm.prank(address(stakingModule));
+        accounting.depositETH{ value: bond }({
+            from: address(0),
+            nodeOperatorId: 0
+        });
+    }
 }
 
 contract CSAccountingPauseTest is CSAccountingBaseTest {
@@ -602,20 +616,6 @@ abstract contract CSAccountingBondStateBaseTest is
                 trend: 0.9 ether
             })
         );
-    }
-
-    function _operator(uint256 ongoing, uint256 withdrawn) internal virtual {
-        mock_getNodeOperatorNonWithdrawnKeys(ongoing - withdrawn);
-        mock_getNodeOperatorsCount(1);
-    }
-
-    function _deposit(uint256 bond) internal virtual {
-        vm.deal(address(stakingModule), bond);
-        vm.prank(address(stakingModule));
-        accounting.depositETH{ value: bond }({
-            from: address(0),
-            nodeOperatorId: 0
-        });
     }
 
     function _curve(
@@ -1113,6 +1113,69 @@ contract CSAccountingGetUnbondedKeysCountToEjectTest is
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 5.75 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 13);
+    }
+}
+
+contract CSAccountingNegativeRebaseTest is CSAccountingBaseTest {
+    function test_negativeRebase_ValidatorBecomeUnbonded() public {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+
+        // Record the initial ETH/share ratio
+        uint256 totalPooledEtherBefore = stETH.totalPooledEther();
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 bondETHBefore = accounting.getBond(0);
+
+        // Simulate negative rebase: reduce totalPooledEther by 1%
+        uint256 rebaseLoss = totalPooledEtherBefore / 100;
+        vm.store(
+            address(stETH),
+            bytes32(uint256(0)), // totalPooledEther storage slot
+            bytes32(totalPooledEtherBefore - rebaseLoss)
+        );
+
+        // Bond shares remain the same, but ETH value decreased
+        assertEq(
+            accounting.getBondShares(0),
+            bondSharesBefore,
+            "Bond shares should remain unchanged"
+        );
+        uint256 bondETHAfter = accounting.getBond(0);
+        assertLt(
+            bondETHAfter,
+            bondETHBefore,
+            "Bond ETH value should decrease after negative rebase"
+        );
+
+        // After 1% loss, 32 ETH becomes ~31.68 ETH, which covers 15 validators
+        uint256 unbondedKeysAfter = accounting.getUnbondedKeysCountToEject(0);
+        assertEq(
+            unbondedKeysAfter,
+            1,
+            "Should have 1 unbonded validator after 1% negative rebase"
+        );
+    }
+
+    function test_negativeRebase_SomeValidatorsBecomeUnbonded() public {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+
+        // Simulate negative rebase: reduce totalPooledEther by 20%
+        uint256 totalPooledEtherBefore = stETH.totalPooledEther();
+        uint256 rebaseLoss = (totalPooledEtherBefore * 20) / 100;
+        vm.store(
+            address(stETH),
+            bytes32(uint256(0)), // totalPooledEther storage slot
+            bytes32(totalPooledEtherBefore - rebaseLoss)
+        );
+
+        // After 20% loss, 32 ETH becomes ~25.6 ETH, which covers only 12 validators
+        uint256 unbondedKeysAfter = accounting.getUnbondedKeysCountToEject(0);
+        assertEq(
+            unbondedKeysAfter,
+            4,
+            "Should have 4 unbonded validators after 20% negative rebase"
+        );
     }
 }
 
