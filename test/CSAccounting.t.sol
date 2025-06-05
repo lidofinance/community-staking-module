@@ -4844,8 +4844,9 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         vm.expectCall(
             locator.burner(),
             abi.encodeWithSelector(
-                IBurner.requestBurnMyStETH.selector,
-                amountToBurn
+                IBurner.requestBurnShares.selector,
+                address(accounting),
+                shares
             )
         );
 
@@ -5054,7 +5055,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
         expectNoCall(
             address(burner),
-            abi.encodeWithSelector(IBurner.requestBurnMyStETH.selector)
+            abi.encodeWithSelector(IBurner.requestBurnShares.selector)
         );
         bool applied = accounting.settleLockedBondETH(noId);
         vm.stopPrank();
