@@ -37,8 +37,11 @@ contract DeployLocalDevNet is DeployBase {
         config.verifierSupportedEpoch = vm.envUint("DEVNET_ELECTRA_EPOCH");
         // Accounting
         // 2.4 -> 1.3
-        config.bondCurve.push([1, 2.4 ether]);
-        config.bondCurve.push([2, 1.3 ether]);
+        config.defaultBondCurve.push([1, 2.4 ether]);
+        config.defaultBondCurve.push([2, 1.3 ether]);
+        // 1.5 -> 1.3
+        config.legacyEaBondCurve.push([1, 1.5 ether]);
+        config.legacyEaBondCurve.push([2, 1.3 ether]);
 
         config.minBondLockPeriod = 1 days;
         config.maxBondLockPeriod = 7 days;
@@ -57,20 +60,20 @@ contract DeployLocalDevNet is DeployBase {
         ); // Dev team EOA
 
         // CSParameters
-        config.keyRemovalCharge = 0.05 ether;
-        config.elRewardsStealingAdditionalFine = 0.1 ether;
-        config.keysLimit = type(uint256).max;
-        config.avgPerfLeewayBP = 450;
-        config.rewardShareBP = 10000;
-        config.strikesLifetimeFrames = 6;
-        config.strikesThreshold = 3;
+        config.defaultKeyRemovalCharge = 0.05 ether;
+        config.defaultElRewardsStealingAdditionalFine = 0.1 ether;
+        config.defaultKeysLimit = type(uint256).max;
+        config.defaultAvgPerfLeewayBP = 450;
+        config.defaultRewardShareBP = 10000;
+        config.defaultStrikesLifetimeFrames = 6;
+        config.defaultStrikesThreshold = 3;
         config.queueLowestPriority = 5;
         config.defaultQueuePriority = 5;
         config.defaultQueueMaxDeposits = type(uint32).max;
-        config.badPerformancePenalty = 0.1 ether; // TODO: to be reviewed
-        config.attestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
-        config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
-        config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultBadPerformancePenalty = 0.1 ether; // TODO: to be reviewed
+        config.defaultAttestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultBlocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultSyncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
         config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
         config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
