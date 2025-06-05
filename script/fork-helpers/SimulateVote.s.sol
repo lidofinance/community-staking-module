@@ -15,7 +15,6 @@ import { CSEjector } from "../../src/CSEjector.sol";
 import { CSParametersRegistry } from "../../src/CSParametersRegistry.sol";
 
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
-import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { ICSBondCurve } from "../../src/interfaces/ICSBondCurve.sol";
 import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { ICSParametersRegistry } from "../../src/interfaces/ICSParametersRegistry.sol";
@@ -65,7 +64,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         });
         // 2. burner role
         burner.grantRole(
-            burner.REQUEST_BURN_MY_STETH_ROLE(),
+            burner.REQUEST_BURN_SHARES_ROLE(),
             address(accounting)
         );
         // 3. Grant resume to agent
@@ -150,11 +149,9 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         }
         vm.stopBroadcast();
 
-        locator = ILidoLocator(deploymentConfig.lidoLocator);
         csm = CSModule(deploymentConfig.csm);
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
-        IBurner burner = IBurner(locator.burner());
 
         vm.startBroadcast(admin);
 
@@ -202,14 +199,6 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         oracle.grantRole(
             oracle.PAUSE_ROLE(),
             address(deploymentConfig.gateSealV2)
-        );
-        burner.revokeRole(
-            burner.REQUEST_BURN_SHARES_ROLE(),
-            address(accounting)
-        );
-        burner.grantRole(
-            burner.REQUEST_BURN_MY_STETH_ROLE(),
-            address(accounting)
         );
 
         accounting.revokeRole(keccak256("RESET_BOND_CURVE_ROLE"), address(csm));
