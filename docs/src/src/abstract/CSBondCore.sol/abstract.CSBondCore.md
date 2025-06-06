@@ -193,7 +193,7 @@ function _claimWstETH(uint256 nodeOperatorId, uint256 requestedAmountToClaim, ad
 
 *Burn Node Operator's bond shares (stETH). Shares will be burned on the next stETH rebase*
 
-*The contract that uses this implementation should be granted `Burner.REQUEST_BURN_MY_STETH_ROLE` and have stETH allowance for `Burner`*
+*The contract that uses this implementation should be granted `Burner.REQUEST_BURN_SHARES_ROLE` and have stETH allowance for `Burner`*
 
 
 ```solidity

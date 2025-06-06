@@ -1470,7 +1470,7 @@ contract CSModule is
         uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
             .getQueueConfig(curveId);
-        // TODO Replace QUEUE_LEGACY_PRIORITY with QUEUE_LOWEST_PRIORITY after legacy queue removal in CSM v3
+        // TODO Replace QUEUE_LEGACY_PRIORITY with QUEUE_LOWEST_PRIORITY after legacy queue removal in the next major release
         if (priority < QUEUE_LEGACY_PRIORITY) {
             unchecked {
                 NodeOperator storage no = _nodeOperators[nodeOperatorId];
