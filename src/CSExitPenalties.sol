@@ -74,7 +74,7 @@ contract CSExitPenalties is ICSExitPenalties, ExitTypes {
         bytes32 keyPointer = _keyPointer(nodeOperatorId, publicKey);
         ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[keyPointer];
         if (exitPenaltyInfo.delayPenalty.isValue) {
-            revert ValidatorExitDelayAlreadyReported();
+            return;
         }
 
         uint256 delayPenalty = PARAMETERS_REGISTRY.getExitDelayPenalty(curveId);
