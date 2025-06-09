@@ -166,6 +166,7 @@ library QueueLib {
                 // @dev No need to safe cast due to internal logic.
                 // @dev Prevent underflow in case of `enqueuedCount` is less than `keysInBatch`. Can happen if
                 // the Node Operator has performed a migration to the priority queue
+                // TODO: Can be simplified to `no.enqueuedCount -= item.keys()` after removal of the migration method
                 uint32 enqueued = no.enqueuedCount;
                 no.enqueuedCount = enqueued > item.keys()
                     ? enqueued - uint32(item.keys())

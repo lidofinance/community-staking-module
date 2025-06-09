@@ -913,7 +913,8 @@ contract CSModule is
                             // @dev `enqueuedCount` >= keysInBatch invariant should be checked.
                             // @dev No need to safe cast due to internal logic
                             // @dev Prevent underflow in case of `enqueuedCount` is less than `keysInBatch`. Can happen if
-                            // the Node Operator has performed a migration to the priority queue
+                            // the Node Operator has performed a migration to the priority queue.
+                            // TODO: Can be simplified to `no.enqueuedCount -= uint32(keysInBatch)` after removal of the migration method
                             no.enqueuedCount = enqueued > keysInBatch
                                 ? enqueued - uint32(keysInBatch)
                                 : 0;
@@ -925,6 +926,7 @@ contract CSModule is
                             // @dev No need to safe cast due to internal logic
                             // @dev Prevent underflow in case of `enqueuedCount` is less than `keysInBatch`. Can happen if
                             // the Node Operator has performed a migration to the priority queue
+                            // TODO: Can be simplified to `no.enqueuedCount -= uint32(keysCount)` after removal of the migration method
                             no.enqueuedCount = enqueued > keysCount
                                 ? enqueued - uint32(keysCount)
                                 : 0;
