@@ -110,12 +110,12 @@ contract CSAccounting is
             sstore(_feeDistributorOld.slot, 0x00)
         }
 
-        // NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
+        // @dev This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
         if (bondCurvesInputs.length != _getLegacyBondCurvesLength()) {
             revert InvalidBondCurvesLength();
         }
 
-        // NOTE: Re-init `CSBondCurve` due to the new format. Contains a check that the first added curve id is `DEFAULT_BOND_CURVE_ID`
+        // @dev Re-init `CSBondCurve` due to the new format. Contains a check that the first added curve id is `DEFAULT_BOND_CURVE_ID`
         __CSBondCurve_init(bondCurvesInputs[0]);
         for (uint256 i = 1; i < bondCurvesInputs.length; ++i) {
             _addBondCurve(bondCurvesInputs[i]);

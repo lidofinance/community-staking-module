@@ -77,7 +77,7 @@ function createBatch(
     uint256 nodeOperatorId,
     uint256 keysCount
 ) pure returns (Batch item) {
-    // NOTE: No need to safe cast due to internal logic.
+    // @dev No need to safe cast due to internal logic.
     nodeOperatorId = uint64(nodeOperatorId);
     keysCount = uint64(keysCount);
 
@@ -150,7 +150,7 @@ library QueueLib {
 
             NodeOperator storage no = nodeOperators[item.noId()];
             if (queueLookup.get(item.noId()) >= no.depositableValidatorsCount) {
-                // NOTE: Since we reached that point there's no way for a Node Operator to have a depositable batch
+                // @dev Since we reached that point there's no way for a Node Operator to have a depositable batch
                 // later in the queue, and hence we don't update _queueLookup for the Node Operator.
                 if (curr == head) {
                     self.dequeue();
@@ -163,8 +163,13 @@ library QueueLib {
                 }
 
                 // We assume that the invariant `enqueuedCount` >= `keys` is kept.
-                // NOTE: No need to safe cast due to internal logic.
-                no.enqueuedCount -= uint32(item.keys());
+                // @dev No need to safe cast due to internal logic.
+                // @dev Prevent underflow in case of `enqueuedCount` is less than `keysInBatch`. Can happen if
+                // the Node Operator has performed a migration to the priority queue
+                uint32 enqueued = no.enqueuedCount;
+                no.enqueuedCount = enqueued > item.keys()
+                    ? enqueued - uint32(item.keys())
+                    : 0;
 
                 unchecked {
                     lastRemovedAtDepth = visited;

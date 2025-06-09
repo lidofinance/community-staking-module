@@ -427,7 +427,7 @@ contract CSModule is
             targetLimit = 0;
         }
 
-        // NOTE: Bytecode saving trick; increased gas cost in rare cases is fine.
+        // @dev Bytecode saving trick; increased gas cost in rare cases is fine.
         // if (
         //     no.targetLimitMode == targetLimitMode &&
         //     no.targetLimit == targetLimit
@@ -455,7 +455,7 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     /// @dev This method is not used in CSM, hence it is do nothing
-    /// @dev NOTE: No role checks because of empty body to save bytecode.
+    /// @dev No role checks because of empty body to save bytecode.
     function onExitedAndStuckValidatorsCountsUpdated() external {
         // solhint-disable-previous-line no-empty-blocks
         // Nothing to do, rewards are distributed by a performance oracle.
@@ -611,13 +611,13 @@ contract CSModule is
             }
 
             no.usedPriorityQueue = true;
+            _incrementModuleNonce();
         }
-        _incrementModuleNonce();
 
         // An alternative version to fit into the bytecode requirements is below. Please consider
         // the described caveat of the approach.
 
-        // NOTE: We allow a node operator (NO) to reset their enqueued counter to zero only once to
+        // @dev We allow a node operator (NO) to reset their enqueued counter to zero only once to
         // migrate their keys from the legacy queue to a priority queue, if any. As a downside, the
         // node operator effectively can have their seats doubled in the queue.
         // Let's say we have a priority queue with a maximum of 10 deposits. Imagine a NO has 20
@@ -874,7 +874,7 @@ contract CSModule is
         uint256 loadedKeysCount = 0;
 
         QueueLib.Queue storage queue;
-        // Note: The highest priority to start iterations with. Priorities are ordered like 0, 1, 2, ...
+        // @dev The highest priority to start iterations with. Priorities are ordered like 0, 1, 2, ...
         uint256 priority = 0;
 
         while (true) {
@@ -884,7 +884,7 @@ contract CSModule is
 
             queue = _getQueue(priority);
             unchecked {
-                // Note: unused below
+                // @dev unused below
                 ++priority;
             }
 
@@ -893,7 +893,7 @@ contract CSModule is
                 !item.isNil();
                 item = queue.peek()
             ) {
-                // NOTE: see the `enqueuedCount` note below.
+                // @dev see the `enqueuedCount` note below.
                 unchecked {
                     uint256 noId = item.noId();
                     uint256 keysInBatch = item.keys();
@@ -903,27 +903,39 @@ contract CSModule is
                         Math.min(no.depositableValidatorsCount, keysInBatch),
                         depositsLeft
                     );
-                    // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
-                    // covers the case when no depositable keys on the Node Operator have been left.
-                    if (depositsLeft > keysCount || keysCount == keysInBatch) {
-                        // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
-                        // @dev No need to safe cast due to internal logic
-                        no.enqueuedCount -= uint32(keysInBatch);
-                        // We've consumed all the keys in the batch, so we dequeue it.
-                        queue.dequeue();
-                    } else {
-                        // This branch covers the case when we stop in the middle of the batch.
-                        // We release the amount of keys consumed only, the rest will be kept.
-                        // @dev No need to safe cast due to internal logic
-                        no.enqueuedCount -= uint32(keysCount);
-                        // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
-                        // We update the batch with the remaining keys.
-                        item = item.setKeys(keysInBatch - keysCount);
-                        // Store the updated batch back to the queue.
-                        queue.queue[queue.head] = item;
+                    {
+                        uint32 enqueued = no.enqueuedCount;
+                        // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
+                        // covers the case when no depositable keys on the Node Operator have been left.
+                        if (
+                            depositsLeft > keysCount || keysCount == keysInBatch
+                        ) {
+                            // @dev `enqueuedCount` >= keysInBatch invariant should be checked.
+                            // @dev No need to safe cast due to internal logic
+                            // @dev Prevent underflow in case of `enqueuedCount` is less than `keysInBatch`. Can happen if
+                            // the Node Operator has performed a migration to the priority queue
+                            no.enqueuedCount = enqueued > keysInBatch
+                                ? enqueued - uint32(keysInBatch)
+                                : 0;
+                            // We've consumed all the keys in the batch, so we dequeue it.
+                            queue.dequeue();
+                        } else {
+                            // This branch covers the case when we stop in the middle of the batch.
+                            // We release the amount of keys consumed only, the rest will be kept.
+                            // @dev No need to safe cast due to internal logic
+                            // @dev Prevent underflow in case of `enqueuedCount` is less than `keysInBatch`. Can happen if
+                            // the Node Operator has performed a migration to the priority queue
+                            no.enqueuedCount = enqueued > keysCount
+                                ? enqueued - uint32(keysCount)
+                                : 0;
+                            // @dev `keysInBatch` can't be less than `keysCount` at this point.
+                            // We update the batch with the remaining keys.
+                            item = item.setKeys(keysInBatch - keysCount);
+                            // Store the updated batch back to the queue.
+                            queue.queue[queue.head] = item;
+                        }
                     }
-
-                    // Note: This condition is located here to allow for the correct removal of the batch for the Node Operators with no depositable keys
+                    // @dev This condition is located here to allow for the correct removal of the batch for the Node Operators with no depositable keys
                     if (keysCount == 0) {
                         continue;
                     }
@@ -990,14 +1002,14 @@ contract CSModule is
             return (0, 0);
         }
 
-        // NOTE: We need one unique hash map per function invocation to be able to track batches of
+        // @dev We need one unique hash map per function invocation to be able to track batches of
         // the same operator across multiple queues.
         TransientUintUintMap queueLookup = TransientUintUintMapLib.create();
 
         QueueLib.Queue storage queue;
 
         uint256 totalVisited = 0;
-        // Note: The highest priority to start iterations with. Priorities are ordered like 0, 1, 2, ...
+        // @dev The highest priority to start iterations with. Priorities are ordered like 0, 1, 2, ...
         uint256 priority = 0;
 
         while (true) {
@@ -1035,7 +1047,7 @@ contract CSModule is
                 }
             }
 
-            // NOTE: If `maxItems` is set to the total length of the queue(s), `reachedOutOfQueue` is equal
+            // @dev If `maxItems` is set to the total length of the queue(s), `reachedOutOfQueue` is equal
             // to `false`, effectively breaking the cycle, because in `QueueLib.clean` we don't reach
             // an empty batch after the end of a queue.
             if (!reachedOutOfQueue) {

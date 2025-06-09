@@ -130,7 +130,7 @@ contract CSStrikes is
         bool[] calldata proofFlags,
         address refundRecipient
     ) external payable {
-        // NOTE: We allow empty proofs to be delivered because there’s no way to use the tree’s
+        // @dev We allow empty proofs to be delivered because there’s no way to use the tree’s
         // internal nodes without brute-forcing the input data.
 
         if (msg.value % keyStrikesList.length > 0) {

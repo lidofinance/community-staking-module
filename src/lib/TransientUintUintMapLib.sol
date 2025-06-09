@@ -31,7 +31,7 @@ library TransientUintUintMapLib {
         uint256 slot = _slot(self, key);
         assembly ("memory-safe") {
             let v := tload(slot)
-            // NOTE: Here's no overflow check.
+            // @dev Here's no overflow check.
             v := add(v, value)
             tstore(slot, v)
         }

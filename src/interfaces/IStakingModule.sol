@@ -123,7 +123,7 @@ interface IStakingModule {
     ///     3. a node operator's ready-to-deposit data size is changed
     ///     4. a node operator was activated/deactivated
     ///     5. a node operator's deposit data is used for the deposit
-    ///     Note: Depending on the StakingModule implementation above list might be extended
+    ///     NOTE: Depending on the StakingModule implementation above list might be extended
     /// @dev In some scenarios, it's allowed to update nonce without actual change of the deposit
     ///      data subset, but it MUST NOT lead to the DOS of the staking module via continuous
     ///      update of the nonce by the malicious actor

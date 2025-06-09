@@ -202,7 +202,7 @@ contract CSFeeDistributor is
             emit RebateTransferred(rebate);
         }
 
-        // NOTE: Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
+        // @dev Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
         // in a frame identifier such as reference slot to a file.
         if (bytes(_logCid).length == 0) {
             revert InvalidLogCID();
@@ -262,7 +262,7 @@ contract CSFeeDistributor is
         uint256 cumulativeFeeShares,
         bytes32[] calldata proof
     ) public view returns (uint256 sharesToDistribute) {
-        // NOTE: We reject empty proofs to separate two business logic paths on the level of
+        // @dev We reject empty proofs to separate two business logic paths on the level of
         // CSAccounting.sol (see _pullFeeRewards function invocations) with and without a proof.
         if (proof.length == 0) {
             revert InvalidProof();

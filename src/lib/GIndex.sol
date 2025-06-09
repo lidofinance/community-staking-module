@@ -27,7 +27,7 @@ function pack(uint256 gI, uint8 p) pure returns (GIndex) {
         revert IndexOutOfRange();
     }
 
-    // NOTE: We can consider adding additional metadata like a fork version.
+    // @dev We can consider adding additional metadata like a fork version.
     return GIndex.wrap(bytes32((gI << 8) | p));
 }
 
