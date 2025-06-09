@@ -12,10 +12,17 @@ import { HashConsensus } from "../../../src/lib/base-oracle/HashConsensus.sol";
 import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
 import { Slot } from "../../../src/lib/Types.sol";
 import { OssifiableProxy } from "../../../src/lib/proxy/OssifiableProxy.sol";
-
+import { NodeOperator } from "../../../src/interfaces/ICSModule.sol";
+import { ICSBondLock } from "../../../src/interfaces/ICSBondLock.sol";
 import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
+import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 
-contract V2UpgradeTestBase is Test, Utilities, DeploymentFixtures {
+contract V2UpgradeTestBase is
+    Test,
+    Utilities,
+    DeploymentFixtures,
+    InvariantAsserts
+{
     uint256 internal forkIdBeforeUpgrade;
     uint256 internal forkIdAfterUpgrade;
 
@@ -102,6 +109,91 @@ contract VoteChangesTest is V2UpgradeTestBase {
         assertEq(totalNodeOperatorsBefore, totalNodeOperatorsAfter);
     }
 
+    function test_csmNodeOperatorsState() public {
+        if (skipInvariants()) {
+            return;
+        }
+        NodeOperator memory noBefore;
+        NodeOperator memory noAfter;
+        for (uint256 noId = 0; noId < csm.getNodeOperatorsCount(); noId++) {
+            noBefore = csm.getNodeOperator(noId);
+            vm.selectFork(forkIdAfterUpgrade);
+            noAfter = csm.getNodeOperator(noId);
+
+            assertEq(
+                noBefore.totalAddedKeys,
+                noAfter.totalAddedKeys,
+                "totalAddedKeys"
+            );
+            assertEq(
+                noBefore.totalWithdrawnKeys,
+                noAfter.totalWithdrawnKeys,
+                "totalWithdrawnKeys"
+            );
+            assertEq(
+                noBefore.totalDepositedKeys,
+                noAfter.totalDepositedKeys,
+                "totalDepositedKeys"
+            );
+            assertEq(
+                noBefore.totalVettedKeys,
+                noAfter.totalVettedKeys,
+                "totalVettedKeys"
+            );
+            assertEq(
+                noBefore.stuckValidatorsCount,
+                noAfter.stuckValidatorsCount,
+                "stuckValidatorsCount"
+            );
+            assertEq(
+                noBefore.depositableValidatorsCount,
+                noAfter.depositableValidatorsCount,
+                "depositableValidatorsCount"
+            );
+            assertEq(noBefore.targetLimit, noAfter.targetLimit, "targetLimit");
+            assertEq(
+                noBefore.targetLimitMode,
+                noAfter.targetLimitMode,
+                "targetLimitMode"
+            );
+            assertEq(
+                noBefore.totalExitedKeys,
+                noAfter.totalExitedKeys,
+                "totalExitedKeys"
+            );
+            assertEq(
+                noBefore.enqueuedCount,
+                noAfter.enqueuedCount,
+                "enqueuedCount"
+            );
+            assertEq(
+                noBefore.managerAddress,
+                noAfter.managerAddress,
+                "managerAddress"
+            );
+            assertEq(
+                noBefore.proposedManagerAddress,
+                noAfter.proposedManagerAddress,
+                "proposedManagerAddress"
+            );
+            assertEq(
+                noBefore.rewardAddress,
+                noAfter.rewardAddress,
+                "rewardAddress"
+            );
+            assertEq(
+                noBefore.proposedRewardAddress,
+                noAfter.proposedRewardAddress,
+                "proposedRewardAddress"
+            );
+            assertEq(
+                noBefore.extendedManagerPermissions,
+                noAfter.extendedManagerPermissions,
+                "extendedManagerPermissions"
+            );
+        }
+    }
+
     function test_accountingChanges() public {
         OssifiableProxy accountingProxy = OssifiableProxy(
             payable(address(accounting))
@@ -182,6 +274,104 @@ contract VoteChangesTest is V2UpgradeTestBase {
         assertEq(totalBondSharesBefore, totalBondSharesAfter);
     }
 
+    function test_accountingCurvesState() public {
+        if (skipInvariants()) {
+            return;
+        }
+        // assuming there are two curves before the upgrade. Can't check exact number from v1
+        uint16[12] memory keysCounts = [
+            0,
+            1,
+            2,
+            4,
+            8,
+            16,
+            32,
+            64,
+            128,
+            256,
+            512,
+            1024
+        ];
+        uint256 bondAmountBefore;
+        uint256 bondAmountAfter;
+
+        for (uint256 i = 0; i < keysCounts.length; i++) {
+            vm.selectFork(forkIdBeforeUpgrade);
+            bondAmountBefore = accounting.getBondAmountByKeysCount(
+                keysCounts[i],
+                0
+            );
+            vm.selectFork(forkIdAfterUpgrade);
+            bondAmountAfter = accounting.getBondAmountByKeysCount(
+                keysCounts[i],
+                0
+            );
+            assertEq(
+                bondAmountBefore,
+                bondAmountAfter,
+                "bond amount for keysCount. Curve: 0"
+            );
+
+            vm.selectFork(forkIdBeforeUpgrade);
+            bondAmountBefore = accounting.getBondAmountByKeysCount(
+                keysCounts[i],
+                1
+            );
+            vm.selectFork(forkIdAfterUpgrade);
+            bondAmountAfter = accounting.getBondAmountByKeysCount(
+                keysCounts[i],
+                1
+            );
+            assertEq(
+                bondAmountBefore,
+                bondAmountAfter,
+                "bond amount for keysCount. Curve: 1"
+            );
+        }
+
+        vm.selectFork(forkIdAfterUpgrade);
+    }
+
+    function test_accountingNodeOperatorsState() public {
+        if (skipInvariants()) {
+            return;
+        }
+        uint256 curveBefore;
+        uint256 curveAfter;
+        uint256 bondBefore;
+        uint256 requiredBefore;
+        uint256 bondAfter;
+        uint256 requiredAfter;
+        ICSBondLock.BondLock memory bondLockBefore;
+        ICSBondLock.BondLock memory bondLockAfter;
+        for (uint256 noId = 0; noId < csm.getNodeOperatorsCount(); noId++) {
+            vm.selectFork(forkIdBeforeUpgrade);
+            curveBefore = accounting.getBondCurveId(noId);
+            (bondBefore, requiredBefore) = accounting.getBondSummary(noId);
+            bondLockBefore = accounting.getLockedBondInfo(noId);
+
+            vm.selectFork(forkIdAfterUpgrade);
+            curveAfter = accounting.getBondCurveId(noId);
+            (bondAfter, requiredAfter) = accounting.getBondSummary(noId);
+            bondLockAfter = accounting.getLockedBondInfo(noId);
+
+            assertEq(curveBefore, curveAfter, "bond curve");
+            assertEq(bondBefore, bondAfter, "bond amount");
+            assertEq(requiredBefore, requiredAfter, "required bond amount");
+            assertEq(
+                bondLockBefore.amount,
+                bondLockAfter.amount,
+                "bond lock amount"
+            );
+            assertEq(
+                bondLockBefore.until,
+                bondLockAfter.until,
+                "bond lock until"
+            );
+        }
+    }
+
     function test_feeDistributorChanges() public {
         OssifiableProxy feeDistributorProxy = OssifiableProxy(
             payable(address(feeDistributor))
@@ -221,6 +411,27 @@ contract VoteChangesTest is V2UpgradeTestBase {
         );
         assertEq(keccak256(bytes(logCidBefore)), keccak256(bytes(logCidAfter)));
         assertEq(totalClaimableSharesBefore, totalClaimableSharesAfter);
+    }
+
+    function test_feeDistributorNodeOperatorState() public {
+        if (skipInvariants()) {
+            return;
+        }
+        uint256 distributedSharesBefore;
+        uint256 distributedSharesAfter;
+        for (uint256 noId = 0; noId < csm.getNodeOperatorsCount(); noId++) {
+            vm.selectFork(forkIdBeforeUpgrade);
+            distributedSharesBefore = feeDistributor.distributedShares(noId);
+
+            vm.selectFork(forkIdAfterUpgrade);
+            distributedSharesAfter = feeDistributor.distributedShares(noId);
+
+            assertEq(
+                distributedSharesBefore,
+                distributedSharesAfter,
+                "distributed shares"
+            );
+        }
     }
 
     function test_feeOracleChanges() public {

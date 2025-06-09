@@ -21,6 +21,26 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
     MerkleTree private feesTree;
     MerkleTree private strikesTree;
 
+    modifier assertInvariants() {
+        _;
+        vm.pauseGasMetering();
+        uint256 noCount = csm.getNodeOperatorsCount();
+        assertCSMKeys(csm);
+        assertCSMEnqueuedCount(csm);
+        assertCSMUnusedStorageSlots(csm);
+        assertAccountingTotalBondShares(noCount, lido, accounting);
+        assertAccountingBurnerApproval(
+            lido,
+            address(accounting),
+            locator.burner()
+        );
+        assertAccountingUnusedStorageSlots(accounting);
+        assertFeeDistributorClaimableShares(lido, feeDistributor);
+        assertFeeDistributorTree(feeDistributor);
+        assertFeeOracleUnusedStorageSlots(oracle);
+        vm.resumeGasMetering();
+    }
+
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
@@ -112,7 +132,7 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         reachConsensus(refSlot, keccak256(abi.encode(data)));
     }
 
-    function test_reportDistributedFees() public {
+    function test_reportDistributedFees() public assertInvariants {
         vm.deal(address(feeDistributor), 1 ether);
         vm.prank(address(feeDistributor));
         lido.submit{ value: 1 ether }(address(0));
@@ -153,7 +173,7 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         );
     }
 
-    function test_reportStrikes() public {
+    function test_reportStrikes() public assertInvariants {
         vm.skip(
             true,
             "requires a core protocol upgrade. consider removing this check later"

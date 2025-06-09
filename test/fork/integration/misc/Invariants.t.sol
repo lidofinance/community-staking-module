@@ -38,6 +38,10 @@ contract CSModuleInvariants is InvariantsBase {
         assertCSMEnqueuedCount(csm);
     }
 
+    function test_unusedStorageSlots() public noGasMetering {
+        assertCSMUnusedStorageSlots(csm);
+    }
+
     function test_roles() public view {
         assertEq(
             csm.getRoleMemberCount(csm.DEFAULT_ADMIN_ROLE()),
@@ -92,6 +96,10 @@ contract CSAccountingInvariants is InvariantsBase {
             address(accounting),
             locator.burner()
         );
+    }
+
+    function test_unusedStorageSlots() public noGasMetering {
+        assertAccountingUnusedStorageSlots(accounting);
     }
 
     function test_roles() public view {
@@ -154,6 +162,10 @@ contract CSFeeDistributorInvariants is InvariantsBase {
 }
 
 contract CSFeeOracleInvariant is InvariantsBase {
+    function test_unusedStorageSlots() public noGasMetering {
+        assertFeeOracleUnusedStorageSlots(oracle);
+    }
+
     function test_roles() public view {
         assertEq(
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
