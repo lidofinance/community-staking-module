@@ -64,6 +64,9 @@ interface ICSModule is
     error InvalidInput();
     error NotEnoughKeys();
     error PriorityQueueAlreadyUsed();
+    error NotEligibleForPriorityQueue();
+    error PriorityQueueMaxDepositsUsed();
+    error NothingToMigrateToPriorityQueue();
 
     error KeysLimitExceeded();
     error SigningKeysInvalidOffset();

@@ -583,7 +583,6 @@ contract CSModule is
         });
     }
 
-    /// @dev TODO: Remove the method in the next major release.
     /// @inheritdoc ICSModule
     function migrateToPriorityQueue(uint256 nodeOperatorId) external {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
@@ -596,22 +595,23 @@ contract CSModule is
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
             .getQueueConfig(curveId);
 
-        if (priority < QUEUE_LEGACY_PRIORITY) {
-            uint32 deposited = no.totalDepositedKeys;
-
-            if (maxDeposits > deposited) {
-                uint32 toMigrate = uint32(
-                    Math.min(maxDeposits - deposited, no.enqueuedCount)
-                );
-
-                unchecked {
-                    no.enqueuedCount -= toMigrate;
-                }
-                _enqueueNodeOperatorKeys(nodeOperatorId, priority, toMigrate);
-            }
-
-            no.usedPriorityQueue = true;
+        if (priority == QUEUE_LOWEST_PRIORITY) {
+            revert NotEligibleForPriorityQueue();
         }
+
+        uint32 enqueued = no.enqueuedCount;
+        if (enqueued == 0) {
+            revert NothingToMigrateToPriorityQueue();
+        }
+
+        uint32 deposited = no.totalDepositedKeys;
+        if (maxDeposits <= deposited) {
+            revert PriorityQueueMaxDepositsUsed();
+        }
+
+        uint32 toMigrate = uint32(Math.min(enqueued, maxDeposits - deposited));
+        _enqueueNodeOperatorKeys(nodeOperatorId, priority, toMigrate);
+        no.usedPriorityQueue = true;
         _incrementModuleNonce();
 
         // An alternative version to fit into the bytecode requirements is below. Please consider
@@ -1470,19 +1470,32 @@ contract CSModule is
         uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
             .getQueueConfig(curveId);
-        // TODO Replace QUEUE_LEGACY_PRIORITY with QUEUE_LOWEST_PRIORITY after legacy queue removal in the next major release
-        if (priority < QUEUE_LEGACY_PRIORITY) {
-            unchecked {
-                NodeOperator storage no = _nodeOperators[nodeOperatorId];
-                uint32 enqueuedSoFar = no.totalDepositedKeys + no.enqueuedCount;
 
-                if (maxDeposits > enqueuedSoFar) {
-                    uint32 leftForQueue = maxDeposits - enqueuedSoFar;
-                    _enqueueNodeOperatorKeys(
-                        nodeOperatorId,
-                        priority,
-                        leftForQueue
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        uint32 depositable = no.depositableValidatorsCount;
+        uint32 enqueued = no.enqueuedCount;
+        if (depositable <= enqueued) {
+            return;
+        }
+
+        uint32 toEnqueue;
+        unchecked {
+            toEnqueue = depositable - enqueued;
+        }
+
+        if (priority < QUEUE_LOWEST_PRIORITY) {
+            unchecked {
+                uint32 depositedAndQueued = no.totalDepositedKeys + enqueued;
+                if (maxDeposits > depositedAndQueued) {
+                    uint32 priorityDepositsLeft = maxDeposits -
+                        depositedAndQueued;
+                    uint32 count = uint32(
+                        Math.min(toEnqueue, priorityDepositsLeft)
                     );
+
+                    _enqueueNodeOperatorKeys(nodeOperatorId, priority, count);
+                    toEnqueue -= count;
+
                     if (!no.usedPriorityQueue) {
                         no.usedPriorityQueue = true;
                     }
@@ -1490,35 +1503,26 @@ contract CSModule is
             }
         }
 
-        _enqueueNodeOperatorKeys(
-            nodeOperatorId,
-            QUEUE_LOWEST_PRIORITY,
-            type(uint32).max
-        );
+        if (toEnqueue > 0) {
+            _enqueueNodeOperatorKeys(
+                nodeOperatorId,
+                QUEUE_LOWEST_PRIORITY,
+                toEnqueue
+            );
+        }
     }
 
-    // TODO refactor this method after removing migrateToPriorityQueue
+    // NOTE: If `count` is 0 an empty batch will be created.
     function _enqueueNodeOperatorKeys(
         uint256 nodeOperatorId,
         uint256 queuePriority,
-        uint32 maxKeys
+        uint32 count
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        uint32 depositable = no.depositableValidatorsCount;
-        uint32 enqueued = no.enqueuedCount;
-
-        if (enqueued < depositable) {
-            unchecked {
-                uint32 count = depositable - enqueued;
-                count = uint32(Math.min(count, maxKeys));
-
-                no.enqueuedCount = enqueued + count;
-
-                QueueLib.Queue storage q = _getQueue(queuePriority);
-                q.enqueue(nodeOperatorId, count);
-                emit BatchEnqueued(queuePriority, nodeOperatorId, count);
-            }
-        }
+        no.enqueuedCount += count;
+        QueueLib.Queue storage q = _getQueue(queuePriority);
+        q.enqueue(nodeOperatorId, count);
+        emit BatchEnqueued(queuePriority, nodeOperatorId, count);
     }
 
     function _markOperatorIsCreatedInTX(uint256 nodeOperatorId) internal {

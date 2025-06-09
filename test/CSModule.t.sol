@@ -3258,6 +3258,32 @@ contract CsmPriorityQueue is CSMCommon {
         }
     }
 
+    function test_migrateToPriorityQueue_RevertsIfNoPriorityQueue() public {
+        vm.expectRevert(ICSModule.NotEligibleForPriorityQueue.selector);
+        csm.migrateToPriorityQueue(0);
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfEmptyNodeOperator() public {
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectRevert(ICSModule.NothingToMigrateToPriorityQueue.selector);
+            csm.migrateToPriorityQueue(0);
+        }
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfMaxDepositsUsed() public {
+        createNodeOperator(MAX_DEPOSITS + 1);
+        csm.obtainDepositData(MAX_DEPOSITS, "");
+
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectRevert(ICSModule.PriorityQueueMaxDepositsUsed.selector);
+            csm.migrateToPriorityQueue(0);
+        }
+    }
+
     function test_queueCleanupWorksAcrossQueues() public {
         _assertQueueEmpty(PRIORITY_QUEUE);
         _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
