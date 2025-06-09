@@ -105,11 +105,14 @@ contract CSExitPenaltiesTestProcessExitDelayReport is CSExitPenaltiesTestBase {
         assertEq(exitPenaltyInfo.delayPenalty.value, penalty);
     }
 
-    function test_processExitDelayReport_ignoreWhen_notApplicable() public {
+    function test_processExitDelayReport_revertWhen_notApplicable() public {
         uint256 eligibleToExit = csm.exitDeadlineThreshold(noId) + 1;
         bytes memory publicKey = randomBytes(48);
 
         vm.prank(address(csm));
+        vm.expectRevert(
+            ICSExitPenalties.ValidatorExitDelayNotApplicable.selector
+        );
         exitPenalties.processExitDelayReport(
             noId,
             publicKey,

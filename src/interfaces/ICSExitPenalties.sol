@@ -25,6 +25,7 @@ interface ICSExitPenalties is IExitTypes {
     error ZeroStrikesAddress();
     error SenderIsNotModule();
     error SenderIsNotStrikes();
+    error ValidatorExitDelayNotApplicable();
 
     event ValidatorExitDelayProcessed(
         uint256 indexed nodeOperatorId,

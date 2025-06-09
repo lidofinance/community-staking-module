@@ -68,7 +68,7 @@ contract CSExitPenalties is ICSExitPenalties, ExitTypes {
             curveId
         );
         if (eligibleToExitInSec <= allowedExitDelay) {
-            return;
+            revert ValidatorExitDelayNotApplicable();
         }
 
         bytes32 keyPointer = _keyPointer(nodeOperatorId, publicKey);
