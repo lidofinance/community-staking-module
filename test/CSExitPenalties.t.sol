@@ -109,32 +109,46 @@ contract CSExitPenaltiesTestProcessExitDelayReport is CSExitPenaltiesTestBase {
         uint256 eligibleToExit = csm.exitDeadlineThreshold(noId) + 1;
         bytes memory publicKey = randomBytes(48);
 
+        vm.prank(address(csm));
         vm.expectRevert(
             ICSExitPenalties.ValidatorExitDelayNotApplicable.selector
         );
-        vm.prank(address(csm));
         exitPenalties.processExitDelayReport(
             noId,
             publicKey,
             eligibleToExit - 1 seconds
         );
+        ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
+            .getExitPenaltyInfo(noId, publicKey);
+        assertEq(
+            exitPenaltyInfo.delayPenalty.isValue,
+            false,
+            "Penalty should not be applied"
+        );
     }
 
-    function test_processExitDelayReport_revertWhen_alreadyReported() public {
+    function test_processExitDelayReport_ignoreWhen_alreadyReported() public {
         uint256 eligibleToExit = csm.exitDeadlineThreshold(noId) + 1;
         bytes memory publicKey = randomBytes(48);
+        uint256 penalty = parametersRegistry.getExitDelayPenalty(0);
 
         vm.prank(address(csm));
         exitPenalties.processExitDelayReport(noId, publicKey, eligibleToExit);
 
+        parametersRegistry.setExitDelayPenalty(0, penalty + 1);
+
         vm.prank(address(csm));
-        vm.expectRevert(
-            ICSExitPenalties.ValidatorExitDelayAlreadyReported.selector
-        );
         exitPenalties.processExitDelayReport(
             noId,
             publicKey,
             eligibleToExit + 1
+        );
+        ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
+            .getExitPenaltyInfo(noId, publicKey);
+        assertEq(
+            exitPenaltyInfo.delayPenalty.value,
+            penalty,
+            "Penalty should not be updated"
         );
     }
 
