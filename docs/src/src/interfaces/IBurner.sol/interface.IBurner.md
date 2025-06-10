@@ -3,12 +3,6 @@
 
 
 ## Functions
-### REQUEST_BURN_MY_STETH_ROLE
-
-
-```solidity
-function REQUEST_BURN_MY_STETH_ROLE() external view returns (bytes32);
-```
 
 ### REQUEST_BURN_SHARES_ROLE
 

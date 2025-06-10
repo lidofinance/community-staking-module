@@ -245,13 +245,6 @@ contract VoteChangesTest is V2UpgradeTestBase {
         );
 
         assertEq(accounting.getInitializedVersion(), 2);
-
-        assertTrue(
-            burner.hasRole(
-                burner.REQUEST_BURN_MY_STETH_ROLE(),
-                address(accounting)
-            )
-        );
     }
 
     function test_accountingState() public {
