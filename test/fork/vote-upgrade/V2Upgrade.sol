@@ -271,7 +271,6 @@ contract VoteChangesTest is V2UpgradeTestBase {
         if (skipInvariants()) {
             return;
         }
-        // assuming there are two curves before the upgrade. Can't check exact number from v1
         uint16[12] memory keysCounts = [
             0,
             1,
@@ -289,41 +288,32 @@ contract VoteChangesTest is V2UpgradeTestBase {
         uint256 bondAmountBefore;
         uint256 bondAmountAfter;
 
-        for (uint256 i = 0; i < keysCounts.length; i++) {
-            vm.selectFork(forkIdBeforeUpgrade);
-            bondAmountBefore = accounting.getBondAmountByKeysCount(
-                keysCounts[i],
-                0
-            );
-            vm.selectFork(forkIdAfterUpgrade);
-            bondAmountAfter = accounting.getBondAmountByKeysCount(
-                keysCounts[i],
-                0
-            );
-            assertEq(
-                bondAmountBefore,
-                bondAmountAfter,
-                "bond amount for keysCount. Curve: 0"
-            );
+        bytes32 bondCurveStorageLocation = 0x8f22e270e477f5becb8793b61d439ab7ae990ed8eba045eb72061c0e6cfe1500;
+        // bondCurvesCount after upgrade might be different but all existing curves must be migrated
+        uint256 bondCurvesCountBefore = uint256(
+            vm.load(address(accounting), bondCurveStorageLocation)
+        );
+        assertNotEq(bondCurvesCountBefore, 0);
 
-            vm.selectFork(forkIdBeforeUpgrade);
-            bondAmountBefore = accounting.getBondAmountByKeysCount(
-                keysCounts[i],
-                1
-            );
-            vm.selectFork(forkIdAfterUpgrade);
-            bondAmountAfter = accounting.getBondAmountByKeysCount(
-                keysCounts[i],
-                1
-            );
-            assertEq(
-                bondAmountBefore,
-                bondAmountAfter,
-                "bond amount for keysCount. Curve: 1"
-            );
+        for (uint256 curveId = 0; curveId < bondCurvesCountBefore; curveId++) {
+            for (uint256 i = 0; i < keysCounts.length; i++) {
+                vm.selectFork(forkIdBeforeUpgrade);
+                bondAmountBefore = accounting.getBondAmountByKeysCount(
+                    keysCounts[i],
+                    curveId
+                );
+                vm.selectFork(forkIdAfterUpgrade);
+                bondAmountAfter = accounting.getBondAmountByKeysCount(
+                    keysCounts[i],
+                    curveId
+                );
+                assertEq(
+                    bondAmountBefore,
+                    bondAmountAfter,
+                    "bond amount for keysCount"
+                );
+            }
         }
-
-        vm.selectFork(forkIdAfterUpgrade);
     }
 
     function test_accountingNodeOperatorsState() public {
