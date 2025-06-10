@@ -3211,7 +3211,9 @@ contract CsmPriorityQueue is CSMCommon {
         _assertQueueState(REGULAR_QUEUE, exp);
     }
 
-    function test_migrateToPriorityQueue_DepositedMoreThanMaxDeposits() public {
+    function test_migrateToPriorityQueue_RevertsIfDepositedMoreThanMaxDeposits()
+        public
+    {
         uint256 noId = createNodeOperator(0);
         uploadMoreKeys(noId, 15);
 
