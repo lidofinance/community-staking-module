@@ -601,7 +601,7 @@ contract CSModule is
 
         uint32 enqueued = no.enqueuedCount;
         if (enqueued == 0) {
-            revert NothingToMigrateToPriorityQueue();
+            revert NoQueuedKeysToMigrate();
         }
 
         uint32 deposited = no.totalDepositedKeys;

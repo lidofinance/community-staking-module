@@ -3269,7 +3269,7 @@ contract CsmPriorityQueue is CSMCommon {
         _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         {
-            vm.expectRevert(ICSModule.NothingToMigrateToPriorityQueue.selector);
+            vm.expectRevert(ICSModule.NoQueuedKeysToMigrate.selector);
             csm.migrateToPriorityQueue(0);
         }
     }
