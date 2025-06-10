@@ -3131,7 +3131,7 @@ contract CsmPriorityQueue is CSMCommon {
         _assertQueueEmpty(PRIORITY_QUEUE);
         _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
-        uint256 initialNonce = csm.getNonce(); // Capture initial nonce
+        uint256 initialNonce = csm.getNonce();
 
         {
             vm.expectEmit(address(csm));
@@ -3140,12 +3140,14 @@ contract CsmPriorityQueue is CSMCommon {
             csm.migrateToPriorityQueue(noId);
         }
 
-        uint256 updatedNonce = csm.getNonce(); // Capture updated nonce
+        assertEq(csm.getNodeOperator(noId).enqueuedCount, 8 + 8);
+
+        uint256 updatedNonce = csm.getNonce();
         assertEq(
             updatedNonce,
             initialNonce + 1,
             "Module nonce should increment by 1"
-        ); // Assert increment
+        );
 
         BatchInfo[] memory exp = new BatchInfo[](1);
 
@@ -3169,6 +3171,8 @@ contract CsmPriorityQueue is CSMCommon {
 
             csm.migrateToPriorityQueue(noId);
         }
+
+        assertEq(csm.getNodeOperator(noId).enqueuedCount, 15 + 10);
 
         BatchInfo[] memory exp = new BatchInfo[](1);
 
@@ -3195,6 +3199,8 @@ contract CsmPriorityQueue is CSMCommon {
             csm.migrateToPriorityQueue(noId);
         }
 
+        assertEq(csm.getNodeOperator(noId).enqueuedCount, 15 - 8 + 2);
+
         BatchInfo[] memory exp = new BatchInfo[](1);
 
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
@@ -3205,7 +3211,9 @@ contract CsmPriorityQueue is CSMCommon {
         _assertQueueState(REGULAR_QUEUE, exp);
     }
 
-    function test_migrateToPriorityQueue_DepositedMoreThanMaxDeposits() public {
+    function test_migrateToPriorityQueue_RevertsIfDepositedMoreThanMaxDeposits()
+        public
+    {
         uint256 noId = createNodeOperator(0);
         uploadMoreKeys(noId, 15);
 
@@ -3215,15 +3223,9 @@ contract CsmPriorityQueue is CSMCommon {
         _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         {
+            vm.expectRevert(ICSModule.PriorityQueueMaxDepositsUsed.selector);
             csm.migrateToPriorityQueue(noId);
         }
-
-        _assertQueueEmpty(PRIORITY_QUEUE);
-
-        BatchInfo[] memory exp = new BatchInfo[](1);
-        // The batch was partially consumed by the obtainDepositData call.
-        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 3 });
-        _assertQueueState(REGULAR_QUEUE, exp);
     }
 
     function test_migrateToPriorityQueue_RevertsIfPriorityQueueAlreadyUsedViaMigrate()
@@ -3255,6 +3257,32 @@ contract CsmPriorityQueue is CSMCommon {
         {
             vm.expectRevert(ICSModule.PriorityQueueAlreadyUsed.selector);
             csm.migrateToPriorityQueue(noId);
+        }
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfNoPriorityQueue() public {
+        vm.expectRevert(ICSModule.NotEligibleForPriorityQueue.selector);
+        csm.migrateToPriorityQueue(0);
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfEmptyNodeOperator() public {
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectRevert(ICSModule.NoQueuedKeysToMigrate.selector);
+            csm.migrateToPriorityQueue(0);
+        }
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfMaxDepositsUsed() public {
+        createNodeOperator(MAX_DEPOSITS + 1);
+        csm.obtainDepositData(MAX_DEPOSITS, "");
+
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectRevert(ICSModule.PriorityQueueMaxDepositsUsed.selector);
+            csm.migrateToPriorityQueue(0);
         }
     }
 
@@ -3335,6 +3363,28 @@ contract CsmPriorityQueue is CSMCommon {
             assertEq(toRemove, 2, "should remove 2 batch(es)");
             assertEq(lastRemovedAtDepth, 7, "the depth should be 7");
         }
+    }
+
+    function test_queueCleanupInvalidBatchesAfterMigrationToPriorityQueue()
+        public
+    {
+        createNodeOperator({ keysCount: 12 });
+        _enablePriorityQueue(0, 12);
+        csm.migrateToPriorityQueue(0);
+        csm.cleanDepositQueue({ maxItems: 2 });
+        assertEq(csm.getNodeOperator(0).enqueuedCount, 12);
+    }
+
+    function test_obtainDepositDataAfterMigrationSkipsInvalidBatches() public {
+        createNodeOperator(10);
+        createNodeOperator(10);
+
+        _enablePriorityQueue(0, 8);
+        csm.migrateToPriorityQueue(0);
+
+        csm.obtainDepositData(20, "");
+        assertEq(csm.getNodeOperator(0).enqueuedCount, 0);
+        assertEq(csm.getNodeOperator(1).enqueuedCount, 0);
     }
 
     function _enablePriorityQueue(
