@@ -1165,7 +1165,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.SET_TREE_ROLE(),
-                deployParams.identifiedCommunityStakersGateManager
+                deployParams.easyTrackEVMScriptExecutor
             )
         );
         assertEq(vettedGate.getRoleMemberCount(vettedGate.SET_TREE_ROLE()), 1);
