@@ -164,10 +164,8 @@ interface IStakingRouter {
     struct ValidatorsCountsCorrection {
         uint256 currentModuleExitedValidatorsCount;
         uint256 currentNodeOperatorExitedValidatorsCount;
-        uint256 currentNodeOperatorStuckValidatorsCount;
         uint256 newModuleExitedValidatorsCount;
         uint256 newNodeOperatorExitedValidatorsCount;
-        uint256 newNodeOperatorStuckValidatorsCount;
     }
 
     function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
@@ -383,6 +381,14 @@ interface IStakingRouter {
     function reportRewardsMinted(
         uint256[] memory _stakingModuleIds,
         uint256[] memory _totalShares
+    ) external;
+
+    function reportValidatorExitDelay(
+        uint256 _stakingModuleId,
+        uint256 _nodeOperatorId,
+        uint256 _proofSlotTimestamp,
+        bytes calldata _publicKey,
+        uint256 _eligibleToExitInSec
     ) external;
 
     function reportStakingModuleExitedValidatorsCountByNodeOperator(

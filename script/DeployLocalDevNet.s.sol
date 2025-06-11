@@ -79,8 +79,9 @@ contract DeployLocalDevNet is DeployBase {
         config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
 
         // VettedGate
-        config
-            .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.identifiedCommunityStakersGateManager = vm.envAddress(
+            "CSM_FIRST_ADMIN_ADDRESS"
+        ); // Dev team EOA
         config.identifiedCommunityStakersGateTreeRoot = vm.envOr(
             "CSM_VETTED_GATE_TREE_ROOT",
             bytes32(uint256(0xdeadbeef))
