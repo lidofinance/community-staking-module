@@ -272,7 +272,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             );
             vettedGate.grantRole(
                 vettedGate.SET_TREE_ROLE(),
-                config.identifiedCommunityStakersGateManager
+                config.easyTrackEVMScriptExecutor
             );
             vettedGate.grantRole(
                 vettedGate.START_REFERRAL_SEASON_ROLE(),

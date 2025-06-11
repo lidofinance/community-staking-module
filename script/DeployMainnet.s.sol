@@ -74,11 +74,11 @@ contract DeployMainnet is DeployBase {
         config.queueLowestPriority = 5;
         config.defaultQueuePriority = 5;
         config.defaultQueueMaxDeposits = type(uint32).max;
-        config.defaultBadPerformancePenalty = 0.24 ether;
+        config.defaultBadPerformancePenalty = 0.258 ether;
         config.defaultAttestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
         config.defaultBlocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
         config.defaultSyncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
-        config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
+        config.defaultAllowedExitDelay = 4 days;
         config.defaultExitDelayPenalty = 0.1 ether;
         config.defaultMaxWithdrawalRequestFee = 0.1 ether;
 
@@ -86,8 +86,8 @@ contract DeployMainnet is DeployBase {
         config
             .identifiedCommunityStakersGateManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config
-            .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
-        config.identifiedCommunityStakersGateTreeCid = "someCid"; // TODO: to be set in the future
+            .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // TODO: update before deployment
+        config.identifiedCommunityStakersGateTreeCid = "someCid"; // TODO: update with a real CID before deployment
         // 1.5 -> 1.3
         config.identifiedCommunityStakersGateBondCurve.push([1, 1.5 ether]);
         config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
@@ -104,10 +104,11 @@ contract DeployMainnet is DeployBase {
         config.identifiedCommunityStakersGateStrikesThreshold = 4;
         config.identifiedCommunityStakersGateQueuePriority = 0;
         config.identifiedCommunityStakersGateQueueMaxDeposits = 10;
-        config.identifiedCommunityStakersGateBadPerformancePenalty = 0.16 ether;
-        config.identifiedCommunityStakersGateAttestationsWeight = 60;
+        config
+            .identifiedCommunityStakersGateBadPerformancePenalty = 0.172 ether;
+        config.identifiedCommunityStakersGateAttestationsWeight = 54;
         config.identifiedCommunityStakersGateBlocksWeight = 4;
-        config.identifiedCommunityStakersGateSyncWeight = 0;
+        config.identifiedCommunityStakersGateSyncWeight = 2;
         config.identifiedCommunityStakersGateAllowedExitDelay = 5 days;
         config.identifiedCommunityStakersGateExitDelayPenalty = 0.05 ether;
         config
