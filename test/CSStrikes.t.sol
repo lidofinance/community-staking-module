@@ -832,6 +832,23 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         );
     }
 
+    function test_processBadPerformanceProof_RevertWhen_EmptyKeyStrikesList()
+        public
+    {
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](0);
+        bytes32[] memory proof = new bytes32[](0);
+        bool[] memory proofFlags = new bool[](0);
+
+        vm.expectRevert(ICSStrikes.EmptyKeyStrikesList.selector);
+        this.processBadPerformanceProof(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
+    }
+
     function test_processBadPerformanceProof_RevertWhen_ValueNotEvenlyDivisible()
         public
         withTreeOfLeavesCount(3)

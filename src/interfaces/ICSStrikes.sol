@@ -24,6 +24,7 @@ interface ICSStrikes {
     error ZeroAdminAddress();
     error SenderIsNotOracle();
     error ValueNotEvenlyDivisible();
+    error EmptyKeyStrikesList();
 
     error InvalidReportData();
     error InvalidProof();
