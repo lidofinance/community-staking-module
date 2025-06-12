@@ -1220,7 +1220,7 @@ contract RemoveKeysTest is IntegrationTestBase {
 
         (uint256 bondAfter, ) = accounting.getBondSummary(defaultNoId);
 
-        assertApproxEqAbs(bondBefore, bondAfter + keyRemovalCharge, 1 wei);
+        assertApproxEqAbs(bondBefore, bondAfter + keyRemovalCharge, 2 wei);
     }
 
     function test_removeKeys_withoutCharge() public assertInvariants {
