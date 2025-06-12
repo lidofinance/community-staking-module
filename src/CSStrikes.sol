@@ -137,6 +137,10 @@ contract CSStrikes is
             revert EmptyKeyStrikesList();
         }
 
+        if (msg.value == 0) {
+            revert ZeroMsgValue();
+        }
+
         if (msg.value % keyStrikesList.length > 0) {
             revert ValueNotEvenlyDivisible();
         }

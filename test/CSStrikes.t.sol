@@ -67,20 +67,6 @@ contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
         address _refundRecipient
-    ) external {
-        strikes.processBadPerformanceProof(
-            keyStrikesList,
-            proof,
-            proofFlags,
-            _refundRecipient
-        );
-    }
-
-    function processBadPerformanceProofPayable(
-        ICSStrikes.KeyStrikes[] calldata keyStrikesList,
-        bytes32[] calldata proof,
-        bool[] calldata proofFlags,
-        address _refundRecipient
     ) external payable {
         strikes.processBadPerformanceProof{ value: msg.value }(
             keyStrikesList,
@@ -681,7 +667,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
                 )
             );
         }
-        this.processBadPerformanceProof(
+        this.processBadPerformanceProof{ value: keyStrikesList.length }(
             keyStrikesList,
             proof,
             proofFlags,
@@ -721,7 +707,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
             )
         );
 
-        this.processBadPerformanceProof(
+        this.processBadPerformanceProof{ value: 1 }(
             keyStrikesList,
             proof,
             proofFlags,
@@ -769,7 +755,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
             brokenStrikesList[0].nodeOperatorId++;
 
             vm.expectRevert(ICSStrikes.InvalidProof.selector);
-            this.processBadPerformanceProof(
+            this.processBadPerformanceProof{ value: keyStrikesList.length }(
                 brokenStrikesList,
                 proof,
                 proofFlags,
@@ -782,7 +768,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
             brokenProof[0] = bytes32(uint256(1));
 
             vm.expectRevert(ICSStrikes.InvalidProof.selector);
-            this.processBadPerformanceProof(
+            this.processBadPerformanceProof{ value: keyStrikesList.length }(
                 keyStrikesList,
                 brokenProof,
                 proofFlags,
@@ -790,7 +776,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
             );
         }
 
-        this.processBadPerformanceProof(
+        this.processBadPerformanceProof{ value: keyStrikesList.length }(
             keyStrikesList,
             proof,
             proofFlags,
@@ -824,7 +810,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         );
 
         vm.expectRevert(ICSStrikes.NotEnoughStrikesToEject.selector);
-        this.processBadPerformanceProof(
+        this.processBadPerformanceProof{ value: 1 }(
             keyStrikesList,
             proof,
             proofFlags,
@@ -877,7 +863,43 @@ contract CSStrikesProofTest is CSStrikesTestBase {
             );
         }
         vm.expectRevert(ICSStrikes.ValueNotEvenlyDivisible.selector);
-        this.processBadPerformanceProofPayable{ value: 11 wei }(
+        this.processBadPerformanceProof{ value: 11 wei }(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
+    }
+
+    function test_processBadPerformanceProof_RevertWhen_ZeroMsgValue()
+        public
+        withTreeOfLeavesCount(3)
+    {
+        uint256[] memory indicies = UintArr(1, 2);
+
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](
+                indicies.length
+            );
+        (bytes32[] memory proof, bool[] memory proofFlags) = tree.getMultiProof(
+            indicies
+        );
+
+        for (uint256 i; i < indicies.length; i++) {
+            Leaf memory leaf = leaves[indicies[i]];
+            keyStrikesList[i] = leaf.keyStrikes;
+            vm.mockCall(
+                address(module),
+                abi.encodeWithSelector(
+                    ICSModule.getSigningKeys.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.keyStrikes.keyIndex
+                ),
+                abi.encode(leaf.pubkey)
+            );
+        }
+        vm.expectRevert(ICSStrikes.ZeroMsgValue.selector);
+        this.processBadPerformanceProof{ value: 0 }(
             keyStrikesList,
             proof,
             proofFlags,
@@ -929,7 +951,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
                 )
             );
         }
-        this.processBadPerformanceProofPayable{ value: 10 wei }(
+        this.processBadPerformanceProof{ value: 10 wei }(
             keyStrikesList,
             proof,
             proofFlags,
