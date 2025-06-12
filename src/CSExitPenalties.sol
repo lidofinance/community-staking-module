@@ -179,7 +179,7 @@ contract CSExitPenalties is ICSExitPenalties, ExitTypes {
 
     function _keyPointer(
         uint256 nodeOperatorId,
-        bytes memory publicKey
+        bytes calldata publicKey
     ) internal pure returns (bytes32) {
         return keccak256(abi.encode(nodeOperatorId, publicKey));
     }

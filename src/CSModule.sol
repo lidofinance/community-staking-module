@@ -757,8 +757,7 @@ contract CSModule is
                 pubkey
             );
 
-            // It is safe to use unchecked for penalty sum, due to it's limited to uint248 in the
-            // structure.
+            // It is safe to use unchecked for penalty sum because it's limited to uint248 in the structure.
             uint256 penaltySum;
             bool chargeWithdrawalRequestFee;
 
