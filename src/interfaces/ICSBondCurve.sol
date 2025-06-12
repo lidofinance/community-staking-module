@@ -69,7 +69,6 @@ interface ICSBondCurve {
     event BondCurveSet(uint256 indexed nodeOperatorId, uint256 curveId);
 
     error InvalidBondCurveLength();
-    error InvalidBondCurveMaxLength();
     error InvalidBondCurveValues();
     error InvalidBondCurveId();
     error InvalidInitializationCurveId();
