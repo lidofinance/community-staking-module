@@ -34,7 +34,7 @@ interface IStETH {
     function balanceOf(address _account) external view returns (uint256);
 
     /**
-     * @notice Transfer `_sharesAmount` stETH shares from `_sender` to `_receiver` using allowance.
+     * @notice Transfer `_sharesAmount` stETH shares from `_sender` to `_recipient` using allowance.
      */
     function transferSharesFrom(
         address _sender,
@@ -51,7 +51,7 @@ interface IStETH {
     ) external returns (uint256);
 
     /**
-     * @notice Moves `_pooledEthAmount` stETH from the caller's account to the `_recipient` account.
+     * @notice Moves `_amount` stETH from the caller's account to the `_recipient` account.
      */
     function transfer(
         address _recipient,
@@ -59,7 +59,7 @@ interface IStETH {
     ) external returns (bool);
 
     /**
-     * @notice Moves `_pooledEthAmount` stETH from the `_sender` account to the `_recipient` account.
+     * @notice Moves `_amount` stETH from the `_sender` account to the `_recipient` account.
      */
     function transferFrom(
         address _sender,

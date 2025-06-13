@@ -75,7 +75,7 @@ abstract contract CSBondCore is ICSBondCore {
         }
 
         uint256 shares = LIDO.submit{ value: msg.value }({
-            _referal: address(0)
+            _referral: address(0)
         });
         _increaseBond(nodeOperatorId, shares);
         emit BondDepositedETH(nodeOperatorId, from, msg.value);
