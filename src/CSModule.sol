@@ -454,7 +454,7 @@ contract CSModule is
     }
 
     /// @inheritdoc IStakingModule
-    /// @dev This method is not used in CSM, hence it is do nothing
+    /// @dev This method is not used in CSM, hence it does nothing
     /// @dev NOTE: No role checks because of empty body to save bytecode.
     function onExitedAndStuckValidatorsCountsUpdated() external {
         // solhint-disable-previous-line no-empty-blocks
@@ -757,8 +757,7 @@ contract CSModule is
                 pubkey
             );
 
-            // It is safe to use unchecked for penalty sum, due to it's limited to uint248 in the
-            // structure.
+            // It is safe to use unchecked for penalty sum because it's limited to uint248 in the structure.
             uint256 penaltySum;
             bool chargeWithdrawalRequestFee;
 

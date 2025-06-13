@@ -70,7 +70,7 @@ library AssetRecovererLib {
      * The use of a separate method for stETH is to avoid rounding problems when converting shares to stETH.
      * @param lido The address of the Lido contract.
      * @param shares The amount of stETH shares to recover.
-     * Emits an StETHRecovered event upon success.
+     * Emits an StETHSharesRecovered event upon success.
      */
     function recoverStETHShares(address lido, uint256 shares) external {
         ILido(lido).transferShares(msg.sender, shares);

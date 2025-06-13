@@ -11,7 +11,7 @@ import { IStETH } from "./IStETH.sol";
 interface ILido is IStETH {
     function STAKING_CONTROL_ROLE() external view returns (bytes32);
 
-    function submit(address _referal) external payable returns (uint256);
+    function submit(address _referral) external payable returns (uint256);
 
     function deposit(
         uint256 _maxDepositsCount,

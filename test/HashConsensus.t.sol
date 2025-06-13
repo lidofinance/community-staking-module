@@ -294,7 +294,56 @@ contract HashConsensusFastLaneMembersTest is HashConsensusBase {
         assertEq(fastLaneMembers.length, 0);
     }
 
-    // TODO too complex tests in core
+    function test_addFastLaneMember_updatesList() public {
+        vm.prank(manager);
+        consensus.setFrameConfig(EPOCHS_PER_FRAME, 1);
+
+        vm.startPrank(manager);
+        consensus.addMember(member1, 1);
+        consensus.addMember(member2, 2);
+        vm.stopPrank();
+
+        (address[] memory membersBefore, ) = consensus.getFastLaneMembers();
+        assertEq(membersBefore.length, 2);
+        assertEq(membersBefore[0], member1);
+        assertEq(membersBefore[1], member2);
+
+        vm.prank(manager);
+        consensus.addMember(member3, 3);
+
+        (address[] memory membersAfter, ) = consensus.getFastLaneMembers();
+        assertEq(membersAfter.length, 3);
+        assertEq(membersAfter[0], member1);
+        assertEq(membersAfter[1], member2);
+        assertEq(membersAfter[2], member3);
+
+        assertTrue(consensus.getIsFastLaneMember(member3));
+        assertTrue(consensus.getConsensusStateForMember(member3).isFastLane);
+    }
+
+    function test_removeFastLaneMember_updatesList() public {
+        vm.prank(manager);
+        consensus.setFrameConfig(EPOCHS_PER_FRAME, 1);
+
+        vm.startPrank(manager);
+        consensus.addMember(member1, 1);
+        consensus.addMember(member2, 2);
+        consensus.addMember(member3, 3);
+        vm.stopPrank();
+
+        (address[] memory membersBefore, ) = consensus.getFastLaneMembers();
+        assertEq(membersBefore.length, 3);
+
+        vm.prank(manager);
+        consensus.removeMember(member1, 2);
+
+        (address[] memory membersAfter, ) = consensus.getFastLaneMembers();
+        assertEq(membersAfter.length, 2);
+        assertEq(membersAfter[0], member3);
+        assertEq(membersAfter[1], member2);
+        assertFalse(consensus.getIsFastLaneMember(member1));
+        assertFalse(consensus.getConsensusStateForMember(member1).isFastLane);
+    }
 }
 
 contract HashConsensusFrameConfigTest is HashConsensusBase {
