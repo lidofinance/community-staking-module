@@ -80,6 +80,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         vm.pauseGasMetering();
         assertCSMEnqueuedCount(csm);
         assertCSMKeys(csm);
+        assertCSMUnusedStorageSlots(csm);
         vm.resumeGasMetering();
     }
 
