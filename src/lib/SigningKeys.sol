@@ -162,7 +162,7 @@ library SigningKeys {
     /// @param nodeOperatorId operator id
     /// @param startIndex start index
     /// @param keysCount keys count to load
-    /// @param pubkeys preallocated kes buffer to read in
+    /// @param pubkeys preallocated keys buffer to read in
     /// @param signatures preallocated signatures buffer to read in
     /// @param bufOffset start offset in `pubkeys`/`signatures` buffer to place values (in number of keys)
     function loadKeysSigs(
