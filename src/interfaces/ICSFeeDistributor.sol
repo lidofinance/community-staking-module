@@ -139,7 +139,8 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     function pendingSharesToDistribute() external view returns (uint256);
 
     /// @notice Get the historical record of distribution data
-    /// @return index Historical entry index
+    /// @param index Historical entry index
+    /// @return Historical distribution data
     function getHistoricalDistributionData(
         uint256 index
     ) external view returns (DistributionData memory);
