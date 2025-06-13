@@ -1630,6 +1630,92 @@ contract CSMAddValidatorKeys is CSMCommon {
         }
     }
 
+    function test_AddValidatorKeysStETH_RevertWhenCalledFromAnotherExtension()
+        public
+        assertInvariants
+    {
+        address extensionOne = nextAddress("EXTENSION_ONE");
+        address extensionTwo = nextAddress("EXTENSION_TWO");
+
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), extensionOne);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), extensionTwo);
+
+        vm.prank(extensionOne);
+        uint256 noId = csm.createNodeOperator({
+            from: nodeOperator,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: nodeOperator,
+                rewardAddress: nodeOperator,
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        {
+            vm.expectRevert(ICSModule.CannotAddKeys.selector);
+
+            vm.prank(extensionTwo);
+            csm.addValidatorKeysStETH(
+                nodeOperator,
+                noId,
+                1,
+                keys,
+                signatures,
+                ICSAccounting.PermitInput({
+                    value: 0,
+                    deadline: 0,
+                    v: 0,
+                    r: 0,
+                    s: 0
+                })
+            );
+        }
+    }
+
+    function test_AddValidatorKeysWstETH_RevertWhenCalledFromAnotherExtension()
+        public
+        assertInvariants
+    {
+        address extensionOne = nextAddress("EXTENSION_ONE");
+        address extensionTwo = nextAddress("EXTENSION_TWO");
+
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), extensionOne);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), extensionTwo);
+
+        vm.prank(extensionOne);
+        uint256 noId = csm.createNodeOperator({
+            from: nodeOperator,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: nodeOperator,
+                rewardAddress: nodeOperator,
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        {
+            vm.expectRevert(ICSModule.CannotAddKeys.selector);
+
+            vm.prank(extensionTwo);
+            csm.addValidatorKeysWstETH(
+                nodeOperator,
+                noId,
+                1,
+                keys,
+                signatures,
+                ICSAccounting.PermitInput({
+                    value: 0,
+                    deadline: 0,
+                    v: 0,
+                    r: 0,
+                    s: 0
+                })
+            );
+        }
+    }
+
     function test_AddValidatorKeysETH_RevertWhenCalledTwice()
         public
         assertInvariants
