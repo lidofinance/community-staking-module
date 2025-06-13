@@ -12,6 +12,7 @@ import { Batch } from "../../src/lib/QueueLib.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSStrikes } from "../../src/CSStrikes.sol";
 import { console } from "forge-std/console.sol";
+import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 
 contract InvariantAsserts is Test {
     bool internal _skipped;
@@ -157,6 +158,20 @@ contract InvariantAsserts is Test {
         }
     }
 
+    function assertCSMUnusedStorageSlots(CSModule csm) public {
+        if (skipInvariants()) {
+            return;
+        }
+        bytes32 value;
+        // _accountingOld
+        value = vm.load(address(csm), bytes32(uint256(2)));
+        assertEq(value, bytes32(0), "assert _accountingOld is empty");
+
+        // _earlyAdoption
+        value = vm.load(address(csm), bytes32(uint256(3)));
+        assertEq(value, bytes32(0), "assert _earlyAdoption is empty");
+    }
+
     function assertAccountingTotalBondShares(
         uint256 nodeOperatorsCount,
         IStETH steth,
@@ -197,6 +212,17 @@ contract InvariantAsserts is Test {
         );
     }
 
+    function assertAccountingUnusedStorageSlots(
+        CSAccounting accounting
+    ) public {
+        if (skipInvariants()) {
+            return;
+        }
+        // _feeDistributorOld
+        bytes32 value = vm.load(address(accounting), bytes32(uint256(0)));
+        assertEq(value, bytes32(0), "assert _feeDistributorOld is empty");
+    }
+
     function assertFeeDistributorClaimableShares(
         IStETH lido,
         CSFeeDistributor feeDistributor
@@ -228,6 +254,20 @@ contract InvariantAsserts is Test {
                 "tree exists, but has no CID"
             );
         }
+    }
+
+    function assertFeeOracleUnusedStorageSlots(CSFeeOracle feeOracle) public {
+        if (skipInvariants()) {
+            return;
+        }
+        bytes32 value;
+        // _feeDistributor
+        value = vm.load(address(feeOracle), bytes32(uint256(0)));
+        assertEq(value, bytes32(0), "assert _feeDistributor is empty");
+
+        // _avgPerfLeewayBP
+        value = vm.load(address(feeOracle), bytes32(uint256(1)));
+        assertEq(value, bytes32(0), "assert _avgPerfLeewayBP is empty");
     }
 
     function assertStrikesTree(CSStrikes strikes) public {

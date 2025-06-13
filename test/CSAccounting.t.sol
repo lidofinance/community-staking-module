@@ -71,6 +71,7 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
             address(accounting),
             address(burner)
         );
+        assertAccountingUnusedStorageSlots(accounting);
         vm.resumeGasMetering();
     }
 
