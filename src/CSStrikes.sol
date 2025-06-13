@@ -133,6 +133,14 @@ contract CSStrikes is
         // NOTE: We allow empty proofs to be delivered because there’s no way to use the tree’s
         // internal nodes without brute-forcing the input data.
 
+        if (keyStrikesList.length == 0) {
+            revert EmptyKeyStrikesList();
+        }
+
+        if (msg.value == 0) {
+            revert ZeroMsgValue();
+        }
+
         if (msg.value % keyStrikesList.length > 0) {
             revert ValueNotEvenlyDivisible();
         }

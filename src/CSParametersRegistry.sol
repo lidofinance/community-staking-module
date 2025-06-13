@@ -766,6 +766,9 @@ contract CSParametersRegistry is
     function _validateKeyNumberValueIntervals(
         KeyNumberValueInterval[] calldata intervals
     ) private pure {
+        if (intervals.length == 0) {
+            revert InvalidKeyNumberValueIntervals();
+        }
         if (intervals[0].minKeyNumber != 1) {
             revert InvalidKeyNumberValueIntervals();
         }
