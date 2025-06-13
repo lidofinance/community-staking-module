@@ -16,6 +16,7 @@ import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { Versioned } from "../src/lib/utils/Versioned.sol";
 import { ICSFeeOracle } from "../src/interfaces/ICSFeeOracle.sol";
 import { Utilities } from "./helpers/Utilities.sol";
+import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
 contract CSFeeOracleForTest is CSFeeOracle {
@@ -38,7 +39,7 @@ contract CSFeeOracleForTest is CSFeeOracle {
     }
 }
 
-contract CSFeeOracleTest is Test, Utilities {
+contract CSFeeOracleTest is Test, Utilities, InvariantAsserts {
     using stdStorage for StdStorage;
     using Strings for uint256;
 
@@ -63,6 +64,13 @@ contract CSFeeOracleTest is Test, Utilities {
     DistributorMock public distributor;
     CSStrikesMock public strikes;
 
+    modifier assertInvariants() {
+        _;
+        vm.pauseGasMetering();
+        assertFeeOracleUnusedStorageSlots(oracle);
+        vm.resumeGasMetering();
+    }
+
     function setUp() public {
         chainConfig = ChainConfig({
             secondsPerSlot: 12,
@@ -84,7 +92,7 @@ contract CSFeeOracleTest is Test, Utilities {
         assertEq(oracle.getContractVersion(), 2);
     }
 
-    function test_happyPath() public {
+    function test_happyPath() public assertInvariants {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -136,7 +144,10 @@ contract CSFeeOracleTest is Test, Utilities {
         assertLt(startSlot, refSlot);
     }
 
-    function test_submitReportData_RevertWhen_InvalidReportSender() public {
+    function test_submitReportData_RevertWhen_InvalidReportSender()
+        public
+        assertInvariants
+    {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -173,7 +184,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.submitReportData({ data: data, contractVersion: 2 });
     }
 
-    function test_submitReport_RevertWhen_PausedFor() public {
+    function test_submitReport_RevertWhen_PausedFor() public assertInvariants {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -210,7 +221,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.submitReportData({ data: data, contractVersion: 2 });
     }
 
-    function test_happyPath_whenResumed() public {
+    function test_happyPath_whenResumed() public assertInvariants {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -267,7 +278,7 @@ contract CSFeeOracleTest is Test, Utilities {
         assertLt(startSlot, refSlot);
     }
 
-    function test_resumeWhenNotPaused() public {
+    function test_resumeWhenNotPaused() public assertInvariants {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -281,7 +292,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.resume();
     }
 
-    function test_constructor() public {
+    function test_constructor() public assertInvariants {
         oracle = new CSFeeOracleForTest({
             feeDistributor: address(distributor),
             strikes: address(strikes),
@@ -313,7 +324,7 @@ contract CSFeeOracleTest is Test, Utilities {
         });
     }
 
-    function test_initialize() public {
+    function test_initialize() public assertInvariants {
         oracle = new CSFeeOracleForTest({
             feeDistributor: address(distributor),
             strikes: address(strikes),
@@ -361,7 +372,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.initialize(address(0), address(consensus), CONSENSUS_VERSION);
     }
 
-    function test_finalizeUpgradeV2() public {
+    function test_finalizeUpgradeV2() public assertInvariants {
         oracle = new CSFeeOracleForTest({
             feeDistributor: address(distributor),
             strikes: address(strikes),
@@ -374,7 +385,7 @@ contract CSFeeOracleTest is Test, Utilities {
         assertEq(oracle.getContractVersion(), 2);
     }
 
-    function test_recovererRole() public {
+    function test_recovererRole() public assertInvariants {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
             _grantAllRolesToAdmin();
