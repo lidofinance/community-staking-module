@@ -189,7 +189,7 @@ contract CSModule is
         }
 
         nodeOperatorId = _nodeOperatorsCount;
-        _markOperatorIsCreatedInTX(nodeOperatorId);
+        _recordOperatorCreator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         address managerAddress = managementProperties.managerAddress ==
@@ -1328,6 +1328,9 @@ contract CSModule is
         bytes calldata publicKeys,
         bytes calldata signatures
     ) internal {
+        // Do not allow of multiple calls of addValidatorKeys* methods.
+        _forgetOperatorCreator(nodeOperatorId);
+
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 totalAddedKeys = no.totalAddedKeys;
 
@@ -1524,20 +1527,28 @@ contract CSModule is
         emit BatchEnqueued(queuePriority, nodeOperatorId, count);
     }
 
-    function _markOperatorIsCreatedInTX(uint256 nodeOperatorId) internal {
+    function _recordOperatorCreator(uint256 nodeOperatorId) internal {
         TransientUintUintMap map = TransientUintUintMapLib.load(
             OPERATORS_CREATED_IN_TX_MAP_TSLOT
         );
-        map.set(nodeOperatorId, 1);
+
+        map.set(nodeOperatorId, uint256(uint160(msg.sender)));
     }
 
-    function _isOperatorCreatedInTX(
-        uint256 nodeOperatorId
-    ) internal view returns (bool) {
+    function _forgetOperatorCreator(uint256 nodeOperatorId) internal {
         TransientUintUintMap map = TransientUintUintMapLib.load(
             OPERATORS_CREATED_IN_TX_MAP_TSLOT
         );
-        return map.get(nodeOperatorId) == 1;
+        map.set(nodeOperatorId, 0);
+    }
+
+    function _getOperatorCreator(
+        uint256 nodeOperatorId
+    ) internal view returns (address) {
+        TransientUintUintMap map = TransientUintUintMapLib.load(
+            OPERATORS_CREATED_IN_TX_MAP_TSLOT
+        );
+        return address(uint160(map.get(nodeOperatorId)));
     }
 
     /// @dev Acts as a proxy to `_queueByPriority` till `_legacyQueue` deprecation.
@@ -1564,7 +1575,7 @@ contract CSModule is
         } else {
             // We're trying to add keys via gate, check if we can do it.
             _checkRole(CREATE_NODE_OPERATOR_ROLE);
-            if (!_isOperatorCreatedInTX(nodeOperatorId)) {
+            if (_getOperatorCreator(nodeOperatorId) != msg.sender) {
                 revert CannotAddKeys();
             }
         }
