@@ -454,6 +454,18 @@ contract CSParametersRegistryRewardShareDataTest is
         parametersRegistry.setRewardShareData(curveId, data);
     }
 
+    function test_set_RevertWhen_emptyIntervals() public {
+        uint256 curveId = 1;
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory data = new ICSParametersRegistry.KeyNumberValueInterval[](0);
+
+        vm.expectRevert(
+            ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
+        );
+        vm.prank(admin);
+        parametersRegistry.setRewardShareData(curveId, data);
+    }
+
     function test_set_RevertWhen_invalidBpValues_nonFirstItem() public {
         uint256 curveId = 1;
         ICSParametersRegistry.KeyNumberValueInterval[]
@@ -659,6 +671,18 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
             memory data = new ICSParametersRegistry.KeyNumberValueInterval[](2);
         data[0] = ICSParametersRegistry.KeyNumberValueInterval(1, 100000);
         data[1] = ICSParametersRegistry.KeyNumberValueInterval(10, 8000);
+
+        vm.expectRevert(
+            ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
+        );
+        vm.prank(admin);
+        parametersRegistry.setPerformanceLeewayData(curveId, data);
+    }
+
+    function test_set_RevertWhen_emptyIntervals() public {
+        uint256 curveId = 1;
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory data = new ICSParametersRegistry.KeyNumberValueInterval[](0);
 
         vm.expectRevert(
             ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
