@@ -121,6 +121,9 @@ contract DeployHoodi is DeployBase {
         config.sealDuration = 6 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
+        // DG
+        config.resealManager = 0x05172CbCDb7307228F781436b327679e4DAE166B;
+
         config.secondAdminAddress = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
         _setUp();
     }

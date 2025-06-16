@@ -48,13 +48,12 @@ contract CSModuleInvariants is InvariantsBase {
             adminsCount,
             "default admin"
         );
-        assertEq(csm.getRoleMemberCount(csm.PAUSE_ROLE()), 1, "pause");
-        assertEq(
-            csm.getRoleMember(csm.PAUSE_ROLE(), 0),
-            address(gateSeal),
+        assertEq(csm.getRoleMemberCount(csm.PAUSE_ROLE()), 2, "pause");
+        assertTrue(
+            csm.hasRole(csm.PAUSE_ROLE(), address(gateSeal)),
             "pause address"
         );
-        assertEq(csm.getRoleMemberCount(csm.RESUME_ROLE()), 0, "resume");
+        assertEq(csm.getRoleMemberCount(csm.RESUME_ROLE()), 1, "resume");
         assertEq(
             csm.getRoleMemberCount(csm.STAKING_ROUTER_ROLE()),
             1,
@@ -110,17 +109,16 @@ contract CSAccountingInvariants is InvariantsBase {
         );
         assertEq(
             accounting.getRoleMemberCount(accounting.PAUSE_ROLE()),
-            1,
+            2,
             "pause"
         );
-        assertEq(
-            accounting.getRoleMember(accounting.PAUSE_ROLE(), 0),
-            address(gateSeal),
+        assertTrue(
+            accounting.hasRole(accounting.PAUSE_ROLE(), address(gateSeal)),
             "pause address"
         );
         assertEq(
             accounting.getRoleMemberCount(accounting.RESUME_ROLE()),
-            0,
+            1,
             "resume"
         );
         assertEq(
@@ -177,13 +175,12 @@ contract CSFeeOracleInvariant is InvariantsBase {
             0,
             "submit data"
         );
-        assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 1, "pause");
-        assertEq(
-            oracle.getRoleMember(oracle.PAUSE_ROLE(), 0),
-            address(gateSeal),
+        assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 2, "pause");
+        assertTrue(
+            oracle.hasRole(oracle.PAUSE_ROLE(), address(gateSeal)),
             "pause address"
         );
-        assertEq(oracle.getRoleMemberCount(oracle.RESUME_ROLE()), 0, "resume");
+        assertEq(oracle.getRoleMemberCount(oracle.RESUME_ROLE()), 1, "resume");
         assertEq(
             oracle.getRoleMemberCount(oracle.RECOVERER_ROLE()),
             0,
@@ -216,17 +213,31 @@ contract VerifierInvariant is InvariantsBase {
     function test_roles() public view {
         assertEq(
             verifier.getRoleMemberCount(verifier.PAUSE_ROLE()),
-            1,
+            2,
             "pause"
         );
-        assertEq(
-            verifier.getRoleMember(verifier.PAUSE_ROLE(), 0),
-            address(gateSeal),
+        assertTrue(
+            verifier.hasRole(verifier.PAUSE_ROLE(), address(gateSeal)),
             "pause address"
         );
         assertEq(
             verifier.getRoleMemberCount(verifier.RESUME_ROLE()),
-            0,
+            1,
+            "resume"
+        );
+    }
+}
+
+contract EjectorInvariant is InvariantsBase {
+    function test_roles() public view {
+        assertEq(verifier.getRoleMemberCount(ejector.PAUSE_ROLE()), 2, "pause");
+        assertTrue(
+            ejector.hasRole(ejector.PAUSE_ROLE(), address(gateSeal)),
+            "pause address"
+        );
+        assertEq(
+            ejector.getRoleMemberCount(ejector.RESUME_ROLE()),
+            1,
             "resume"
         );
     }
