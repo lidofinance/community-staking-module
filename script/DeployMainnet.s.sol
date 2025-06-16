@@ -98,6 +98,7 @@ contract DeployMainnet is DeployBase {
             .identifiedCommunityStakersGateELRewardsStealingAdditionalFine = 0.05 ether;
         config.identifiedCommunityStakersGateKeysLimit = type(uint248).max;
         config.identifiedCommunityStakersGateAvgPerfLeewayData.push([1, 500]);
+        config.identifiedCommunityStakersGateAvgPerfLeewayData.push([151, 300]);
         config.identifiedCommunityStakersGateRewardShareData.push([1, 10000]);
         config.identifiedCommunityStakersGateRewardShareData.push([17, 5834]);
         config.identifiedCommunityStakersGateStrikesLifetimeFrames = 6;
