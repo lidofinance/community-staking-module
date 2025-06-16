@@ -145,16 +145,16 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         bool extendedManagerPermissions
     ) internal returns (uint256) {
         vm.prank(csm.getRoleMember(csm.CREATE_NODE_OPERATOR_ROLE(), 0));
-        csm.createNodeOperator(
-            managerAddress,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: extendedManagerPermissions
-            }),
-            address(0)
-        );
-        return csm.getNodeOperatorsCount() - 1;
+        return
+            csm.createNodeOperator(
+                managerAddress,
+                NodeOperatorManagementProperties({
+                    managerAddress: address(0),
+                    rewardAddress: address(0),
+                    extendedManagerPermissions: extendedManagerPermissions
+                }),
+                address(0)
+            );
     }
 
     function uploadMoreKeys(
@@ -1040,7 +1040,18 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertInvariants
         brutalizeMemory
     {
-        uint256 noId = createNodeOperator(0);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        vm.prank(stranger);
+        uint256 noId = csm.createNodeOperator(
+            nodeOperator,
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            address(0)
+        );
         uint256 toWrap = BOND_SIZE + 1 wei;
         vm.deal(nodeOperator, toWrap);
         vm.startPrank(nodeOperator);
@@ -1050,9 +1061,6 @@ contract CSMAddValidatorKeys is CSMCommon {
         vm.stopPrank();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
         uint256 nonce = csm.getNonce();
-
-        vm.prank(admin);
-        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
 
         vm.prank(stranger);
         csm.addValidatorKeysWstETH(
@@ -1082,42 +1090,45 @@ contract CSMAddValidatorKeys is CSMCommon {
         uint256[] memory ids = new uint256[](3);
         for (uint256 i; i < ids.length; i++) {
             vm.prank(stranger);
-            ids[i] = createNodeOperator(0);
+            ids[i] = csm.createNodeOperator(
+                nodeOperator,
+                NodeOperatorManagementProperties({
+                    managerAddress: address(0),
+                    rewardAddress: address(0),
+                    extendedManagerPermissions: false
+                }),
+                address(0)
+            );
         }
         shuffle(ids);
 
         for (uint256 i; i < ids.length; i++) {
-            for (uint256 j; j < 3; j++) {
-                uint256 toWrap = BOND_SIZE + 2 wei;
-                vm.deal(nodeOperator, toWrap);
-                vm.startPrank(nodeOperator);
-                stETH.submit{ value: toWrap }(address(0));
-                stETH.approve(address(wstETH), UINT256_MAX);
-                wstETH.wrap(toWrap);
-                vm.stopPrank();
-                (bytes memory keys, bytes memory signatures) = keysSignatures(
-                    1,
-                    1
-                );
-                uint256 nonce = csm.getNonce();
+            uint256 toWrap = BOND_SIZE + 2 wei;
+            vm.deal(nodeOperator, toWrap);
+            vm.startPrank(nodeOperator);
+            stETH.submit{ value: toWrap }(address(0));
+            stETH.approve(address(wstETH), UINT256_MAX);
+            wstETH.wrap(toWrap);
+            vm.stopPrank();
+            (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+            uint256 nonce = csm.getNonce();
 
-                vm.prank(stranger);
-                csm.addValidatorKeysWstETH(
-                    nodeOperator,
-                    ids[i],
-                    1,
-                    keys,
-                    signatures,
-                    ICSAccounting.PermitInput({
-                        value: 0,
-                        deadline: 0,
-                        v: 0,
-                        r: 0,
-                        s: 0
-                    })
-                );
-                assertEq(csm.getNonce(), nonce + 1);
-            }
+            vm.prank(stranger);
+            csm.addValidatorKeysWstETH(
+                nodeOperator,
+                ids[i],
+                1,
+                keys,
+                signatures,
+                ICSAccounting.PermitInput({
+                    value: 0,
+                    deadline: 0,
+                    v: 0,
+                    r: 0,
+                    s: 0
+                })
+            );
+            assertEq(csm.getNonce(), nonce + 1);
         }
     }
 
@@ -1287,15 +1298,24 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertInvariants
         brutalizeMemory
     {
-        uint256 noId = createNodeOperator(0);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        vm.prank(stranger);
+        uint256 noId = csm.createNodeOperator(
+            nodeOperator,
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            address(0)
+        );
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.prank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
         uint256 nonce = csm.getNonce();
-        vm.prank(admin);
-        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
 
         vm.prank(stranger);
         csm.addValidatorKeysStETH(
@@ -1325,38 +1345,41 @@ contract CSMAddValidatorKeys is CSMCommon {
         uint256[] memory ids = new uint256[](3);
         for (uint256 i; i < ids.length; i++) {
             vm.prank(stranger);
-            ids[i] = createNodeOperator(0);
+            ids[i] = csm.createNodeOperator(
+                nodeOperator,
+                NodeOperatorManagementProperties({
+                    managerAddress: address(0),
+                    rewardAddress: address(0),
+                    extendedManagerPermissions: false
+                }),
+                address(0)
+            );
         }
         shuffle(ids);
 
         for (uint256 i; i < ids.length; i++) {
-            for (uint256 j; j < 3; j++) {
-                (bytes memory keys, bytes memory signatures) = keysSignatures(
-                    1,
-                    1
-                );
-                vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-                vm.prank(nodeOperator);
-                stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-                uint256 nonce = csm.getNonce();
+            (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+            vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+            vm.prank(nodeOperator);
+            stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+            uint256 nonce = csm.getNonce();
 
-                vm.prank(stranger);
-                csm.addValidatorKeysStETH(
-                    nodeOperator,
-                    ids[i],
-                    1,
-                    keys,
-                    signatures,
-                    ICSAccounting.PermitInput({
-                        value: BOND_SIZE,
-                        deadline: 0,
-                        v: 0,
-                        r: 0,
-                        s: 0
-                    })
-                );
-                assertEq(csm.getNonce(), nonce + 1);
-            }
+            vm.prank(stranger);
+            csm.addValidatorKeysStETH(
+                nodeOperator,
+                ids[i],
+                1,
+                keys,
+                signatures,
+                ICSAccounting.PermitInput({
+                    value: BOND_SIZE,
+                    deadline: 0,
+                    v: 0,
+                    r: 0,
+                    s: 0
+                })
+            );
+            assertEq(csm.getNonce(), nonce + 1);
         }
     }
 
@@ -1500,28 +1523,6 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertEq(no.depositableValidatorsCount, 0);
     }
 
-    function test_AddValidatorKeysETH_createNodeOperatorRole() public {
-        uint256 noId = createNodeOperator(0);
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
-
-        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
-        vm.deal(stranger, required);
-        uint256 nonce = csm.getNonce();
-        vm.startPrank(admin);
-        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
-        vm.stopPrank();
-
-        vm.prank(stranger);
-        csm.addValidatorKeysETH{ value: required }(
-            nodeOperator,
-            noId,
-            1,
-            keys,
-            signatures
-        );
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
     function test_AddValidatorKeysETH_createNodeOperatorRole_MultipleOperators()
         public
     {
@@ -1530,33 +1531,33 @@ contract CSMAddValidatorKeys is CSMCommon {
         uint256[] memory ids = new uint256[](3);
         for (uint256 i; i < ids.length; i++) {
             vm.prank(stranger);
-            ids[i] = createNodeOperator(0);
+            ids[i] = csm.createNodeOperator(
+                stranger,
+                NodeOperatorManagementProperties({
+                    managerAddress: address(0),
+                    rewardAddress: address(0),
+                    extendedManagerPermissions: false
+                }),
+                address(0)
+            );
         }
         shuffle(ids);
 
         for (uint256 i; i < ids.length; i++) {
-            for (uint256 j; j < 3; j++) {
-                (bytes memory keys, bytes memory signatures) = keysSignatures(
-                    1,
-                    1
-                );
-                uint256 required = accounting.getRequiredBondForNextKeys(
-                    ids[i],
-                    1
-                );
-                vm.deal(stranger, required);
-                uint256 nonce = csm.getNonce();
+            (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+            uint256 required = accounting.getRequiredBondForNextKeys(ids[i], 1);
+            vm.deal(stranger, required);
+            uint256 nonce = csm.getNonce();
 
-                vm.prank(stranger);
-                csm.addValidatorKeysETH{ value: required }(
-                    nodeOperator,
-                    ids[i],
-                    1,
-                    keys,
-                    signatures
-                );
-                assertEq(csm.getNonce(), nonce + 1);
-            }
+            vm.prank(stranger);
+            csm.addValidatorKeysETH{ value: required }(
+                nodeOperator,
+                ids[i],
+                1,
+                keys,
+                signatures
+            );
+            assertEq(csm.getNonce(), nonce + 1);
         }
     }
 
@@ -1588,6 +1589,296 @@ contract CSMAddValidatorKeys is CSMCommon {
             signatures
         );
         assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysETH_RevertWhenCalledFromAnotherExtension()
+        public
+        assertInvariants
+    {
+        address extensionOne = nextAddress("EXTENSION_ONE");
+        address extensionTwo = nextAddress("EXTENSION_TWO");
+
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), extensionOne);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), extensionTwo);
+
+        vm.prank(extensionOne);
+        uint256 noId = csm.createNodeOperator({
+            from: nodeOperator,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: nodeOperator,
+                rewardAddress: nodeOperator,
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        uint256 required = accounting.getRequiredBondForNextKeys(noId, 1);
+        vm.deal(extensionTwo, required);
+
+        {
+            vm.expectRevert(ICSModule.CannotAddKeys.selector);
+
+            vm.prank(extensionTwo);
+            csm.addValidatorKeysETH{ value: required }(
+                nodeOperator,
+                noId,
+                1,
+                keys,
+                signatures
+            );
+        }
+    }
+
+    function test_AddValidatorKeysStETH_RevertWhenCalledFromAnotherExtension()
+        public
+        assertInvariants
+    {
+        address extensionOne = nextAddress("EXTENSION_ONE");
+        address extensionTwo = nextAddress("EXTENSION_TWO");
+
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), extensionOne);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), extensionTwo);
+
+        vm.prank(extensionOne);
+        uint256 noId = csm.createNodeOperator({
+            from: nodeOperator,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: nodeOperator,
+                rewardAddress: nodeOperator,
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        {
+            vm.expectRevert(ICSModule.CannotAddKeys.selector);
+
+            vm.prank(extensionTwo);
+            csm.addValidatorKeysStETH(
+                nodeOperator,
+                noId,
+                1,
+                keys,
+                signatures,
+                ICSAccounting.PermitInput({
+                    value: 0,
+                    deadline: 0,
+                    v: 0,
+                    r: 0,
+                    s: 0
+                })
+            );
+        }
+    }
+
+    function test_AddValidatorKeysWstETH_RevertWhenCalledFromAnotherExtension()
+        public
+        assertInvariants
+    {
+        address extensionOne = nextAddress("EXTENSION_ONE");
+        address extensionTwo = nextAddress("EXTENSION_TWO");
+
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), extensionOne);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), extensionTwo);
+
+        vm.prank(extensionOne);
+        uint256 noId = csm.createNodeOperator({
+            from: nodeOperator,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: nodeOperator,
+                rewardAddress: nodeOperator,
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        {
+            vm.expectRevert(ICSModule.CannotAddKeys.selector);
+
+            vm.prank(extensionTwo);
+            csm.addValidatorKeysWstETH(
+                nodeOperator,
+                noId,
+                1,
+                keys,
+                signatures,
+                ICSAccounting.PermitInput({
+                    value: 0,
+                    deadline: 0,
+                    v: 0,
+                    r: 0,
+                    s: 0
+                })
+            );
+        }
+    }
+
+    function test_AddValidatorKeysETH_RevertWhenCalledTwice()
+        public
+        assertInvariants
+    {
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        vm.prank(stranger);
+        uint256 noId = csm.createNodeOperator({
+            from: nodeOperator,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: nodeOperator,
+                rewardAddress: nodeOperator,
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        uint256 required = accounting.getRequiredBondForNextKeys(noId, 1);
+        vm.deal(stranger, required);
+
+        vm.prank(stranger);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
+
+        {
+            vm.expectRevert(ICSModule.CannotAddKeys.selector);
+
+            vm.prank(stranger);
+            csm.addValidatorKeysETH(nodeOperator, noId, 1, keys, signatures);
+        }
+    }
+
+    function test_AddValidatorKeysStETH_RevertWhenCalledTwice()
+        public
+        assertInvariants
+    {
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        vm.prank(stranger);
+        uint256 noId = csm.createNodeOperator({
+            from: nodeOperator,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: nodeOperator,
+                rewardAddress: nodeOperator,
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        uint256 required = accounting.getRequiredBondForNextKeys(noId, 1);
+        uint256 toWrap = required + 1 wei;
+        vm.deal(stranger, toWrap);
+
+        vm.prank(stranger);
+        stETH.submit{ value: toWrap }(address(0));
+
+        vm.prank(stranger);
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        {
+            vm.expectRevert(ICSModule.CannotAddKeys.selector);
+
+            vm.prank(stranger);
+            csm.addValidatorKeysStETH(
+                nodeOperator,
+                noId,
+                1,
+                keys,
+                signatures,
+                ICSAccounting.PermitInput({
+                    value: 0,
+                    deadline: 0,
+                    v: 0,
+                    r: 0,
+                    s: 0
+                })
+            );
+        }
+    }
+
+    function test_AddValidatorKeysWstETH_RevertWhenCalledTwice()
+        public
+        assertInvariants
+    {
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        vm.prank(stranger);
+        uint256 noId = csm.createNodeOperator({
+            from: nodeOperator,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: nodeOperator,
+                rewardAddress: nodeOperator,
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        uint256 required = accounting.getRequiredBondForNextKeys(noId, 1);
+        uint256 toWrap = required + 1 wei;
+        vm.deal(stranger, toWrap);
+
+        vm.startPrank(stranger);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        vm.stopPrank();
+
+        vm.prank(stranger);
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        {
+            vm.expectRevert(ICSModule.CannotAddKeys.selector);
+
+            vm.prank(stranger);
+            csm.addValidatorKeysWstETH(
+                nodeOperator,
+                noId,
+                1,
+                keys,
+                signatures,
+                ICSAccounting.PermitInput({
+                    value: 0,
+                    deadline: 0,
+                    v: 0,
+                    r: 0,
+                    s: 0
+                })
+            );
+        }
     }
 }
 
@@ -7644,7 +7935,7 @@ contract CSMCreateNodeOperators is CSMCommon {
         address managerAddress
     ) external payable {
         for (uint256 i; i < operators; i++) {
-            csm.createNodeOperator(
+            uint256 noId = csm.createNodeOperator(
                 managerAddress,
                 NodeOperatorManagementProperties({
                     managerAddress: address(0),
@@ -7653,7 +7944,6 @@ contract CSMCreateNodeOperators is CSMCommon {
                 }),
                 address(0)
             );
-            uint256 noId = csm.getNodeOperatorsCount() - 1;
             uint256 amount = csm.accounting().getRequiredBondForNextKeys(
                 noId,
                 keysCount
