@@ -27,14 +27,17 @@ contract StakingRouterIntegrationTest is
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
+        assertCSMUnusedStorageSlots(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
             address(accounting),
             locator.burner()
         );
+        assertAccountingUnusedStorageSlots(accounting);
         assertFeeDistributorClaimableShares(lido, feeDistributor);
         assertFeeDistributorTree(feeDistributor);
+        assertFeeOracleUnusedStorageSlots(oracle);
         vm.resumeGasMetering();
     }
 

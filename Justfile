@@ -42,7 +42,7 @@ anvil_rpc_url := "http://" + anvil_host + ":" + anvil_port
 default: clean deps build test-all
 
 build *args:
-    forge build --force {{args}}
+    forge build --skip test --force {{args}}
 
 clean:
     forge clean
@@ -316,3 +316,4 @@ test-v2-only-deploy *args:
 
 _warn message:
     @tput setaf 3 && printf "[WARNING]" && tput sgr0 && echo " {{message}}"
+
