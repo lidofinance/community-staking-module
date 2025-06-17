@@ -57,6 +57,7 @@ struct DeployParams {
     // Accounting
     uint256[2][] defaultBondCurve;
     uint256[2][] legacyEaBondCurve;
+    uint256[2][][] extraBondCurves;
     uint256 minBondLockPeriod;
     uint256 maxBondLockPeriod;
     uint256 bondLockPeriod;

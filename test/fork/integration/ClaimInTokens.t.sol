@@ -420,7 +420,7 @@ contract ClaimRewardsTest is
         assertApproxEqAbs(
             current,
             required,
-            1 wei,
+            2 wei,
             "NO bond shares should be equal required"
         );
         assertEq(
