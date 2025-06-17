@@ -261,6 +261,19 @@ abstract contract DeployImplementationsBase is DeployBase {
                 _grantSecondAdminsForNewContracts();
             }
 
+            verifierV2.grantRole(verifierV2.PAUSE_ROLE(), config.resealManager);
+            verifierV2.grantRole(
+                verifierV2.RESUME_ROLE(),
+                config.resealManager
+            );
+            vettedGate.grantRole(vettedGate.PAUSE_ROLE(), config.resealManager);
+            vettedGate.grantRole(
+                vettedGate.RESUME_ROLE(),
+                config.resealManager
+            );
+            ejector.grantRole(ejector.PAUSE_ROLE(), config.resealManager);
+            ejector.grantRole(ejector.RESUME_ROLE(), config.resealManager);
+
             ejector.grantRole(ejector.PAUSE_ROLE(), gateSealV2);
             ejector.grantRole(ejector.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             ejector.revokeRole(ejector.DEFAULT_ADMIN_ROLE(), deployer);
