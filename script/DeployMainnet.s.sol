@@ -121,6 +121,8 @@ contract DeployMainnet is DeployBase {
         config.sealDuration = 11 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
+        // DG
+        config.resealManager = 0x7914b5a1539b97Bd0bbd155757F25FD79A522d24;
         _setUp();
     }
 }

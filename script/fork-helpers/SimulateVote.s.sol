@@ -201,6 +201,19 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             address(deploymentConfig.gateSealV2)
         );
 
+        csm.grantRole(csm.PAUSE_ROLE(), deployParams.resealManager);
+        csm.grantRole(csm.RESUME_ROLE(), deployParams.resealManager);
+        accounting.grantRole(
+            accounting.PAUSE_ROLE(),
+            deployParams.resealManager
+        );
+        accounting.grantRole(
+            accounting.RESUME_ROLE(),
+            deployParams.resealManager
+        );
+        oracle.grantRole(oracle.PAUSE_ROLE(), deployParams.resealManager);
+        oracle.grantRole(oracle.RESUME_ROLE(), deployParams.resealManager);
+
         accounting.revokeRole(keccak256("RESET_BOND_CURVE_ROLE"), address(csm));
         address csmCommittee = accounting.getRoleMember(
             keccak256("RESET_BOND_CURVE_ROLE"),

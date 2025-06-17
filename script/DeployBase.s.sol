@@ -111,6 +111,8 @@ struct DeployParams {
     address sealingCommittee;
     uint256 sealDuration;
     uint256 sealExpiryTimestamp;
+    // DG
+    address resealManager;
     // Testnet stuff
     address secondAdminAddress;
 }
@@ -508,6 +510,25 @@ abstract contract DeployBase is Script {
                 vettedGate.grantRole(vettedGate.PAUSE_ROLE(), gateSeal);
                 ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
             }
+
+            csm.grantRole(csm.PAUSE_ROLE(), config.resealManager);
+            csm.grantRole(csm.RESUME_ROLE(), config.resealManager);
+            accounting.grantRole(accounting.PAUSE_ROLE(), config.resealManager);
+            accounting.grantRole(
+                accounting.RESUME_ROLE(),
+                config.resealManager
+            );
+            oracle.grantRole(oracle.PAUSE_ROLE(), config.resealManager);
+            oracle.grantRole(oracle.RESUME_ROLE(), config.resealManager);
+            verifier.grantRole(verifier.PAUSE_ROLE(), config.resealManager);
+            verifier.grantRole(verifier.RESUME_ROLE(), config.resealManager);
+            vettedGate.grantRole(vettedGate.PAUSE_ROLE(), config.resealManager);
+            vettedGate.grantRole(
+                vettedGate.RESUME_ROLE(),
+                config.resealManager
+            );
+            ejector.grantRole(ejector.PAUSE_ROLE(), config.resealManager);
+            ejector.grantRole(ejector.RESUME_ROLE(), config.resealManager);
 
             accounting.grantRole(
                 accounting.SET_BOND_CURVE_ROLE(),

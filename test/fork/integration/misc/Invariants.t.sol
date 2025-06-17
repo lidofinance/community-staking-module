@@ -10,6 +10,7 @@ import { DeploymentFixtures } from "../../../helpers/Fixtures.sol";
 import { NodeOperator } from "../../../../src/interfaces/ICSModule.sol";
 import { QueueLib, Batch } from "../../../../src/lib/QueueLib.sol";
 import { InvariantAsserts } from "../../../helpers/InvariantAsserts.sol";
+import { DeployParams } from "../../../../script/DeployBase.s.sol";
 
 contract InvariantsBase is
     Test,
@@ -18,11 +19,13 @@ contract InvariantsBase is
     InvariantAsserts
 {
     uint256 adminsCount;
+    DeployParams internal deployParams;
 
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
+        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 }
@@ -48,18 +51,40 @@ contract CSModuleInvariants is InvariantsBase {
             adminsCount,
             "default admin"
         );
-        assertEq(csm.getRoleMemberCount(csm.PAUSE_ROLE()), 1, "pause");
-        assertEq(
-            csm.getRoleMember(csm.PAUSE_ROLE(), 0),
-            address(gateSeal),
+        assertTrue(
+            csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent),
+            "default admin address"
+        );
+
+        assertEq(csm.getRoleMemberCount(csm.PAUSE_ROLE()), 2, "pause");
+        assertTrue(
+            csm.hasRole(csm.PAUSE_ROLE(), address(gateSeal)),
             "pause address"
         );
-        assertEq(csm.getRoleMemberCount(csm.RESUME_ROLE()), 0, "resume");
+        assertTrue(
+            csm.hasRole(csm.PAUSE_ROLE(), deployParams.resealManager),
+            "pause address"
+        );
+
+        assertEq(csm.getRoleMemberCount(csm.RESUME_ROLE()), 1, "resume");
+        assertTrue(
+            csm.hasRole(csm.RESUME_ROLE(), deployParams.resealManager),
+            "resume address"
+        );
+
         assertEq(
             csm.getRoleMemberCount(csm.STAKING_ROUTER_ROLE()),
             1,
             "staking router"
         );
+        assertTrue(
+            csm.hasRole(
+                csm.STAKING_ROUTER_ROLE(),
+                address(locator.stakingRouter())
+            ),
+            "staking router address"
+        );
+
         assertEq(
             csm.getRoleMemberCount(
                 csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE()
@@ -67,6 +92,14 @@ contract CSModuleInvariants is InvariantsBase {
             1,
             "report el rewards stealing penalty"
         );
+        assertTrue(
+            csm.hasRole(
+                csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
+                deployParams.elRewardsStealingReporter
+            ),
+            "report el rewards stealing penalty address"
+        );
+
         assertEq(
             csm.getRoleMemberCount(
                 csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE()
@@ -74,12 +107,38 @@ contract CSModuleInvariants is InvariantsBase {
             1,
             "settle el rewards stealing penalty"
         );
+        assertTrue(
+            csm.hasRole(
+                csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
+                deployParams.easyTrackEVMScriptExecutor
+            ),
+            "settle el rewards stealing penalty address"
+        );
+
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1, "verifier");
         assertEq(
             csm.getRoleMember(csm.VERIFIER_ROLE(), 0),
             address(verifier),
             "verifier address"
         );
+
+        assertEq(
+            csm.getRoleMemberCount(csm.CREATE_NODE_OPERATOR_ROLE()),
+            2,
+            "create node operator"
+        );
+        assertTrue(
+            csm.hasRole(
+                csm.CREATE_NODE_OPERATOR_ROLE(),
+                address(permissionlessGate)
+            ),
+            "create node operator address"
+        );
+        assertTrue(
+            csm.hasRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(vettedGate)),
+            "create node operator address"
+        );
+
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0, "recoverer");
     }
 }
@@ -108,26 +167,69 @@ contract CSAccountingInvariants is InvariantsBase {
             adminsCount,
             "default admin"
         );
+        assertTrue(
+            accounting.hasRole(
+                accounting.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            ),
+            "default admin address"
+        );
+
         assertEq(
             accounting.getRoleMemberCount(accounting.PAUSE_ROLE()),
-            1,
+            2,
             "pause"
         );
-        assertEq(
-            accounting.getRoleMember(accounting.PAUSE_ROLE(), 0),
-            address(gateSeal),
+        assertTrue(
+            accounting.hasRole(accounting.PAUSE_ROLE(), address(gateSeal)),
             "pause address"
         );
+        assertTrue(
+            accounting.hasRole(
+                accounting.PAUSE_ROLE(),
+                deployParams.resealManager
+            ),
+            "pause address"
+        );
+
         assertEq(
             accounting.getRoleMemberCount(accounting.RESUME_ROLE()),
-            0,
+            1,
             "resume"
         );
+        assertTrue(
+            accounting.hasRole(
+                accounting.RESUME_ROLE(),
+                deployParams.resealManager
+            ),
+            "resume address"
+        );
+
         assertEq(
             accounting.getRoleMemberCount(accounting.MANAGE_BOND_CURVES_ROLE()),
             0,
             "manage bond curves"
         );
+        assertEq(
+            accounting.getRoleMemberCount(accounting.SET_BOND_CURVE_ROLE()),
+            2,
+            "set bond curve"
+        );
+        assertTrue(
+            accounting.hasRole(
+                accounting.SET_BOND_CURVE_ROLE(),
+                deployParams.setResetBondCurveAddress
+            ),
+            "set bond curve address"
+        );
+        assertTrue(
+            accounting.hasRole(
+                accounting.SET_BOND_CURVE_ROLE(),
+                address(vettedGate)
+            ),
+            "set bond curve address"
+        );
+
         assertEq(
             accounting.getRoleMemberCount(accounting.RECOVERER_ROLE()),
             0,
@@ -153,6 +255,13 @@ contract CSFeeDistributorInvariants is InvariantsBase {
             adminsCount,
             "default admin"
         );
+        assertTrue(
+            feeDistributor.hasRole(
+                feeDistributor.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            ),
+            "default admin address"
+        );
         assertEq(
             feeDistributor.getRoleMemberCount(feeDistributor.RECOVERER_ROLE()),
             0,
@@ -172,18 +281,36 @@ contract CSFeeOracleInvariant is InvariantsBase {
             adminsCount,
             "default admin"
         );
+        assertTrue(
+            oracle.hasRole(
+                oracle.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            ),
+            "default admin address"
+        );
+
         assertEq(
             oracle.getRoleMemberCount(oracle.SUBMIT_DATA_ROLE()),
             0,
             "submit data"
         );
-        assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 1, "pause");
-        assertEq(
-            oracle.getRoleMember(oracle.PAUSE_ROLE(), 0),
-            address(gateSeal),
+
+        assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 2, "pause");
+        assertTrue(
+            oracle.hasRole(oracle.PAUSE_ROLE(), address(gateSeal)),
             "pause address"
         );
-        assertEq(oracle.getRoleMemberCount(oracle.RESUME_ROLE()), 0, "resume");
+        assertTrue(
+            oracle.hasRole(oracle.PAUSE_ROLE(), deployParams.resealManager),
+            "pause address"
+        );
+
+        assertEq(oracle.getRoleMemberCount(oracle.RESUME_ROLE()), 1, "resume");
+        assertTrue(
+            oracle.hasRole(oracle.RESUME_ROLE(), deployParams.resealManager),
+            "resume address"
+        );
+
         assertEq(
             oracle.getRoleMemberCount(oracle.RECOVERER_ROLE()),
             0,
@@ -209,25 +336,99 @@ contract HashConsensusInvariant is InvariantsBase {
             adminsCount,
             "default admin"
         );
+        assertTrue(
+            oracle.hasRole(
+                oracle.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            ),
+            "default admin address"
+        );
     }
 }
 
 contract VerifierInvariant is InvariantsBase {
     function test_roles() public view {
         assertEq(
+            verifier.getRoleMemberCount(verifier.DEFAULT_ADMIN_ROLE()),
+            adminsCount,
+            "default admin"
+        );
+        assertTrue(
+            verifier.hasRole(
+                verifier.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            ),
+            "default admin address"
+        );
+
+        assertEq(
             verifier.getRoleMemberCount(verifier.PAUSE_ROLE()),
-            1,
+            2,
             "pause"
         );
-        assertEq(
-            verifier.getRoleMember(verifier.PAUSE_ROLE(), 0),
-            address(gateSeal),
+        assertTrue(
+            verifier.hasRole(verifier.PAUSE_ROLE(), address(gateSeal)),
             "pause address"
         );
+        assertTrue(
+            verifier.hasRole(verifier.PAUSE_ROLE(), deployParams.resealManager),
+            "pause address"
+        );
+
         assertEq(
             verifier.getRoleMemberCount(verifier.RESUME_ROLE()),
-            0,
+            1,
             "resume"
+        );
+        assertTrue(
+            verifier.hasRole(
+                verifier.RESUME_ROLE(),
+                deployParams.resealManager
+            ),
+            "resume address"
+        );
+    }
+}
+
+contract EjectorInvariant is InvariantsBase {
+    function test_roles() public view {
+        assertEq(
+            ejector.getRoleMemberCount(ejector.DEFAULT_ADMIN_ROLE()),
+            adminsCount,
+            "default admin"
+        );
+        assertTrue(
+            ejector.hasRole(
+                ejector.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            ),
+            "default admin address"
+        );
+
+        assertEq(verifier.getRoleMemberCount(ejector.PAUSE_ROLE()), 2, "pause");
+        assertTrue(
+            ejector.hasRole(ejector.PAUSE_ROLE(), address(gateSeal)),
+            "pause address"
+        );
+        assertTrue(
+            ejector.hasRole(ejector.PAUSE_ROLE(), deployParams.resealManager),
+            "pause address"
+        );
+
+        assertEq(
+            ejector.getRoleMemberCount(ejector.RESUME_ROLE()),
+            1,
+            "resume"
+        );
+        assertTrue(
+            ejector.hasRole(ejector.RESUME_ROLE(), deployParams.resealManager),
+            "resume address"
+        );
+
+        assertEq(
+            ejector.getRoleMemberCount(ejector.RECOVERER_ROLE()),
+            0,
+            "recoverer"
         );
     }
 }
