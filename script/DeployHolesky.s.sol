@@ -51,18 +51,20 @@ contract DeployHolesky is DeployBase {
         config.legacyEaBondCurve.push([6, 1.5 ether]);
 
         uint256[2][] memory bondCurve2 = new uint256[2][](6);
+        // Prev:
+        // 3000000000000000000,4900000000000000000,6700000000000000000,8400000000000000000,10000000000000000000,11500000000000000000
         bondCurve2[0] = uintArr(1, 3 ether);
-        bondCurve2[1] = uintArr(2, 4.9 ether);
-        bondCurve2[2] = uintArr(3, 6.4 ether);
-        bondCurve2[3] = uintArr(4, 8.4 ether);
-        bondCurve2[4] = uintArr(5, 10 ether);
-        bondCurve2[5] = uintArr(6, 11.5 ether);
+        bondCurve2[1] = uintArr(2, 1.9 ether);
+        bondCurve2[2] = uintArr(3, 1.8 ether);
+        bondCurve2[3] = uintArr(4, 1.7 ether);
+        bondCurve2[4] = uintArr(5, 1.6 ether);
+        bondCurve2[5] = uintArr(6, 1.5 ether);
 
-        uint256[2][] memory bondCurve3 = new uint256[2][](4);
+        uint256[2][] memory bondCurve3 = new uint256[2][](2);
+        // Prev:
+        // 4000000000000000000,5000000000000000000,6000000000000000000,7000000000000000000
         bondCurve3[0] = uintArr(1, 4 ether);
-        bondCurve3[1] = uintArr(2, 5 ether);
-        bondCurve3[2] = uintArr(3, 6 ether);
-        bondCurve3[3] = uintArr(4, 7 ether);
+        bondCurve3[1] = uintArr(2, 1 ether);
 
         config.extraBondCurves.push(bondCurve2);
         config.extraBondCurves.push(bondCurve3);
