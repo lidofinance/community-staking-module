@@ -21,18 +21,22 @@ import { Utilities } from "./helpers/Utilities.sol";
 import { console } from "forge-std/console.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
-import { Batch, IQueueLib } from "../src/lib/QueueLib.sol";
+import { Batch, QueueLib, IQueueLib } from "../src/lib/QueueLib.sol";
 import { SigningKeys } from "../src/lib/SigningKeys.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { INOAddresses } from "../src/lib/NOAddresses.sol";
 import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
 import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "../src/interfaces/ICSModule.sol";
 import { ICSExitPenalties, ExitPenaltyInfo, MarkedUint248 } from "../src/interfaces/ICSExitPenalties.sol";
+import { TransientUintUintMap, TransientUintUintMapLib } from "../src/lib/TransientUintUintMapLib.sol";
 import { ExitPenaltiesMock } from "./helpers/mocks/ExitPenaltiesMock.sol";
 import { CSAccountingMock } from "./helpers/mocks/CSAccountingMock.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
 contract CSModuleTestable is CSModule {
+    using QueueLib for QueueLib.Queue;
+    mapping(uint256 => NodeOperator) internal nodeOperators;
+
     constructor(
         bytes32 moduleType,
         address lidoLocator,
@@ -51,6 +55,11 @@ contract CSModuleTestable is CSModule {
 
     function _enqueueToLegacyQueue(uint256 noId, uint32 count) external {
         _enqueueNodeOperatorKeys(noId, QUEUE_LEGACY_PRIORITY, count);
+    }
+
+    function cleanDepositQueueTestable(uint256 maxItems) external {
+        TransientUintUintMap queueLookup = TransientUintUintMapLib.create();
+        _legacyQueue.clean(nodeOperators, maxItems, queueLookup);
     }
 }
 
@@ -3047,6 +3056,18 @@ contract CsmQueueOps is CSMCommon {
     function test_emptyQueueIsClean() public assertInvariants {
         bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
         assertFalse(isDirty, "queue should be clean");
+    }
+
+    function test_cleanDepositQueue_revertWhen_QueueLookupNoLimit()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator({ keysCount: 2 });
+        uploadMoreKeys(noId, 1);
+        unvetKeys({ noId: noId, to: 2 });
+
+        vm.expectRevert(IQueueLib.QueueLookupNoLimit.selector);
+        csm.cleanDepositQueueTestable(0);
     }
 
     function test_queueIsDirty_WhenHasBatchOfNonDepositableOperator()
