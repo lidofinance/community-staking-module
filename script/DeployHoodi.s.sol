@@ -86,6 +86,7 @@ contract DeployHoodi is DeployBase {
         // VettedGate
         config
             .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.identifiedCommunityStakersGateCurveId = 2;
         config
             .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // TODO: update before deployment
         config.identifiedCommunityStakersGateTreeCid = "someCid"; // TODO: update with a real CID before deployment

@@ -104,6 +104,7 @@ contract DeployHolesky is DeployBase {
         // VettedGate
         config
             .identifiedCommunityStakersGateManager = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
+        config.identifiedCommunityStakersGateCurveId = 4;
         config
             .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // TODO: update before deployment
         config.identifiedCommunityStakersGateTreeCid = "someCid"; // TODO: update with a real CID before deployment
