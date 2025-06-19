@@ -59,7 +59,7 @@ contract DeployMainnet is DeployBase {
 
         // Module
         config.stakingModuleId = 3;
-        config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
+        config.moduleType = "community-onchain-v2"; // Just a unique type name to be used by the off-chain tooling
         config
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
 

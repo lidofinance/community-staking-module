@@ -54,7 +54,7 @@ contract DeployLocalDevNet is DeployBase {
         ); // Dev team EOA
         // Module
         config.stakingModuleId = vm.envUint("CSM_STAKING_MODULE_ID");
-        config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
+        config.moduleType = "community-onchain-v2"; // Just a unique type name to be used by the off-chain tooling
         config.elRewardsStealingReporter = vm.envAddress(
             "CSM_FIRST_ADMIN_ADDRESS"
         ); // Dev team EOA
