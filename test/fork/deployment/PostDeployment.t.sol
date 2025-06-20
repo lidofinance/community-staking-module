@@ -1157,8 +1157,11 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
             vettedGate.treeCid(),
             deployParams.identifiedCommunityStakersGateTreeCid
         );
-        // Check that the curve is set
-        assertTrue(vettedGate.curveId() != 0);
+
+        assertTrue(
+            vettedGate.curveId() ==
+                deployParams.identifiedCommunityStakersGateCurveId
+        );
         assertEq(vettedGate.getInitializedVersion(), 1);
     }
 
