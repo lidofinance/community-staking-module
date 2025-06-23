@@ -308,12 +308,10 @@ contract StakingRouterIntegrationTest is
                 currentModuleExitedValidatorsCount: moduleInfo
                     .exitedValidatorsCount,
                 currentNodeOperatorExitedValidatorsCount: exited,
-                currentNodeOperatorStuckValidatorsCount: 0,
                 // dirty hack since prev call does not update total counts
                 newModuleExitedValidatorsCount: moduleInfo
-                    .exitedValidatorsCount + unsafeExited,
-                newNodeOperatorExitedValidatorsCount: unsafeExited,
-                newNodeOperatorStuckValidatorsCount: 0
+                    .exitedValidatorsCount,
+                newNodeOperatorExitedValidatorsCount: unsafeExited
             });
         vm.prank(agent);
         stakingRouter.unsafeSetExitedValidatorsCount(

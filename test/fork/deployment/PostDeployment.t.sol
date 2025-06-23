@@ -214,8 +214,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             deployParams.identifiedCommunityStakersGateBondCurve[1][1]
         );
 
-        uint256 legacyEaBondCurveId = identifiedCommunityStakersGateBondCurveId -
-                1;
+        uint256 legacyEaBondCurveId = defaultCurveId + 1;
 
         assertEq(
             accounting
