@@ -38,11 +38,11 @@ contract DeployHoodi is DeployBase {
         config.hashConsensusQuorum = 6;
 
         // Verifier
-        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_CAPELLA;
-        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_CAPELLA;
-        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_CAPELLA;
+        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_ELECTRA;
+        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_ELECTRA;
+        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_ELECTRA;
+        config.verifierSupportedEpoch = 2048;
 
-        config.verifierSupportedEpoch = 0;
         // Accounting
         // 2.4 -> 1.3
         config.defaultBondCurve.push([1, 2.4 ether]);
