@@ -14,7 +14,7 @@ contract DeployHoodi is DeployBase {
         config.aragonAgent = 0x0534aA41907c9631fae990960bCC72d75fA7cfeD;
         config
             .easyTrackEVMScriptExecutor = 0x79a20FD0FA36453B2F45eAbab19bfef43575Ba9E;
-        config.proxyAdmin = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.proxyAdmin = config.aragonAgent;
 
         // Oracle
         config.secondsPerSlot = 12;

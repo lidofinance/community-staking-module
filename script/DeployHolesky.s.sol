@@ -14,7 +14,7 @@ contract DeployHolesky is DeployBase {
         config.aragonAgent = 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d;
         config
             .easyTrackEVMScriptExecutor = 0x2819B65021E13CEEB9AC33E77DB32c7e64e7520D;
-        config.proxyAdmin = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
+        config.proxyAdmin = config.aragonAgent;
 
         // Oracle
         config.secondsPerSlot = 12;
