@@ -10,14 +10,16 @@ import "../../helpers/MerkleTree.sol";
 
 import { ICSStrikes } from "../../../src/interfaces/ICSStrikes.sol";
 import { ICSFeeOracle } from "../../../src/interfaces/ICSFeeOracle.sol";
-import { ICSExitPenalties } from "../../../src/interfaces/ICSExitPenalties.sol";
+import { ICSExitPenalties, ExitPenaltyInfo } from "../../../src/interfaces/ICSExitPenalties.sol";
 import { NodeOperatorManagementProperties } from "../../../src/interfaces/ICSModule.sol";
 import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 import { Utilities } from "../../helpers/Utilities.sol";
 import { Batch } from "../../../src/lib/QueueLib.sol";
+import { IWithdrawalVault } from "../../../src/interfaces/IWithdrawalVault.sol";
 
 contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
     uint256 private nodeOperatorId;
+    address private refundRecipient;
     MerkleTree private feesTree;
     MerkleTree private strikesTree;
 
@@ -60,6 +62,7 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
 
         hugeDeposit();
 
+        refundRecipient = nextAddress("refundRecipient");
         uint256 keysCount;
         uint256 moduleId = findCSModule();
         (nodeOperatorId, keysCount) = getDepositableNodeOperator(nextAddress());
@@ -214,6 +217,14 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         uint256 penalty = parametersRegistry.getBadPerformancePenalty(
             accounting.getBondCurveId(nodeOperatorId)
         );
+
+        uint256 initialBalance = 1 ether;
+        vm.deal(refundRecipient, initialBalance);
+        vm.prank(refundRecipient);
+        uint256 expectedWithdrawalFee = IWithdrawalVault(
+            locator.withdrawalVault()
+        ).getWithdrawalRequestFee();
+
         ICSStrikes.KeyStrikes[]
             memory keyStrikesList = new ICSStrikes.KeyStrikes[](1);
         keyStrikesList[0] = ICSStrikes.KeyStrikes({
@@ -229,27 +240,41 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
             key,
             penalty
         );
+        vm.prank(refundRecipient);
         vm.startSnapshotGas("CSStrikes.processBadPerformanceProof");
-        this.processBadPerformanceProof(
+        this.processBadPerformanceProof{ value: 1 ether }(
             keyStrikesList,
             proof,
             proofFlags,
-            address(0)
+            refundRecipient
         );
         vm.stopSnapshotGas();
+
+        ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
+            .getExitPenaltyInfo(nodeOperatorId, key);
+        assertEq(exitPenaltyInfo.strikesPenalty.value, penalty);
+        assertTrue(exitPenaltyInfo.withdrawalRequestFee.isValue);
+        assertEq(
+            exitPenaltyInfo.withdrawalRequestFee.value,
+            expectedWithdrawalFee
+        );
+        assertEq(
+            refundRecipient.balance,
+            initialBalance - expectedWithdrawalFee
+        );
     }
 
     function processBadPerformanceProof(
         ICSStrikes.KeyStrikes[] calldata keyStrikes,
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
-        address refundRecipient
-    ) external {
-        strikes.processBadPerformanceProof(
+        address _refundRecipient
+    ) external payable {
+        strikes.processBadPerformanceProof{ value: msg.value }(
             keyStrikes,
             proof,
             proofFlags,
-            refundRecipient
+            _refundRecipient
         );
     }
 }

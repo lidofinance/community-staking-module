@@ -11,6 +11,7 @@ import { Utilities } from "../../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 import { Batch } from "../../../src/lib/QueueLib.sol";
+import { ExitPenaltyInfo } from "../../../src/interfaces/ICSExitPenalties.sol";
 
 contract StakingRouterIntegrationTest is
     Test,
@@ -348,5 +349,54 @@ contract StakingRouterIntegrationTest is
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedKeys, newVetted);
         assertEq(no.depositableValidatorsCount, newVetted);
+    }
+
+    function test_reportValidatorExitDelay() public assertInvariants {
+        vm.skip(false, "Protocol upgrade needed");
+        uint256 totalKeys = 1;
+        uint256 noId = addNodeOperator(nextAddress(), totalKeys);
+        bytes memory publicKey = csm.getSigningKeys(noId, 0, 1);
+        uint256 curveId = accounting.getBondCurveId(noId);
+        uint256 exitDelay = parametersRegistry.getAllowedExitDelay(curveId);
+        assertFalse(
+            csm.isValidatorExitDelayPenaltyApplicable(
+                noId,
+                12345,
+                publicKey,
+                exitDelay
+            )
+        );
+        exitDelay += 1;
+        assertTrue(
+            csm.isValidatorExitDelayPenaltyApplicable(
+                noId,
+                12345,
+                publicKey,
+                exitDelay
+            )
+        );
+
+        vm.prank(
+            stakingRouter.getRoleMember(
+                keccak256("REPORT_VALIDATOR_EXITING_STATUS_ROLE"),
+                0
+            )
+        );
+        stakingRouter.reportValidatorExitDelay(
+            moduleId,
+            noId,
+            12345,
+            publicKey,
+            exitDelay
+        );
+
+        ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
+            .getExitPenaltyInfo(noId, publicKey);
+        uint256 expectedPenalty = parametersRegistry.getExitDelayPenalty(
+            accounting.getBondCurveId(noId)
+        );
+
+        assertTrue(exitPenaltyInfo.delayPenalty.isValue);
+        assertEq(exitPenaltyInfo.delayPenalty.value, expectedPenalty);
     }
 }
