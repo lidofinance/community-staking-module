@@ -87,8 +87,9 @@ contract DeployHoodi is DeployBase {
         config
             .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
         config
-            .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // TODO: update before deployment
-        config.identifiedCommunityStakersGateTreeCid = "someCid"; // TODO: update with a real CID before deployment
+            .identifiedCommunityStakersGateTreeRoot = 0x30e01b38a2c9a20b4f530f068d9277700f9d19f3e06098509d4034888ee0ac7c;
+        config
+            .identifiedCommunityStakersGateTreeCid = "bafkreigdvtiwusfrhd7ktonrwpiqlqga23usghv4odgjtj4nuyqsmv5yyu";
         // 1.5 -> 1.3
         config.identifiedCommunityStakersGateBondCurve.push([1, 1.5 ether]);
         config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
