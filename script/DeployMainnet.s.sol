@@ -36,10 +36,10 @@ contract DeployMainnet is DeployBase {
         config.hashConsensusQuorum = 5;
 
         // Verifier
-        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_CAPELLA;
-        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_CAPELLA;
-        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_CAPELLA;
-        config.verifierSupportedEpoch = 269568;
+        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_ELECTRA;
+        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_ELECTRA;
+        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_ELECTRA;
+        config.verifierSupportedEpoch = 364032; // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7600.md#activation
 
         // Accounting
         // 2.4 -> 1.3
