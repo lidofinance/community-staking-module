@@ -7,61 +7,81 @@ import { DeployBase } from "./DeployBase.s.sol";
 import { GIndicies } from "./constants/GIndicies.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
-contract DeployMainnet is DeployBase {
-    constructor() DeployBase("mainnet", 1) {
+contract DeployHolesky is DeployBase {
+    constructor() DeployBase("holesky", 17000) {
         // Lido addresses
-        config.lidoLocatorAddress = 0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb;
-        config.aragonAgent = 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c;
+        config.lidoLocatorAddress = 0x28FAB2059C713A7F9D8c86Db49f9bb0e96Af1ef8;
+        config.aragonAgent = 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d;
         config
-            .easyTrackEVMScriptExecutor = 0xFE5986E06210aC1eCC1aDCafc0cc7f8D63B3F977;
+            .easyTrackEVMScriptExecutor = 0x2819B65021E13CEEB9AC33E77DB32c7e64e7520D;
         config.proxyAdmin = config.aragonAgent;
 
         // Oracle
-        config.secondsPerSlot = 12; // https://github.com/eth-clients/mainnet/blob/f6b7882618a5ad2c1d2731ae35e5d16a660d5bb7/metadata/config.yaml#L58
-        config.slotsPerEpoch = 32; // https://github.com/ethereum/consensus-specs/blob/7df1ce30384b13d01617f8ddf930f4035da0f689/specs/phase0/beacon-chain.md?plain=1#L246
-        config.clGenesisTime = 1606824023; // https://github.com/eth-clients/mainnet/blob/f6b7882618a5ad2c1d2731ae35e5d16a660d5bb7/README.md?plain=1#L10
-        config.oracleReportEpochsPerFrame = 225 * 28; // 28 days
-        config.fastLaneLengthSlots = 1800;
+        config.secondsPerSlot = 12;
+        config.slotsPerEpoch = 32;
+        config.clGenesisTime = 1695902400;
+        config.oracleReportEpochsPerFrame = 225 * 7; // 7 days
+        config.fastLaneLengthSlots = 600;
         config.consensusVersion = 3;
-        config.oracleMembers = new address[](9);
-        config.oracleMembers[0] = 0x73181107c8D9ED4ce0bbeF7A0b4ccf3320C41d12; // Instadapp
-        config.oracleMembers[1] = 0xA7410857ABbf75043d61ea54e07D57A6EB6EF186; // Kyber Network
-        config.oracleMembers[2] = 0x404335BcE530400a5814375E7Ec1FB55fAff3eA2; // Staking Facilities
-        config.oracleMembers[3] = 0x946D3b081ed19173dC83Cd974fC69e1e760B7d78; // Stakefish
-        config.oracleMembers[4] = 0x007DE4a5F7bc37E2F26c0cb2E8A95006EE9B89b5; // P2P
-        config.oracleMembers[5] = 0xc79F702202E3A6B0B6310B537E786B9ACAA19BAf; // Chainlayer
-        config.oracleMembers[6] = 0x61c91ECd902EB56e314bB2D5c5C07785444Ea1c8; // bloXroute
-        config.oracleMembers[7] = 0xe57B3792aDCc5da47EF4fF588883F0ee0c9835C9; // MatrixedLink
-        config.oracleMembers[8] = 0x285f8537e1dAeEdaf617e96C742F2Cf36d63CcfB; // Chorus One
-        config.hashConsensusQuorum = 5;
+        config.oracleMembers = new address[](2);
+        config.oracleMembers[0] = 0x12A1D74F8697b9f4F1eEBb0a9d0FB6a751366399;
+        config.oracleMembers[1] = 0xD892c09b556b547c80B7d8c8cB8d75bf541B2284;
+        config.hashConsensusQuorum = 2;
 
         // Verifier
+        // current deployment is on Capella
         config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_ELECTRA;
         config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_ELECTRA;
         config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_ELECTRA;
-        config.verifierSupportedEpoch = 364032; // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7600.md#activation
 
+        config.verifierSupportedEpoch = 29696;
         // Accounting
-        // 2.4 -> 1.3
-        config.defaultBondCurve.push([1, 2.4 ether]);
-        config.defaultBondCurve.push([2, 1.3 ether]);
-        // 1.5 -> 1.3
+        // 2 -> 1.9 -> 1.8 -> 1.7 -> 1.6 -> 1.5
+        config.defaultBondCurve.push([1, 2 ether]);
+        config.defaultBondCurve.push([2, 1.9 ether]);
+        config.defaultBondCurve.push([3, 1.8 ether]);
+        config.defaultBondCurve.push([4, 1.7 ether]);
+        config.defaultBondCurve.push([5, 1.6 ether]);
+        config.defaultBondCurve.push([6, 1.5 ether]);
+        // 1.5 -> 1.9 -> 1.8 -> 1.7 -> 1.6 -> 1.5
         config.legacyEaBondCurve.push([1, 1.5 ether]);
-        config.legacyEaBondCurve.push([2, 1.3 ether]);
+        config.legacyEaBondCurve.push([2, 1.9 ether]);
+        config.legacyEaBondCurve.push([3, 1.8 ether]);
+        config.legacyEaBondCurve.push([4, 1.7 ether]);
+        config.legacyEaBondCurve.push([5, 1.6 ether]);
+        config.legacyEaBondCurve.push([6, 1.5 ether]);
 
-        config.minBondLockPeriod = 4 weeks;
+        uint256[2][] memory bondCurve2 = new uint256[2][](6);
+        // Prev:
+        // 3000000000000000000,4900000000000000000,6700000000000000000,8400000000000000000,10000000000000000000,11500000000000000000
+        bondCurve2[0] = uintArr(1, 3 ether);
+        bondCurve2[1] = uintArr(2, 1.9 ether);
+        bondCurve2[2] = uintArr(3, 1.8 ether);
+        bondCurve2[3] = uintArr(4, 1.7 ether);
+        bondCurve2[4] = uintArr(5, 1.6 ether);
+        bondCurve2[5] = uintArr(6, 1.5 ether);
+
+        uint256[2][] memory bondCurve3 = new uint256[2][](2);
+        // Prev:
+        // 4000000000000000000,5000000000000000000,6000000000000000000,7000000000000000000
+        bondCurve3[0] = uintArr(1, 4 ether);
+        bondCurve3[1] = uintArr(2, 1 ether);
+
+        config.extraBondCurves.push(bondCurve2);
+        config.extraBondCurves.push(bondCurve3);
+
+        config.minBondLockPeriod = 0;
         config.maxBondLockPeriod = 365 days;
         config.bondLockPeriod = 8 weeks;
         config
-            .setResetBondCurveAddress = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
+            .setResetBondCurveAddress = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
         config
-            .chargePenaltyRecipient = 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c; // locator.treasury()
-
+            .chargePenaltyRecipient = 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d; // locator.treasury()
         // Module
-        config.stakingModuleId = 3;
+        config.stakingModuleId = 4;
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
         config
-            .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
+            .elRewardsStealingReporter = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
 
         // CSParameters
         config.defaultKeyRemovalCharge = 0.02 ether;
@@ -84,8 +104,8 @@ contract DeployMainnet is DeployBase {
 
         // VettedGate
         config
-            .identifiedCommunityStakersGateManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
-        config.identifiedCommunityStakersGateCurveId = 2;
+            .identifiedCommunityStakersGateManager = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
+        config.identifiedCommunityStakersGateCurveId = 4;
         config
             .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // TODO: update before deployment
         config.identifiedCommunityStakersGateTreeCid = "someCid"; // TODO: update with a real CID before deployment
@@ -117,13 +137,23 @@ contract DeployMainnet is DeployBase {
             .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.1 ether;
 
         // GateSeal
-        config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
-        config.sealingCommittee = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
-        config.sealDuration = 11 days;
+        config.gateSealFactory = 0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2;
+        config.sealingCommittee = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
+        config.sealDuration = 6 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
         // DG
-        config.resealManager = 0x7914b5a1539b97Bd0bbd155757F25FD79A522d24;
+        config.resealManager = 0x9dE2273f9f1e81145171CcA927EFeE7aCC64c9fb;
+
+        config.secondAdminAddress = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
         _setUp();
+    }
+
+    function uintArr(
+        uint256 a,
+        uint256 b
+    ) internal pure returns (uint256[2] memory arr) {
+        arr[0] = a;
+        arr[1] = b;
     }
 }

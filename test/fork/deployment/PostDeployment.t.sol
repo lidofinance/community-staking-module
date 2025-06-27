@@ -214,8 +214,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             deployParams.identifiedCommunityStakersGateBondCurve[1][1]
         );
 
-        uint256 legacyEaBondCurveId = identifiedCommunityStakersGateBondCurveId -
-                1;
+        uint256 legacyEaBondCurveId = defaultCurveId + 1;
 
         assertEq(
             accounting
@@ -1157,8 +1156,11 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
             vettedGate.treeCid(),
             deployParams.identifiedCommunityStakersGateTreeCid
         );
-        // Check that the curve is set
-        assertTrue(vettedGate.curveId() != 0);
+
+        assertTrue(
+            vettedGate.curveId() ==
+                deployParams.identifiedCommunityStakersGateCurveId
+        );
         assertEq(vettedGate.getInitializedVersion(), 1);
     }
 

@@ -992,21 +992,21 @@ contract DepositTest is IntegrationTestBase {
     }
 
     function test_depositWstETHWithPermit() public assertInvariants {
+        vm.deal(user, 33 ether);
+        vm.startPrank(user);
+        lido.submit{ value: 33 ether }(address(0));
+        lido.approve(address(wstETH), type(uint256).max);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+
         bytes32 digest = wstETHPermitDigest(
             user,
             address(accounting),
-            32 ether,
+            wstETHAmount + 10 wei,
             vm.getNonce(user),
             type(uint256).max,
             address(wstETH)
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
-
-        vm.deal(user, 32 ether);
-        vm.startPrank(user);
-        lido.submit{ value: 32 ether }(address(0));
-        lido.approve(address(wstETH), type(uint256).max);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
 
         uint256 shares = lido.getSharesByPooledEth(
             wstETH.getStETHByWstETH(wstETHAmount)
@@ -1020,7 +1020,7 @@ contract DepositTest is IntegrationTestBase {
             defaultNoId,
             wstETHAmount,
             ICSAccounting.PermitInput({
-                value: 32 ether,
+                value: wstETHAmount + 10 wei,
                 deadline: type(uint256).max,
                 v: v,
                 r: r,
