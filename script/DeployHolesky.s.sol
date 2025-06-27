@@ -29,9 +29,10 @@ contract DeployHolesky is DeployBase {
         config.hashConsensusQuorum = 2;
 
         // Verifier
-        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_CAPELLA;
-        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_CAPELLA;
-        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_CAPELLA;
+        // current deployment is on Capella
+        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_ELECTRA;
+        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_ELECTRA;
+        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_ELECTRA;
 
         config.verifierSupportedEpoch = 29696;
         // Accounting
