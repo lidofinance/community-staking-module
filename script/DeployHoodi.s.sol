@@ -87,7 +87,7 @@ contract DeployHoodi is DeployBase {
         config
             .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
         config
-            .identifiedCommunityStakersGateTreeRoot = 0x30e01b38a2c9a20b4f530f068d9277700f9d19f3e06098509d4034888ee0ac7c;
+            .identifiedCommunityStakersGateTreeRoot = 0x30e01b38a2c9a20b4f530f068d9277700f9d19f3e06098509d4034888ee0ac7c; // See the first value in artifacts/hoodi/ics/merkle-tree.json
         config
             .identifiedCommunityStakersGateTreeCid = "bafkreigdvtiwusfrhd7ktonrwpiqlqga23usghv4odgjtj4nuyqsmv5yyu";
         // 1.5 -> 1.3
