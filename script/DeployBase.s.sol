@@ -57,6 +57,7 @@ struct DeployParams {
     // Accounting
     uint256[2][] defaultBondCurve;
     uint256[2][] legacyEaBondCurve;
+    uint256[2][][] extraBondCurves;
     uint256 minBondLockPeriod;
     uint256 maxBondLockPeriod;
     uint256 bondLockPeriod;
@@ -86,6 +87,7 @@ struct DeployParams {
     uint256 defaultMaxWithdrawalRequestFee;
     // VettedGate
     address identifiedCommunityStakersGateManager;
+    uint256 identifiedCommunityStakersGateCurveId;
     bytes32 identifiedCommunityStakersGateTreeRoot;
     string identifiedCommunityStakersGateTreeCid;
     uint256[2][] identifiedCommunityStakersGateBondCurve;
@@ -293,6 +295,17 @@ abstract contract DeployBase is Script {
                 memory legacyEaBondCurve = CommonScriptUtils
                     .arraysToBondCurveIntervalsInputs(config.legacyEaBondCurve);
             accounting.addBondCurve(legacyEaBondCurve);
+
+            if (config.extraBondCurves.length > 0) {
+                for (uint256 i = 0; i < config.extraBondCurves.length; i++) {
+                    ICSBondCurve.BondCurveIntervalInput[]
+                        memory extraBondCurve = CommonScriptUtils
+                            .arraysToBondCurveIntervalsInputs(
+                                config.extraBondCurves[i]
+                            );
+                    accounting.addBondCurve(extraBondCurve);
+                }
+            }
 
             ICSBondCurve.BondCurveIntervalInput[]
                 memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils
