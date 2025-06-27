@@ -352,7 +352,7 @@ contract StakingRouterIntegrationTest is
     }
 
     function test_reportValidatorExitDelay() public assertInvariants {
-        vm.skip(false, "Protocol upgrade needed");
+        vm.skip(true, "Protocol upgrade needed");
         uint256 totalKeys = 1;
         uint256 noId = addNodeOperator(nextAddress(), totalKeys);
         bytes memory publicKey = csm.getSigningKeys(noId, 0, 1);
