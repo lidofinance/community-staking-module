@@ -110,7 +110,6 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     }
 
     /// @dev Update existing bond curve
-    // TODO: add fuzzing tests for 5 calls with the same curveId
     function _updateBondCurve(
         uint256 curveId,
         BondCurveIntervalInput[] calldata intervals

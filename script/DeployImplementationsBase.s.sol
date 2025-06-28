@@ -91,10 +91,9 @@ abstract contract DeployImplementationsBase is DeployBase {
 
             address vettedGateImpl = address(new VettedGate(address(csm)));
             vettedGateFactory = new VettedGateFactory(vettedGateImpl);
-            // We use the early adoption contract to get the curve ID and add 1 since the new curve for ICS will be added in the vote
             vettedGate = VettedGate(
                 vettedGateFactory.create({
-                    curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID() + 1,
+                    curveId: config.identifiedCommunityStakersGateCurveId,
                     treeRoot: config.identifiedCommunityStakersGateTreeRoot,
                     treeCid: config.identifiedCommunityStakersGateTreeCid,
                     admin: deployer

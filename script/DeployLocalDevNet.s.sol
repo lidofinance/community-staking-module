@@ -30,11 +30,11 @@ contract DeployLocalDevNet is DeployBase {
         config.oracleMembers[2] = vm.envAddress("CSM_ORACLE_3_ADDRESS");
         config.hashConsensusQuorum = 2;
         // Verifier
-        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_CAPELLA;
-        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_CAPELLA;
-        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_CAPELLA;
-
+        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_ELECTRA;
+        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_ELECTRA;
+        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_ELECTRA;
         config.verifierSupportedEpoch = vm.envUint("DEVNET_ELECTRA_EPOCH");
+
         // Accounting
         // 2.4 -> 1.3
         config.defaultBondCurve.push([1, 2.4 ether]);
@@ -81,6 +81,7 @@ contract DeployLocalDevNet is DeployBase {
         // VettedGate
         config
             .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.identifiedCommunityStakersGateCurveId = 2;
         config.identifiedCommunityStakersGateTreeRoot = vm.envOr(
             "CSM_VETTED_GATE_TREE_ROOT",
             bytes32(uint256(0xdeadbeef))

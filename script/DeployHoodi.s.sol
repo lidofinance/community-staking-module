@@ -14,7 +14,7 @@ contract DeployHoodi is DeployBase {
         config.aragonAgent = 0x0534aA41907c9631fae990960bCC72d75fA7cfeD;
         config
             .easyTrackEVMScriptExecutor = 0x79a20FD0FA36453B2F45eAbab19bfef43575Ba9E;
-        config.proxyAdmin = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.proxyAdmin = config.aragonAgent;
 
         // Oracle
         config.secondsPerSlot = 12;
@@ -38,11 +38,11 @@ contract DeployHoodi is DeployBase {
         config.hashConsensusQuorum = 6;
 
         // Verifier
-        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_CAPELLA;
-        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_CAPELLA;
-        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_CAPELLA;
+        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_ELECTRA;
+        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_ELECTRA;
+        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_ELECTRA;
+        config.verifierSupportedEpoch = 2048;
 
-        config.verifierSupportedEpoch = 0;
         // Accounting
         // 2.4 -> 1.3
         config.defaultBondCurve.push([1, 2.4 ether]);
@@ -86,6 +86,7 @@ contract DeployHoodi is DeployBase {
         // VettedGate
         config
             .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.identifiedCommunityStakersGateCurveId = 2;
         config
             .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // TODO: update before deployment
         config.identifiedCommunityStakersGateTreeCid = "someCid"; // TODO: update with a real CID before deployment

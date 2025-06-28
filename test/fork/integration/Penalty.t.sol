@@ -96,7 +96,7 @@ contract PenaltyIntegrationTest is
         });
     }
 
-    function test_penalty() public assertInvariants {
+    function test_elRewardsStealingPenalty() public assertInvariants {
         uint256 amount = 1 ether;
 
         uint256 amountShares = lido.getSharesByPooledEth(amount);
