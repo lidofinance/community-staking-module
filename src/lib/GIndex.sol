@@ -5,17 +5,7 @@ pragma solidity 0.8.24;
 
 type GIndex is bytes32;
 
-using {
-    isRoot,
-    isParentOf,
-    index,
-    width,
-    shr,
-    shl,
-    concat,
-    unwrap,
-    pow
-} for GIndex global;
+using { isRoot, index, width, shr, shl, concat, unwrap, pow } for GIndex global;
 
 error IndexOutOfRange();
 
@@ -89,25 +79,6 @@ function concat(GIndex lhs, GIndex rhs) pure returns (GIndex) {
             (index(lhs) << rhsMSbIndex) | (index(rhs) ^ (1 << rhsMSbIndex)),
             pow(rhs)
         );
-}
-
-function isParentOf(GIndex self, GIndex child) pure returns (bool) {
-    uint256 parentIndex = index(self);
-    uint256 childIndex = index(child);
-
-    if (parentIndex >= childIndex) {
-        return false;
-    }
-
-    while (childIndex > 0) {
-        if (childIndex == parentIndex) {
-            return true;
-        }
-
-        childIndex = childIndex >> 1;
-    }
-
-    return false;
 }
 
 /// @dev From Solady LibBit, see https://github.com/Vectorized/solady/blob/main/src/utils/LibBit.sol.

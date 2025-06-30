@@ -26,8 +26,8 @@ main(
     exitEpoch: 28736,
     withdrawableEpoch: 28961,
   },
-  ssz.capella,
   ssz.deneb,
+  ssz.electra,
 ).catch();
 
 /**
@@ -42,7 +42,7 @@ main(
  * @param {number} opts.exitEpoch,
  * @param {number} opts.withdrawableEpoch,
  */
-async function main(opts, PrevFork = ssz.deneb, NextFork = ssz.deneb) {
+async function main(opts, PrevFork = ssz.electra, NextFork = ssz.electra) {
   const Withdrawal = PrevFork.BeaconBlock.getPathInfo([
     "body",
     "executionPayload",
@@ -104,8 +104,12 @@ async function main(opts, PrevFork = ssz.deneb, NextFork = ssz.deneb) {
 
   const stateInFuture = NextFork.BeaconState.defaultView();
   stateInFuture.historicalSummaries.push(stateInFuture.historicalSummaries.type.defaultView());
-  // HACK: Simplify a little bit and store our block's root as `blockSummaryRoot`.
-  stateInFuture.historicalSummaries.get(0).blockSummaryRoot = block.hashTreeRoot();
+
+  const BlockRoots = NextFork.BeaconState.getPathInfo(["blockRoots"]).type;
+  const blockRoots = BlockRoots.defaultView();
+  blockRoots.set(block.slot % 8192, block.hashTreeRoot());
+
+  stateInFuture.historicalSummaries.get(0).blockSummaryRoot = blockRoots.hashTreeRoot();
   blockInFuture.stateRoot = stateInFuture.hashTreeRoot();
   blockInFuture.parentRoot = blockInFuture.hashTreeRoot(); // This action changes the `blockInFuture`'s root.
 
@@ -138,20 +142,19 @@ async function main(opts, PrevFork = ssz.deneb, NextFork = ssz.deneb) {
   }
 
   {
-    const { gindex } = NextFork.BeaconState.getPathInfo([
-      "historicalSummaries",
-      0,
-      "blockSummaryRoot",
-    ]);
-    proofs.historicalRoot = createProof(stateInFuture.node, {
+    const nav = stateInFuture.type.getPathInfo(["historicalSummaries", 0, "blockSummaryRoot"]);
+    const clone = stateInFuture.clone();
+    clone.tree.setNode(nav.gindex, blockRoots.node);
+
+    proofs.historicalRoot = createProof(clone.node, {
       type: ProofType.single,
-      gindex,
+      gindex: concatGindices([nav.gindex, BlockRoots.getPropertyGindex(block.slot % 8192)]),
     });
   }
 
   console.log({
-    block: toHeaderJson(block),
-    blockInFuture: toHeaderJson(blockInFuture),
+    oldBlock: toHeaderJson(block),
+    newBlock: toHeaderJson(blockInFuture),
     validator: { ...Validator.toJson(validator), index: opts.validatorIndex },
     validatorProof: proofs.validator?.witnesses.map(toHex),
     withdrawal: { ...Withdrawal.toJson(wd), offset: opts.withdrawalOffset },

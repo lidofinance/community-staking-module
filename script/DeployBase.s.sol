@@ -50,10 +50,13 @@ struct DeployParams {
     address[] oracleMembers;
     uint256 hashConsensusQuorum;
     // Verifier
-    GIndex gIHistoricalSummaries;
+    uint256 slotsPerHistoricalRoot;
     GIndex gIFirstWithdrawal;
     GIndex gIFirstValidator;
-    uint256 verifierSupportedEpoch;
+    GIndex gIFirstHistoricalSummary;
+    GIndex gIFirstBlockRootInSummary;
+    uint256 verifierFirstSupportedSlot;
+    uint256 capellaSlot;
     // Accounting
     uint256[2][] defaultBondCurve;
     uint256[2][] legacyEaBondCurve;
@@ -219,20 +222,26 @@ abstract contract DeployBase is Script {
                 withdrawalAddress: locator.withdrawalVault(),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
+                slotsPerHistoricalRoot: uint64(config.slotsPerHistoricalRoot),
                 gindices: ICSVerifier.GIndices({
                     gIFirstWithdrawalPrev: config.gIFirstWithdrawal,
                     gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
                     gIFirstValidatorPrev: config.gIFirstValidator,
                     gIFirstValidatorCurr: config.gIFirstValidator,
-                    gIHistoricalSummariesPrev: config.gIHistoricalSummaries,
-                    gIHistoricalSummariesCurr: config.gIHistoricalSummaries
+                    gIFirstHistoricalSummaryPrev: config
+                        .gIFirstHistoricalSummary,
+                    gIFirstHistoricalSummaryCurr: config
+                        .gIFirstHistoricalSummary,
+                    gIFirstBlockRootInSummaryPrev: config
+                        .gIFirstBlockRootInSummary,
+                    gIFirstBlockRootInSummaryCurr: config
+                        .gIFirstBlockRootInSummary
                 }),
                 firstSupportedSlot: Slot.wrap(
-                    uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
+                    uint64(config.verifierFirstSupportedSlot)
                 ),
-                pivotSlot: Slot.wrap(
-                    uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
-                ),
+                pivotSlot: Slot.wrap(uint64(config.verifierFirstSupportedSlot)),
+                capellaSlot: Slot.wrap(uint64(config.capellaSlot)),
                 admin: deployer
             });
 

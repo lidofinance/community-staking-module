@@ -41,6 +41,10 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
 
     uint64 public immutable SLOTS_PER_EPOCH;
 
+    /// @dev Count of historical roots per accumulator.
+    /// @dev See https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters
+    uint64 public immutable SLOTS_PER_HISTORICAL_ROOT;
+
     /// @dev This index is relative to a state like: `BeaconState.latest_execution_payload_header.withdrawals[0]`.
     GIndex public immutable GI_FIRST_WITHDRAWAL_PREV;
 
@@ -53,11 +57,17 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
     /// @dev This index is relative to a state like: `BeaconState.validators[0]`.
     GIndex public immutable GI_FIRST_VALIDATOR_CURR;
 
-    /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
-    GIndex public immutable GI_HISTORICAL_SUMMARIES_PREV;
+    /// @dev This index is relative to a state like: `BeaconState.historical_summaries[0]`.
+    GIndex public immutable GI_FIRST_HISTORICAL_SUMMARY_PREV;
 
-    /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
-    GIndex public immutable GI_HISTORICAL_SUMMARIES_CURR;
+    /// @dev This index is relative to a state like: `BeaconState.historical_summaries[0]`.
+    GIndex public immutable GI_FIRST_HISTORICAL_SUMMARY_CURR;
+
+    /// @dev This index is relative to HistoricalSummary like: HistoricalSummary.blockRoots[0].
+    GIndex public immutable GI_FIRST_BLOCK_ROOT_IN_SUMMARY_PREV;
+
+    /// @dev This index is relative to HistoricalSummary like: HistoricalSummary.blockRoots[0].
+    GIndex public immutable GI_FIRST_BLOCK_ROOT_IN_SUMMARY_CURR;
 
     /// @dev The very first slot the verifier is supposed to accept proofs for.
     Slot public immutable FIRST_SUPPORTED_SLOT;
@@ -65,10 +75,13 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
     /// @dev The first slot of the currently compatible fork.
     Slot public immutable PIVOT_SLOT;
 
+    /// @dev Historical summaries started accumulating from the slot of Capella fork.
+    Slot public immutable CAPELLA_SLOT;
+
     /// @dev An address withdrawals are supposed to happen to (Lido withdrawal credentials).
     address public immutable WITHDRAWAL_ADDRESS;
 
-    /// @dev Staking module contract
+    /// @dev Staking module contract.
     ICSModule public immutable MODULE;
 
     /// @dev The previous and current forks can be essentially the same.
@@ -76,9 +89,11 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
         address withdrawalAddress,
         address module,
         uint64 slotsPerEpoch,
+        uint64 slotsPerHistoricalRoot,
         GIndices memory gindices,
         Slot firstSupportedSlot,
         Slot pivotSlot,
+        Slot capellaSlot,
         address admin
     ) {
         if (withdrawalAddress == address(0)) {
@@ -97,14 +112,23 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
             revert InvalidChainConfig();
         }
 
+        if (slotsPerHistoricalRoot == 0) {
+            revert InvalidChainConfig();
+        }
+
         if (firstSupportedSlot > pivotSlot) {
             revert InvalidPivotSlot();
+        }
+
+        if (capellaSlot > firstSupportedSlot) {
+            revert InvalidCapellaSlot();
         }
 
         WITHDRAWAL_ADDRESS = withdrawalAddress;
         MODULE = ICSModule(module);
 
         SLOTS_PER_EPOCH = slotsPerEpoch;
+        SLOTS_PER_HISTORICAL_ROOT = slotsPerHistoricalRoot;
 
         GI_FIRST_WITHDRAWAL_PREV = gindices.gIFirstWithdrawalPrev;
         GI_FIRST_WITHDRAWAL_CURR = gindices.gIFirstWithdrawalCurr;
@@ -112,11 +136,19 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
         GI_FIRST_VALIDATOR_PREV = gindices.gIFirstValidatorPrev;
         GI_FIRST_VALIDATOR_CURR = gindices.gIFirstValidatorCurr;
 
-        GI_HISTORICAL_SUMMARIES_PREV = gindices.gIHistoricalSummariesPrev;
-        GI_HISTORICAL_SUMMARIES_CURR = gindices.gIHistoricalSummariesCurr;
+        GI_FIRST_HISTORICAL_SUMMARY_PREV = gindices
+            .gIFirstHistoricalSummaryPrev;
+        GI_FIRST_HISTORICAL_SUMMARY_CURR = gindices
+            .gIFirstHistoricalSummaryCurr;
+
+        GI_FIRST_BLOCK_ROOT_IN_SUMMARY_PREV = gindices
+            .gIFirstBlockRootInSummaryPrev;
+        GI_FIRST_BLOCK_ROOT_IN_SUMMARY_CURR = gindices
+            .gIFirstBlockRootInSummaryCurr;
 
         FIRST_SUPPORTED_SLOT = firstSupportedSlot;
         PIVOT_SLOT = pivotSlot;
+        CAPELLA_SLOT = capellaSlot;
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -201,21 +233,14 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
             }
         }
 
-        // It's up to a user to provide a valid generalized index of a historical block root in a summaries list.
-        // Ensuring the provided generalized index is for a node somewhere below the historical_summaries root.
-        if (
-            !_getHistoricalSummariesGI(beaconBlock.header.slot).isParentOf(
-                oldBlock.rootGIndex
-            )
-        ) {
-            revert InvalidGIndex();
-        }
-
         SSZ.verifyProof({
             proof: oldBlock.proof,
             root: beaconBlock.header.stateRoot,
             leaf: oldBlock.header.hashTreeRoot(),
-            gI: oldBlock.rootGIndex
+            gI: _getHistoricalBlockRootGI(
+                beaconBlock.header.slot,
+                oldBlock.header.slot
+            )
         });
 
         bytes memory pubkey = MODULE.getSigningKeys(
@@ -356,13 +381,25 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
         return gI.shr(offset);
     }
 
-    function _getHistoricalSummariesGI(
-        Slot stateSlot
-    ) internal view returns (GIndex) {
-        return
-            stateSlot < PIVOT_SLOT
-                ? GI_HISTORICAL_SUMMARIES_PREV
-                : GI_HISTORICAL_SUMMARIES_CURR;
+    function _getHistoricalBlockRootGI(
+        Slot recentSlot,
+        Slot targetSlot
+    ) internal view returns (GIndex gI) {
+        uint256 targetSlotShifted = targetSlot.unwrap() - CAPELLA_SLOT.unwrap();
+        uint256 summaryIndex = targetSlotShifted / SLOTS_PER_HISTORICAL_ROOT;
+        uint256 rootIndex = targetSlot.unwrap() % SLOTS_PER_HISTORICAL_ROOT;
+
+        gI = recentSlot < PIVOT_SLOT
+            ? GI_FIRST_HISTORICAL_SUMMARY_PREV
+            : GI_FIRST_HISTORICAL_SUMMARY_CURR;
+
+        gI = gI.shr(summaryIndex); // historicalSummaries[summaryIndex]
+        gI = gI.concat(
+            targetSlot < PIVOT_SLOT
+                ? GI_FIRST_BLOCK_ROOT_IN_SUMMARY_PREV
+                : GI_FIRST_BLOCK_ROOT_IN_SUMMARY_CURR
+        ); // historicalSummaries[summaryIndex].blockRoots[0]
+        gI = gI.shr(rootIndex); // historicalSummaries[summaryIndex].blockRoots[rootIndex]
     }
 
     // From HashConsensus contract.

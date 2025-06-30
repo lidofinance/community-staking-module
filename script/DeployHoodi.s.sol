@@ -38,10 +38,13 @@ contract DeployHoodi is DeployBase {
         config.hashConsensusQuorum = 6;
 
         // Verifier
+        config.slotsPerHistoricalRoot = 8192; // @see https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters
         config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_ELECTRA;
         config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_ELECTRA;
-        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_ELECTRA;
-        config.verifierSupportedEpoch = 2048;
+        config.gIFirstHistoricalSummary = GIndicies.FIRST_HISTORICAL_SUMMARY_ELECTRA; // prettier-ignore
+        config.gIFirstBlockRootInSummary = GIndicies.FIRST_BLOCK_ROOT_IN_SUMMARY_ELECTRA; // prettier-ignore
+        config.verifierFirstSupportedSlot = 2048 * config.slotsPerEpoch; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L41
+        config.capellaSlot = 0; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L33
 
         // Accounting
         // 2.4 -> 1.3

@@ -36,10 +36,13 @@ contract DeployMainnet is DeployBase {
         config.hashConsensusQuorum = 5;
 
         // Verifier
+        config.slotsPerHistoricalRoot = 8192; // @see https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters
         config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_ELECTRA;
         config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_ELECTRA;
-        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_ELECTRA;
-        config.verifierSupportedEpoch = 364032; // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7600.md#activation
+        config.gIFirstHistoricalSummary = GIndicies.FIRST_HISTORICAL_SUMMARY_ELECTRA; // prettier-ignore
+        config.gIFirstBlockRootInSummary = GIndicies.FIRST_BLOCK_ROOT_IN_SUMMARY_ELECTRA; // prettier-ignore
+        config.verifierFirstSupportedSlot = 364032 * config.slotsPerEpoch; // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7600.md#activation
+        config.capellaSlot = 194048 * config.slotsPerEpoch; // @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L50
 
         // Accounting
         // 2.4 -> 1.3
