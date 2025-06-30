@@ -8,6 +8,8 @@ deploy_script_name := if chain == "mainnet" {
     "DeployLocalDevNet"
 } else if chain == "hoodi" {
     "DeployHoodi"
+} else if chain == "holesky" {
+    "DeployHolesky"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -16,6 +18,8 @@ deploy_implementations_script_name := if chain == "mainnet" {
     "DeployImplementationsMainnet"
 } else if chain == "hoodi" {
     "DeployImplementationsHoodi"
+} else if chain == "holesky" {
+    "DeployImplementationsHolesky"
 } else if chain == "local-devnet" {
     "SCRIPT_IS_NOT_DEFINED"
 } else {
@@ -28,6 +32,8 @@ deploy_config_path := if chain == "mainnet" {
     "artifacts/local-devnet/deploy-local-devnet.json"
 } else if chain == "hoodi" {
     "artifacts/hoodi/deploy-hoodi.json"
+} else if chain == "holesky" {
+    "artifacts/holesky/deploy-holesky.json"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -222,7 +228,7 @@ _deploy-live-no-confirm *args:
 _deploy-impl *args:
     FOUNDRY_PROFILE=deploy \
         forge script {{deploy_impls_script_path}} --sig="deploy(string,string)" \
-            --rpc-url {{anvil_rpc_url}} --slow {{args}} \
+            --rpc-url ${RPC_URL} {{args}} \
             -- {{deploy_config_path}} `git rev-parse HEAD`
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
@@ -305,10 +311,11 @@ test-v2-only-deploy *args:
     just make-fork --silent &
     while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
 
+    export RPC_URL={{anvil_rpc_url}}
+
     just _deploy-impl --broadcast --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
 
     export DEPLOY_CONFIG=./artifacts/local/upgrade-{{chain}}.json
-    export RPC_URL={{anvil_rpc_url}}
 
     just test-deployment-v2-only-scratch {{args}}
 

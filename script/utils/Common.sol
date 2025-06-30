@@ -10,7 +10,7 @@ library CommonScriptUtils {
     function arraysToKeyIndexValueIntervals(
         uint256[2][] memory data
     )
-        public
+        internal
         pure
         returns (ICSParametersRegistry.KeyNumberValueInterval[] memory)
     {
@@ -29,7 +29,7 @@ library CommonScriptUtils {
 
     function arraysToBondCurveIntervalsInputs(
         uint256[2][] memory data
-    ) public pure returns (ICSBondCurve.BondCurveIntervalInput[] memory) {
+    ) internal pure returns (ICSBondCurve.BondCurveIntervalInput[] memory) {
         ICSBondCurve.BondCurveIntervalInput[]
             memory bondCurveInputs = new ICSBondCurve.BondCurveIntervalInput[](
                 data.length
