@@ -70,8 +70,6 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: withdrawalAddress,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0xfff0, 4),
-            gIHistoricalSummariesCurr: pack(0xffff, 4),
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c1, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -83,14 +81,6 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
         assertEq(address(verifier.WITHDRAWAL_ADDRESS()), withdrawalAddress);
         assertEq(address(verifier.MODULE()), address(module));
         assertEq(verifier.SLOTS_PER_EPOCH(), 32);
-        assertEq(
-            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_PREV()),
-            GIndex.unwrap(pack(0xfff0, 4))
-        );
-        assertEq(
-            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_CURR()),
-            GIndex.unwrap(pack(0xffff, 4))
-        );
         assertEq(
             GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL_PREV()),
             GIndex.unwrap(pack(0xe1c0, 4))
@@ -123,8 +113,6 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: nextAddress(),
             module: address(module),
             slotsPerEpoch: 0,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -140,8 +128,6 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: nextAddress(),
             module: address(0),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -157,8 +143,6 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: address(0),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -177,8 +161,6 @@ contract CSVerifierSlashingTest is CSVerifierTestBase {
             withdrawalAddress: nextAddress("WITHDRAWAL_ADDRESS"),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -197,8 +179,6 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),

@@ -20,8 +20,6 @@ struct Config {
     GIndex gIFirstWithdrawalCurr;
     GIndex gIFirstValidatorPrev;
     GIndex gIFirstValidatorCurr;
-    GIndex gIHistoricalSummariesPrev;
-    GIndex gIHistoricalSummariesCurr;
     Slot firstSupportedSlot;
     Slot pivotSlot;
     uint64 slotsPerEpoch;
@@ -66,8 +64,6 @@ abstract contract DeployCSVerifier is Script {
             gIFirstWithdrawalCurr: config.gIFirstWithdrawalCurr,
             gIFirstValidatorPrev: config.gIFirstValidatorPrev,
             gIFirstValidatorCurr: config.gIFirstValidatorCurr,
-            gIHistoricalSummariesPrev: config.gIHistoricalSummariesPrev,
-            gIHistoricalSummariesCurr: config.gIHistoricalSummariesCurr,
             firstSupportedSlot: config.firstSupportedSlot,
             pivotSlot: config.pivotSlot
         });
@@ -102,8 +98,6 @@ contract DeployCSVerifierHolesky is DeployCSVerifier {
             gIFirstWithdrawalCurr: FIRST_WITHDRAWAL_ELECTRA,
             gIFirstValidatorPrev: FIRST_VALIDATOR_DENEB,
             gIFirstValidatorCurr: FIRST_VALIDATOR_ELECTRA,
-            gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
-            gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(950272), // 29_696 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L38
             pivotSlot: Slot.wrap(3710976), // 115_968 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L42
             chainName: "holesky"
@@ -121,8 +115,6 @@ contract DeployCSVerifierHoodi is DeployCSVerifier {
             gIFirstWithdrawalCurr: FIRST_WITHDRAWAL_ELECTRA,
             gIFirstValidatorPrev: FIRST_VALIDATOR_DENEB,
             gIFirstValidatorCurr: FIRST_VALIDATOR_ELECTRA,
-            gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
-            gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(0), // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L37
             pivotSlot: Slot.wrap(65536), // 2048 * 32, @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L41
             chainName: "hoodi"
@@ -140,8 +132,6 @@ contract DeployCSVerifierMainnet is DeployCSVerifier {
             gIFirstWithdrawalCurr: FIRST_WITHDRAWAL_ELECTRA,
             gIFirstValidatorPrev: FIRST_VALIDATOR_DENEB,
             gIFirstValidatorCurr: FIRST_VALIDATOR_ELECTRA,
-            gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
-            gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(8626176), // 269_568 * 32, @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L52
             pivotSlot: Slot.wrap(11649024), // 364032 * 32 https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7600.md#activation
             chainName: "mainnet"
@@ -159,8 +149,6 @@ contract DeployCSVerifierDevNet is DeployCSVerifier {
             gIFirstWithdrawalCurr: FIRST_WITHDRAWAL_ELECTRA,
             gIFirstValidatorPrev: FIRST_VALIDATOR_DENEB,
             gIFirstValidatorCurr: FIRST_VALIDATOR_ELECTRA,
-            gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
-            gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(0),
             pivotSlot: Slot.wrap(
                 uint64(vm.envUint("DEVNET_ELECTRA_EPOCH")) * 32

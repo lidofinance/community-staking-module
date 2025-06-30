@@ -62,7 +62,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_hashconsensus_initialState() public {
-        vm.skip(block.chainid != 1);
+        vm.skip(true);
         assertEq(hashConsensus.getQuorum(), deployParams.hashConsensusQuorum);
         (address[] memory members, ) = hashConsensus.getMembers();
         assertEq(

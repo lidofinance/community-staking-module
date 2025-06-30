@@ -74,8 +74,6 @@ contract DeployHoleskyImplementations is DeployHolesky {
                 gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
                 gIFirstValidatorPrev: config.gIFirstValidator,
                 gIFirstValidatorCurr: config.gIFirstValidator,
-                gIHistoricalSummariesPrev: config.gIHistoricalSummaries,
-                gIHistoricalSummariesCurr: config.gIHistoricalSummaries,
                 firstSupportedSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
                 ),

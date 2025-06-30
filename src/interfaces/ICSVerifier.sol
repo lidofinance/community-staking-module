@@ -43,26 +43,9 @@ interface ICSVerifier {
         bytes32[] validatorProof;
     }
 
-    // A witness for a block header which root is accessible via `historical_summaries` field.
-    struct HistoricalHeaderWitness {
-        BeaconBlockHeader header;
-        GIndex rootGIndex;
-        bytes32[] proof;
-    }
-
     /// @notice `witness` is a withdrawal witness against the `beaconBlock`'s state root.
     function processWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
-        WithdrawalWitness calldata witness,
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external;
-
-    /// @notice `oldHeader` is a beacon block header witness against the `beaconBlock`'s state root.
-    /// @notice `witness` is a withdrawal witness against the `oldHeader`'s state root.
-    function processHistoricalWithdrawalProof(
-        ProvableBeaconBlockHeader calldata beaconBlock,
-        HistoricalHeaderWitness calldata oldBlock,
         WithdrawalWitness calldata witness,
         uint256 nodeOperatorId,
         uint256 keyIndex

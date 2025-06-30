@@ -47,12 +47,6 @@ contract CSVerifier is ICSVerifier {
     /// @dev This index is relative to a state like: `BeaconState.validators[0]`.
     GIndex public immutable GI_FIRST_VALIDATOR_CURR;
 
-    /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
-    GIndex public immutable GI_HISTORICAL_SUMMARIES_PREV;
-
-    /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
-    GIndex public immutable GI_HISTORICAL_SUMMARIES_CURR;
-
     /// @dev The very first slot the verifier is supposed to accept proofs for.
     Slot public immutable FIRST_SUPPORTED_SLOT;
 
@@ -86,8 +80,6 @@ contract CSVerifier is ICSVerifier {
         GIndex gIFirstWithdrawalCurr,
         GIndex gIFirstValidatorPrev,
         GIndex gIFirstValidatorCurr,
-        GIndex gIHistoricalSummariesPrev,
-        GIndex gIHistoricalSummariesCurr,
         Slot firstSupportedSlot,
         Slot pivotSlot
     ) {
@@ -107,9 +99,6 @@ contract CSVerifier is ICSVerifier {
 
         GI_FIRST_VALIDATOR_PREV = gIFirstValidatorPrev;
         GI_FIRST_VALIDATOR_CURR = gIFirstValidatorCurr;
-
-        GI_HISTORICAL_SUMMARIES_PREV = gIHistoricalSummariesPrev;
-        GI_HISTORICAL_SUMMARIES_CURR = gIHistoricalSummariesCurr;
 
         FIRST_SUPPORTED_SLOT = firstSupportedSlot;
         PIVOT_SLOT = pivotSlot;
@@ -149,75 +138,6 @@ contract CSVerifier is ICSVerifier {
             witness: witness,
             stateSlot: beaconBlock.header.slot,
             stateRoot: beaconBlock.header.stateRoot,
-            pubkey: pubkey
-        });
-
-        MODULE.submitWithdrawal(
-            nodeOperatorId,
-            keyIndex,
-            withdrawalAmount,
-            witness.slashed
-        );
-    }
-
-    /// @notice Verify withdrawal proof against historical summaries data and report withdrawal to the module for valid proofs
-    /// @param beaconBlock Beacon block header
-    /// @param oldBlock Historical block header witness
-    /// @param witness Withdrawal witness
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the validator key in the Node Operator's key storage
-    function processHistoricalWithdrawalProof(
-        ProvableBeaconBlockHeader calldata beaconBlock,
-        HistoricalHeaderWitness calldata oldBlock,
-        WithdrawalWitness calldata witness,
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external {
-        if (beaconBlock.header.slot < FIRST_SUPPORTED_SLOT) {
-            revert UnsupportedSlot(beaconBlock.header.slot);
-        }
-
-        if (oldBlock.header.slot < FIRST_SUPPORTED_SLOT) {
-            revert UnsupportedSlot(oldBlock.header.slot);
-        }
-
-        {
-            bytes32 trustedHeaderRoot = _getParentBlockRoot(
-                beaconBlock.rootsTimestamp
-            );
-            bytes32 headerRoot = beaconBlock.header.hashTreeRoot();
-            if (trustedHeaderRoot != headerRoot) {
-                revert InvalidBlockHeader();
-            }
-        }
-
-        // It's up to a user to provide a valid generalized index of a historical block root in a summaries list.
-        // Ensuring the provided generalized index is for a node somewhere below the historical_summaries root.
-        if (
-            !_getHistoricalSummariesGI(beaconBlock.header.slot).isParentOf(
-                oldBlock.rootGIndex
-            )
-        ) {
-            revert InvalidGIndex();
-        }
-
-        SSZ.verifyProof({
-            proof: oldBlock.proof,
-            root: beaconBlock.header.stateRoot,
-            leaf: oldBlock.header.hashTreeRoot(),
-            gI: oldBlock.rootGIndex
-        });
-
-        bytes memory pubkey = MODULE.getSigningKeys(
-            nodeOperatorId,
-            keyIndex,
-            1
-        );
-
-        uint256 withdrawalAmount = _processWithdrawalProof({
-            witness: witness,
-            stateSlot: oldBlock.header.slot,
-            stateRoot: oldBlock.header.stateRoot,
             pubkey: pubkey
         });
 
@@ -341,15 +261,6 @@ contract CSVerifier is ICSVerifier {
             ? GI_FIRST_WITHDRAWAL_PREV
             : GI_FIRST_WITHDRAWAL_CURR;
         return gI.shr(offset);
-    }
-
-    function _getHistoricalSummariesGI(
-        Slot stateSlot
-    ) internal view returns (GIndex) {
-        return
-            stateSlot < PIVOT_SLOT
-                ? GI_HISTORICAL_SUMMARIES_PREV
-                : GI_HISTORICAL_SUMMARIES_CURR;
     }
 
     // From HashConsensus contract.
