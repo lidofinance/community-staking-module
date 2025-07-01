@@ -2,10 +2,7 @@
 
 Consists of the following parts:
 
-## CSM Hoodi Sybil Analysis
-
-Source: private
-At: 20th of June 2025
+- Private CSM Hoodi Sybil Analysis (20th of June 2025)
 
 ## How to build
 
