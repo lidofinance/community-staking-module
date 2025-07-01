@@ -86,13 +86,23 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
 
         ICSBondCurve.BondCurveIntervalInput[][]
-            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](2);
+            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](
+                2 + deployParams.extraBondCurves.length
+            );
         bondCurves[0] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
             deployParams.defaultBondCurve
         );
         bondCurves[1] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
             deployParams.legacyEaBondCurve
         );
+        if (deployParams.extraBondCurves.length > 0) {
+            for (uint256 i = 0; i < deployParams.extraBondCurves.length; i++) {
+                bondCurves[i + 2] = CommonScriptUtils
+                    .arraysToBondCurveIntervalsInputs(
+                        deployParams.extraBondCurves[i]
+                    );
+            }
+        }
 
         ICSBondCurve.BondCurveIntervalInput[]
             memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils

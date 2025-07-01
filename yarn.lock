@@ -674,7 +674,7 @@ __metadata:
     "@openzeppelin/contracts-upgradeable": "npm:5.0.2"
     "@openzeppelin/merkle-tree": "npm:^1.0.8"
     ds-test: "https://github.com/dapphub/ds-test"
-    forge-std: "https://github.com/foundry-rs/forge-std.git#v1.9.5"
+    forge-std: "https://github.com/foundry-rs/forge-std.git#v1.9.6"
     husky: "npm:^8.0.3"
     lint-staged: "npm:^15.4.3"
     prettier: "npm:^3.0.3"
@@ -889,10 +889,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"forge-std@https://github.com/foundry-rs/forge-std.git#v1.9.5":
-  version: 1.9.5
-  resolution: "forge-std@https://github.com/foundry-rs/forge-std.git#commit=b93cf4bc34ff214c099dc970b153f85ade8c9f66"
-  checksum: 10c0/8ac6460e4e27993b2695aee5370742f98b61807ea9311f0fc685e8e365b2555a1d6c8062f4d70316d1c6e14e138100dcfe81368b02d4915db7b0c8653860a483
+"forge-std@https://github.com/foundry-rs/forge-std.git#v1.9.6":
+  version: 1.9.6
+  resolution: "forge-std@https://github.com/foundry-rs/forge-std.git#commit=3b20d60d14b343ee4f908cb8079495c07f5e8981"
+  checksum: 10c0/bab2678075048dc43c526513ef5920254c1faca484f88ffe53a01b1a2da1b1d332a9d0146f2813310da0beeb47394c18f675816b81956071c77b335f2de45119
   languageName: node
   linkType: hard
 
