@@ -4,7 +4,7 @@
 pragma solidity 0.8.24;
 
 import { DeployBase } from "./DeployBase.s.sol";
-import { GIndicies } from "./constants/GIndicies.sol";
+import { GIndices } from "./constants/GIndices.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 contract DeployHoodi is DeployBase {
@@ -39,10 +39,10 @@ contract DeployHoodi is DeployBase {
 
         // Verifier
         config.slotsPerHistoricalRoot = 8192; // @see https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters
-        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_ELECTRA;
-        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_ELECTRA;
-        config.gIFirstHistoricalSummary = GIndicies.FIRST_HISTORICAL_SUMMARY_ELECTRA; // prettier-ignore
-        config.gIFirstBlockRootInSummary = GIndicies.FIRST_BLOCK_ROOT_IN_SUMMARY_ELECTRA; // prettier-ignore
+        config.gIFirstWithdrawal = GIndices.FIRST_WITHDRAWAL_ELECTRA;
+        config.gIFirstValidator = GIndices.FIRST_VALIDATOR_ELECTRA;
+        config.gIFirstHistoricalSummary = GIndices.FIRST_HISTORICAL_SUMMARY_ELECTRA; // prettier-ignore
+        config.gIFirstBlockRootInSummary = GIndices.FIRST_BLOCK_ROOT_IN_SUMMARY_ELECTRA; // prettier-ignore
         config.verifierFirstSupportedSlot = 2048 * config.slotsPerEpoch; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L41
         config.capellaSlot = 0; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L33
 

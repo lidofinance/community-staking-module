@@ -13,7 +13,7 @@ import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { JsonObj, Json } from "./utils/Json.sol";
-import { GIndicies } from "./constants/GIndicies.sol";
+import { GIndices } from "./constants/GIndices.sol";
 
 struct Config {
     address withdrawalVault;
@@ -95,17 +95,17 @@ contract DeployCSVerifierHolesky is DeployCSVerifier {
             module: 0x4562c3e63c2e586cD1651B958C22F88135aCAd4f,
             slotsPerEpoch: 32,
             slotsPerHistoricalRoot: 8192, // @see https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters
-            gIFirstWithdrawalPrev: GIndicies.FIRST_WITHDRAWAL_DENEB,
-            gIFirstWithdrawalCurr: GIndicies.FIRST_WITHDRAWAL_ELECTRA,
-            gIFirstValidatorPrev: GIndicies.FIRST_VALIDATOR_DENEB,
-            gIFirstValidatorCurr: GIndicies.FIRST_VALIDATOR_ELECTRA,
-            gIFirstHistoricalSummaryPrev: GIndicies
+            gIFirstWithdrawalPrev: GIndices.FIRST_WITHDRAWAL_DENEB,
+            gIFirstWithdrawalCurr: GIndices.FIRST_WITHDRAWAL_ELECTRA,
+            gIFirstValidatorPrev: GIndices.FIRST_VALIDATOR_DENEB,
+            gIFirstValidatorCurr: GIndices.FIRST_VALIDATOR_ELECTRA,
+            gIFirstHistoricalSummaryPrev: GIndices
                 .FIRST_HISTORICAL_SUMMARY_DENEB,
-            gIFirstHistoricalSummaryCurr: GIndicies
+            gIFirstHistoricalSummaryCurr: GIndices
                 .FIRST_HISTORICAL_SUMMARY_ELECTRA,
-            gIFirstBlockRootInSummaryPrev: GIndicies
+            gIFirstBlockRootInSummaryPrev: GIndices
                 .FIRST_BLOCK_ROOT_IN_SUMMARY_DENEB,
-            gIFirstBlockRootInSummaryCurr: GIndicies
+            gIFirstBlockRootInSummaryCurr: GIndices
                 .FIRST_BLOCK_ROOT_IN_SUMMARY_ELECTRA,
             firstSupportedSlot: Slot.wrap(950272), // 29_696 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L38
             pivotSlot: Slot.wrap(3710976), // 115_968 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L42
@@ -123,17 +123,17 @@ contract DeployCSVerifierHoodi is DeployCSVerifier {
             module: 0x79CEf36D84743222f37765204Bec41E92a93E59d,
             slotsPerEpoch: 32,
             slotsPerHistoricalRoot: 8192, // @see https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters
-            gIFirstWithdrawalPrev: GIndicies.FIRST_WITHDRAWAL_DENEB,
-            gIFirstWithdrawalCurr: GIndicies.FIRST_WITHDRAWAL_ELECTRA,
-            gIFirstValidatorPrev: GIndicies.FIRST_VALIDATOR_DENEB,
-            gIFirstValidatorCurr: GIndicies.FIRST_VALIDATOR_ELECTRA,
-            gIFirstHistoricalSummaryPrev: GIndicies
+            gIFirstWithdrawalPrev: GIndices.FIRST_WITHDRAWAL_DENEB,
+            gIFirstWithdrawalCurr: GIndices.FIRST_WITHDRAWAL_ELECTRA,
+            gIFirstValidatorPrev: GIndices.FIRST_VALIDATOR_DENEB,
+            gIFirstValidatorCurr: GIndices.FIRST_VALIDATOR_ELECTRA,
+            gIFirstHistoricalSummaryPrev: GIndices
                 .FIRST_HISTORICAL_SUMMARY_DENEB,
-            gIFirstHistoricalSummaryCurr: GIndicies
+            gIFirstHistoricalSummaryCurr: GIndices
                 .FIRST_HISTORICAL_SUMMARY_ELECTRA,
-            gIFirstBlockRootInSummaryPrev: GIndicies
+            gIFirstBlockRootInSummaryPrev: GIndices
                 .FIRST_BLOCK_ROOT_IN_SUMMARY_DENEB,
-            gIFirstBlockRootInSummaryCurr: GIndicies
+            gIFirstBlockRootInSummaryCurr: GIndices
                 .FIRST_BLOCK_ROOT_IN_SUMMARY_ELECTRA,
             firstSupportedSlot: Slot.wrap(0), // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L37
             pivotSlot: Slot.wrap(65536), // 2048 * 32, @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L41
@@ -151,17 +151,17 @@ contract DeployCSVerifierMainnet is DeployCSVerifier {
             module: 0xdA7dE2ECdDfccC6c3AF10108Db212ACBBf9EA83F,
             slotsPerEpoch: 32,
             slotsPerHistoricalRoot: 8192, // @see https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters
-            gIFirstWithdrawalPrev: GIndicies.FIRST_WITHDRAWAL_DENEB,
-            gIFirstWithdrawalCurr: GIndicies.FIRST_WITHDRAWAL_ELECTRA,
-            gIFirstValidatorPrev: GIndicies.FIRST_VALIDATOR_DENEB,
-            gIFirstValidatorCurr: GIndicies.FIRST_VALIDATOR_ELECTRA,
-            gIFirstHistoricalSummaryPrev: GIndicies
+            gIFirstWithdrawalPrev: GIndices.FIRST_WITHDRAWAL_DENEB,
+            gIFirstWithdrawalCurr: GIndices.FIRST_WITHDRAWAL_ELECTRA,
+            gIFirstValidatorPrev: GIndices.FIRST_VALIDATOR_DENEB,
+            gIFirstValidatorCurr: GIndices.FIRST_VALIDATOR_ELECTRA,
+            gIFirstHistoricalSummaryPrev: GIndices
                 .FIRST_HISTORICAL_SUMMARY_DENEB,
-            gIFirstHistoricalSummaryCurr: GIndicies
+            gIFirstHistoricalSummaryCurr: GIndices
                 .FIRST_HISTORICAL_SUMMARY_ELECTRA,
-            gIFirstBlockRootInSummaryPrev: GIndicies
+            gIFirstBlockRootInSummaryPrev: GIndices
                 .FIRST_BLOCK_ROOT_IN_SUMMARY_DENEB,
-            gIFirstBlockRootInSummaryCurr: GIndicies
+            gIFirstBlockRootInSummaryCurr: GIndices
                 .FIRST_BLOCK_ROOT_IN_SUMMARY_ELECTRA,
             firstSupportedSlot: Slot.wrap(8626176), // 269_568 * 32, @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L53
             pivotSlot: Slot.wrap(11649024), // 364_032 * 32 https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7600.md#activation
@@ -181,17 +181,17 @@ contract DeployCSVerifierDevNet is DeployCSVerifier {
             slotsPerHistoricalRoot: uint64(
                 vm.envUint("DEVNET_SLOTS_PER_HISTORICAL_ROOT")
             ),
-            gIFirstWithdrawalPrev: GIndicies.FIRST_WITHDRAWAL_DENEB,
-            gIFirstWithdrawalCurr: GIndicies.FIRST_WITHDRAWAL_ELECTRA,
-            gIFirstValidatorPrev: GIndicies.FIRST_VALIDATOR_DENEB,
-            gIFirstValidatorCurr: GIndicies.FIRST_VALIDATOR_ELECTRA,
-            gIFirstHistoricalSummaryPrev: GIndicies
+            gIFirstWithdrawalPrev: GIndices.FIRST_WITHDRAWAL_DENEB,
+            gIFirstWithdrawalCurr: GIndices.FIRST_WITHDRAWAL_ELECTRA,
+            gIFirstValidatorPrev: GIndices.FIRST_VALIDATOR_DENEB,
+            gIFirstValidatorCurr: GIndices.FIRST_VALIDATOR_ELECTRA,
+            gIFirstHistoricalSummaryPrev: GIndices
                 .FIRST_HISTORICAL_SUMMARY_DENEB,
-            gIFirstHistoricalSummaryCurr: GIndicies
+            gIFirstHistoricalSummaryCurr: GIndices
                 .FIRST_HISTORICAL_SUMMARY_ELECTRA,
-            gIFirstBlockRootInSummaryPrev: GIndicies
+            gIFirstBlockRootInSummaryPrev: GIndices
                 .FIRST_BLOCK_ROOT_IN_SUMMARY_DENEB,
-            gIFirstBlockRootInSummaryCurr: GIndicies
+            gIFirstBlockRootInSummaryCurr: GIndices
                 .FIRST_BLOCK_ROOT_IN_SUMMARY_ELECTRA,
             firstSupportedSlot: Slot.wrap(0),
             pivotSlot: Slot.wrap(

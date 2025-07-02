@@ -6,7 +6,7 @@ pragma solidity 0.8.24;
 import { GIndex } from "../../src/lib/GIndex.sol";
 
 // Check using `yarn run gindex`
-library GIndicies {
+library GIndices {
     GIndex constant FIRST_WITHDRAWAL_DENEB =
         GIndex.wrap(
             0x0000000000000000000000000000000000000000000000000000000000e1c004
