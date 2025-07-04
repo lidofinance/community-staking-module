@@ -7,6 +7,7 @@ import "../../../src/interfaces/IWithdrawalVault.sol";
 
 import "forge-std/Test.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
+import { IStakingModule } from "../../../src/interfaces/IStakingModule.sol";
 import { ITriggerableWithdrawalsGateway } from "../../../src/interfaces/ITriggerableWithdrawalsGateway.sol";
 import { IWithdrawalVault } from "../../../src/interfaces/IWithdrawalVault.sol";
 import { NodeOperatorManagementProperties } from "../../../src/interfaces/ICSModule.sol";
@@ -33,7 +34,7 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
 
     function _prepareWithdrawalRequestData(
         bytes memory pubkey
-    ) internal returns (bytes memory request) {
+    ) internal pure returns (bytes memory request) {
         request = new bytes(56); // 48 bytes for pubkey + 8 bytes for amount (0)
         assembly {
             let requestPtr := add(request, 0x20)
@@ -62,7 +63,6 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
             .getWithdrawalRequestFee();
 
         address withdrawalVault = locator.withdrawalVault();
-        uint256 stakingModuleId = ejector.STAKING_MODULE_ID();
         bytes[] memory pubkeys = new bytes[](keysCount);
 
         for (uint256 i = 0; i < keysCount; i++) {
@@ -72,6 +72,16 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
             vm.expectEmit(withdrawalVault);
             emit IWithdrawalVault.WithdrawalRequestAdded(
                 _prepareWithdrawalRequestData(pubkeys[i])
+            );
+            vm.expectCall(
+                address(csm),
+                abi.encodeWithSelector(
+                    IStakingModule.onValidatorExitTriggered.selector,
+                    nodeOperatorId,
+                    pubkeys[i],
+                    expectedFee,
+                    ejector.VOLUNTARY_EXIT_TYPE_ID()
+                )
             );
         }
 
@@ -103,30 +113,38 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
             .getWithdrawalRequestFee();
 
         address withdrawalVault = locator.withdrawalVault();
-        uint256 stakingModuleId = ejector.STAKING_MODULE_ID();
         bytes[] memory pubkeys = new bytes[](keysCount);
         uint256[] memory keyIds = new uint256[](keysCount);
-        uint256 expectedWithdrawalFee = IWithdrawalVault(
-            locator.withdrawalVault()
-        ).getWithdrawalRequestFee();
 
-        uint256 i;
-        uint256 keyIndex;
-        while (i < keysCount) {
-            if (csm.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
+        {
+            uint256 i;
+            uint256 keyIndex;
+            while (i < keysCount) {
+                if (csm.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
+                    keyIndex++;
+                    continue;
+                }
+                keyIds[i] = keyIndex;
+                pubkeys[i] = csm.getSigningKeys(nodeOperatorId, keyIndex, 1);
+                i++;
                 keyIndex++;
-                continue;
             }
-            keyIds[i] = keyIndex;
-            pubkeys[i] = csm.getSigningKeys(nodeOperatorId, keyIndex, 1);
-            i++;
-            keyIndex++;
         }
 
         for (uint256 i = 0; i < keysCount; i++) {
             vm.expectEmit(withdrawalVault);
             emit IWithdrawalVault.WithdrawalRequestAdded(
                 _prepareWithdrawalRequestData(pubkeys[i])
+            );
+            vm.expectCall(
+                address(csm),
+                abi.encodeWithSelector(
+                    IStakingModule.onValidatorExitTriggered.selector,
+                    nodeOperatorId,
+                    pubkeys[i],
+                    expectedFee,
+                    ejector.VOLUNTARY_EXIT_TYPE_ID()
+                )
             );
         }
         vm.prank(noProperties.managerAddress);
