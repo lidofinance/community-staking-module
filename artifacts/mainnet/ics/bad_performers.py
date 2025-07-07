@@ -1,17 +1,36 @@
 import json
+import time
+
+import requests
 
 with open("sources/ea.json", "r") as file:
     EA_NOS = json.load(file)
 
-PERFORMANCE_REPORTS = ["sources/performance_log_05_2025.json", "sources/performance_log_06_2025.json"]
+PERFORMANCE_REPORTS = [
+    "QmaHU6Ah99Yk6kQVtSrN4inxqqYoU6epZ5UKyDvwdYUKAS",  # 05/2025
+    "Qmemm9gD2fQgwNziBsf9mAaveNXJ3eJvHpqBTWKoLdUXXV"  # 06/2025
+]
+
+def request_performance_report(report_file, retries=3, delay=2):
+    url = f"https://ipfs.io/ipfs/{report_file}"
+    for attempt in range(retries):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            return response.json()
+        except (requests.HTTPError, requests.JSONDecodeError) as e:
+            print(f"Error fetching report {report_file}: {e}")
+            if attempt < retries - 1:
+                time.sleep(delay)
+                continue
+            raise e
 
 
 def process_bad_performers():
     bad_performance_counts = {}
 
     for report_file in PERFORMANCE_REPORTS:
-        with open(report_file, "r") as file:
-            report = json.load(file)
+        report = request_performance_report(report_file)
         threshold = report["threshold"]
         for no_id in EA_NOS:
             if str(no_id) in report["operators"].keys():
