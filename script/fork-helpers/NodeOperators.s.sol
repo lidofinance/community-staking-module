@@ -202,12 +202,7 @@ contract NodeOperators is
 
         ValidatorWithdrawalInfo[]
             memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
-        withdrawalInfo[0] = ValidatorWithdrawalInfo(
-            noId,
-            keyIndex,
-            amount,
-            false
-        );
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(noId, keyIndex, amount);
         csm.submitWithdrawals(withdrawalInfo);
 
         assertTrue(csm.isValidatorWithdrawn(noId, keyIndex));

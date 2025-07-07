@@ -169,8 +169,7 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
         withdrawalsInfo[0] = ValidatorWithdrawalInfo(
             nodeOperatorId,
             keyIndex,
-            withdrawalAmount,
-            witness.slashed
+            withdrawalAmount
         );
         MODULE.submitWithdrawals(withdrawalsInfo);
     }
@@ -236,8 +235,7 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
         withdrawalsInfo[0] = ValidatorWithdrawalInfo(
             nodeOperatorId,
             keyIndex,
-            withdrawalAmount,
-            witness.slashed
+            withdrawalAmount
         );
         MODULE.submitWithdrawals(withdrawalsInfo);
     }
