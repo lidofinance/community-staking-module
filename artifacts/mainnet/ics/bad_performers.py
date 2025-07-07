@@ -3,7 +3,7 @@ import json
 with open("sources/ea.json", "r") as file:
     EA_NOS = json.load(file)
 
-PERFORMANCE_REPORTS = ["sources/performance_log_04_2025.json", "sources/performance_log_05_2025.json"]
+PERFORMANCE_REPORTS = ["sources/performance_log_05_2025.json", "sources/performance_log_06_2025.json"]
 
 
 def process_bad_performers():
