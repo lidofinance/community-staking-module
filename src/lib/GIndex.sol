@@ -116,8 +116,7 @@ function isParentOf(GIndex self, GIndex child) pure returns (bool) {
 /// counting from the least significant bit position.
 /// If `x` is zero, returns 256.
 function fls(uint256 x) pure returns (uint256 r) {
-    /// @solidity memory-safe-assembly
-    assembly {
+    assembly ("memory-safe") {
         // prettier-ignore
         r := or(shl(8, iszero(x)), shl(7, lt(0xffffffffffffffffffffffffffffffff, x)))
         r := or(r, shl(6, lt(0xffffffffffffffff, shr(r, x))))
