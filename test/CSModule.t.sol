@@ -6507,10 +6507,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         csm.submitWithdrawals(withdrawalInfo);
     }
 
-    function test_submitWithdrawals_RevertWhen_AlreadyWithdrawn()
-        public
-        assertInvariants
-    {
+    function test_submitWithdrawals_alreadyWithdrawn() public assertInvariants {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
@@ -6524,8 +6521,14 @@ contract CsmSubmitWithdrawals is CSMCommon {
         );
 
         csm.submitWithdrawals(withdrawalInfo);
-        vm.expectRevert(ICSModule.AlreadyWithdrawn.selector);
+
+        uint256 nonceBefore = csm.getNonce();
         csm.submitWithdrawals(withdrawalInfo);
+        assertEq(
+            csm.getNonce(),
+            nonceBefore,
+            "Nonce should not change when trying to withdraw already withdrawn key"
+        );
     }
 
     function test_submitWithdrawals_nonceIncrementsOnceForManyWithdrawals()

@@ -719,6 +719,8 @@ contract CSModule is
     function submitWithdrawals(
         ValidatorWithdrawalInfo[] calldata withdrawalsInfo
     ) external onlyRole(VERIFIER_ROLE) {
+        bool anySubmission = false;
+
         for (uint256 i; i < withdrawalsInfo.length; ++i) {
             ValidatorWithdrawalInfo memory withdrawalInfo = withdrawalsInfo[i];
 
@@ -736,7 +738,7 @@ contract CSModule is
                 withdrawalInfo.keyIndex
             );
             if (_isValidatorWithdrawn[pointer]) {
-                revert AlreadyWithdrawn();
+                continue;
             }
 
             _isValidatorWithdrawn[pointer] = true;
@@ -756,6 +758,7 @@ contract CSModule is
                 withdrawalInfo.amount,
                 pubkey
             );
+            anySubmission = true;
 
             // It is safe to use unchecked for penalty sum because it's limited to uint248 in the structure.
             uint256 penaltySum;
@@ -807,7 +810,10 @@ contract CSModule is
                 incrementNonceIfUpdated: false
             });
         }
-        _incrementModuleNonce();
+
+        if (anySubmission) {
+            _incrementModuleNonce();
+        }
     }
 
     /// @inheritdoc IStakingModule
