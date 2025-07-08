@@ -38,14 +38,16 @@ def main():
         print(f"Node Operator ID: {no_id}, Address: {no_address}")
 
     # For sybil operators, take addresses from the first associated operator in each group
-    for sybil_group, associated_ids in associated_operators.items():
+    for cluster_group, associated_ids in associated_operators.items():
         first = associated_ids[0]  # Take the first associated operator
         no_address = extract_address(first)
         final_addresses.append(no_address)
-        print(f"Sybil Group {sybil_group}, First Operator ID: {first}, Address: {no_address}")
+        print(f"Cluster Group {cluster_group}, First Operator ID: {first}, Address: {no_address}")
+
+    sorted_addresses = sorted(set(final_addresses), key=lambda x: final_addresses.index(x))
 
     with open("ics.csv", "w") as f:
-        for address in set(final_addresses):
+        for address in sorted_addresses:
             f.write(f"{address}\n")
 
 if __name__ == '__main__':
