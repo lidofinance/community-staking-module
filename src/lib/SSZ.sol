@@ -27,8 +27,7 @@ library SSZ {
             bytes32(0)
         ];
 
-        // @solidity memory-safe-assembly
-        assembly {
+        assembly ("memory-safe") {
             // Count of nodes to hash
             let count := 8
 
@@ -89,7 +88,7 @@ library SSZ {
         root = bytes32(0);
 
         bytes32 pubkeyRoot;
-        assembly {
+        assembly ("memory-safe") {
             // Dynamic data types such as bytes are stored at the specified offset.
             let offset := mload(validator)
             // Copy the pubkey to the scratch space.
@@ -118,8 +117,7 @@ library SSZ {
             toLittleEndian(validator.withdrawableEpoch)
         ];
 
-        // @solidity memory-safe-assembly
-        assembly {
+        assembly ("memory-safe") {
             // Count of nodes to hash
             let count := 8
 
@@ -184,8 +182,7 @@ library SSZ {
     ) internal view {
         uint256 index = gI.index();
 
-        // @solidity memory-safe-assembly
-        assembly {
+        assembly ("memory-safe") {
             // Check if `proof` is empty.
             if iszero(proof.length) {
                 // revert InvalidProof()
