@@ -251,7 +251,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     ) private view returns (BondCurve storage) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         unchecked {
-            if (curveId >= $.bondCurves.length) {
+            if (curveId > $.bondCurves.length - 1) {
                 revert InvalidBondCurveId();
             }
         }
