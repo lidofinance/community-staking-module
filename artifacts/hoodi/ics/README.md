@@ -1,17 +1,15 @@
-# ICS list on Hoodi
+# Initial ICS list on Hoodi
 
-Consists of the following parts:
+Data collected as of block 761666, July 8, 2025.
 
-- Private CSM Hoodi Sybil Analysis (20th of June 2025)
+Based on private CSM Hoodi Sybil Analysis source from 20.06.2025.
 
-## How to build
+Initial list consists of the following categories:
 
-```bash
-node compose.js
-```
+- Non-Sybil Node Operators
+- First Node Operator from each sybil group
 
-## Output files
-
-- `addresses.json` - plain list of unique addresses
-- `merkle-tree.json` - Merkle tree of the list
-- `merkle-proofs.json` - Merkle proofs for each address
+Steps to reproduce the list:
+- Ensure all sources are correct and up-to-date
+- To generate final list, run `main.py` script
+- To compose the Merkle tree, run `node compose.js` script
