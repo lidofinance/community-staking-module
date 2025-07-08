@@ -62,6 +62,7 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
         uint256 expectedFee = IWithdrawalVault(locator.withdrawalVault())
             .getWithdrawalRequestFee();
 
+        uint256 VOLUNTARY_EXIT_TYPE_ID = ejector.VOLUNTARY_EXIT_TYPE_ID();
         address withdrawalVault = locator.withdrawalVault();
         bytes[] memory pubkeys = new bytes[](keysCount);
 
@@ -80,7 +81,7 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
                     nodeOperatorId,
                     pubkeys[i],
                     expectedFee,
-                    ejector.VOLUNTARY_EXIT_TYPE_ID()
+                    VOLUNTARY_EXIT_TYPE_ID
                 )
             );
         }
@@ -112,6 +113,7 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
         uint256 expectedFee = IWithdrawalVault(locator.withdrawalVault())
             .getWithdrawalRequestFee();
 
+        uint256 VOLUNTARY_EXIT_TYPE_ID = ejector.VOLUNTARY_EXIT_TYPE_ID();
         address withdrawalVault = locator.withdrawalVault();
         bytes[] memory pubkeys = new bytes[](keysCount);
         uint256[] memory keyIds = new uint256[](keysCount);
@@ -143,7 +145,7 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
                     nodeOperatorId,
                     pubkeys[i],
                     expectedFee,
-                    ejector.VOLUNTARY_EXIT_TYPE_ID()
+                    VOLUNTARY_EXIT_TYPE_ID
                 )
             );
         }
