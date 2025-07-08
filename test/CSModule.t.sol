@@ -3224,8 +3224,6 @@ contract CsmQueueOps is CSMCommon {
         public
         assertInvariants
     {
-        uint256 noId = csm.getNodeOperatorsCount();
-
         (, , uint256 depositableBefore) = csm.getStakingModuleSummary();
         uint256 nonceBefore = csm.getNonce();
 

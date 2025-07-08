@@ -799,7 +799,7 @@ contract VettedGateTest is VettedGateTestBase {
 
         vm.startPrank(admin);
         vettedGate.grantRole(vettedGate.START_REFERRAL_SEASON_ROLE(), admin);
-        uint256 season = vettedGate.startNewReferralProgramSeason(2, 2);
+        vettedGate.startNewReferralProgramSeason(2, 2);
         vm.stopPrank();
 
         assertTrue(vettedGate.isReferralProgramSeasonActive());
