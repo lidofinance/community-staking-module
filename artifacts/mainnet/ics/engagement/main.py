@@ -5,12 +5,14 @@ from typing import Iterable
 import os
 
 import requests
+from urllib3 import Retry
 from web3 import Web3
 
 scores = {
     "snapshot-vote": 1,
     "aragon-vote": 1,
-    "galxe-score": 1
+    "galxe-score": 1,
+    "git-poap": 1
 }
 
 MIN_SCORE = 3
@@ -46,6 +48,7 @@ def snapshot_vote(addresses: Iterable[str]) -> bool:
     result = requests.get("https://hub.snapshot.org/graphql", json={"query": query}).json()
     if result["data"]["votes"]:
         return True
+    return False
 
 
 def aragon_vote(addresses: Iterable[str]) -> bool:
@@ -77,10 +80,54 @@ def aragon_vote(addresses: Iterable[str]) -> bool:
 
 def galxe_scores(addresses: Iterable[str]) -> bool:
     with open("galxe_scores.json", "r") as f:
-        eligible_addresses = [item["address"]["address"].lower() for item in json.load(f) if item["points"] >= REQUIRED_GALXE_POINTS]
+        eligible_addresses = [item["address"]["address"].lower() for item in json.load(f) if
+                              item["points"] >= REQUIRED_GALXE_POINTS]
     for eligible_address in eligible_addresses:
         if eligible_address in addresses:
             return True
+    return False
+
+
+def gitpoap(addresses: Iterable[str]) -> bool:
+    url = "https://public-api.gitpoap.io/v1"
+
+    gitpoap_events = {
+        129: "2022 NiceNode Contributor",
+        807: "2023 NiceNode Contributor",
+        985: "2023 Rocket Rescue Node Contributor",
+        1107: "2024 Rocket Rescue Node Contributor",
+        1088: "2024 CoinCashew Contributor",
+        733: "2023 CoinCashew Contributor",
+        512: "2022 CoinCashew Contributor",
+        511: "2021 CoinCashew Contributor",
+        510: "2020 CoinCashew Contributor",
+        861: "2023 DAppNode Contributor",
+        1133: "2025 Stereum Contributor",
+        1084: "2024 Stereum Contributor",
+        838: "2023 Stereum Contributor",
+        122: "2022 Stereum Contributor",
+        121: "2021 Stereum Contributor",
+        2: "2022 Wagyu Key Gen Contributor",
+        854: "2023 Wagyu Key Gen Contributor",
+        23: "2021 Wagyu Key Gen Contributor"
+    }
+    s = requests.Session()
+    a = requests.adapters.HTTPAdapter(max_retries=3)
+    s.mount('https://', a)
+
+    for event_id, event_name in gitpoap_events.items():
+        response = s.get(f"{url}/gitpoaps/{event_id}/addresses")
+        response.raise_for_status()
+
+        poap_holders = response.json().get("addresses", [])
+        if any(address.lower() in poap_holders for address in addresses):
+            print(f"Found GitPoap for event '{event_name}'")
+            return True
+        else:
+            print(f"No GitPoap found for event '{event_name}' in the provided addresses.")
+
+    return False
+
 
 def main():
     if len(sys.argv) < 2:
@@ -93,7 +140,8 @@ def main():
     results = {
         "snapshot-vote": snapshot_vote(addresses),
         "aragon-vote": aragon_vote(addresses),
-        "galxe-score": galxe_scores(addresses)
+        "galxe-score": galxe_scores(addresses),
+        "git-poap": gitpoap(addresses)
     }
 
     total_score = 0
