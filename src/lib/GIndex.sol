@@ -77,18 +77,18 @@ function shl(GIndex self, uint256 n) pure returns (GIndex) {
 
 // See https://github.com/protolambda/remerkleable/blob/91ed092d08ef0ba5ab076f0a34b0b371623db728/remerkleable/tree.py#L46
 function concat(GIndex lhs, GIndex rhs) pure returns (GIndex) {
-    uint256 lhsMSbIndex = fls(index(lhs));
-    uint256 rhsMSbIndex = fls(index(rhs));
+    uint256 lindex = index(lhs);
+    uint256 rindex = index(rhs);
+
+    uint256 lhsMSbIndex = fls(lindex);
+    uint256 rhsMSbIndex = fls(rindex);
 
     if (lhsMSbIndex + 1 + rhsMSbIndex > 248) {
         revert IndexOutOfRange();
     }
 
     return
-        pack(
-            (index(lhs) << rhsMSbIndex) | (index(rhs) ^ (1 << rhsMSbIndex)),
-            pow(rhs)
-        );
+        pack((lindex << rhsMSbIndex) | (rindex ^ (1 << rhsMSbIndex)), pow(rhs));
 }
 
 function isParentOf(GIndex self, GIndex child) pure returns (bool) {
@@ -116,8 +116,7 @@ function isParentOf(GIndex self, GIndex child) pure returns (bool) {
 /// counting from the least significant bit position.
 /// If `x` is zero, returns 256.
 function fls(uint256 x) pure returns (uint256 r) {
-    /// @solidity memory-safe-assembly
-    assembly {
+    assembly ("memory-safe") {
         // prettier-ignore
         r := or(shl(8, iszero(x)), shl(7, lt(0xffffffffffffffffffffffffffffffff, x)))
         r := or(r, shl(6, lt(0xffffffffffffffff, shr(r, x))))

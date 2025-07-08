@@ -44,7 +44,6 @@ struct ValidatorWithdrawalInfo {
     uint256 nodeOperatorId; // @dev ID of the Node Operator
     uint256 keyIndex; // @dev Index of the withdrawn key in the Node Operator's keys storage
     uint256 amount; // @dev Amount of withdrawn ETH in wei
-    bool isSlashed; // @dev If validator is slashed or not
 }
 
 /// @title Lido's Community Staking Module interface
