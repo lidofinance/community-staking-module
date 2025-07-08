@@ -790,6 +790,43 @@ contract VettedGateTest is VettedGateTestBase {
         assertEq(vettedGate.getReferralsCount(stranger), 1);
     }
 
+    function test_addNodeOperatorETH_withReferrer_referrerIsSender() public {
+        uint256 keysCount = 1;
+        bytes32[] memory proof = merkleTree.getProof(0);
+        assertFalse(vettedGate.isConsumed(nodeOperator));
+        assertEq(vettedGate.getReferralsCount(nodeOperator), 0);
+        assertFalse(vettedGate.isReferralProgramSeasonActive());
+
+        vm.startPrank(admin);
+        vettedGate.grantRole(vettedGate.START_REFERRAL_SEASON_ROLE(), admin);
+        uint256 season = vettedGate.startNewReferralProgramSeason(2, 2);
+        vm.stopPrank();
+
+        assertTrue(vettedGate.isReferralProgramSeasonActive());
+
+        vm.expectEmit(address(vettedGate));
+        emit IVettedGate.Consumed(nodeOperator);
+        vm.recordLogs();
+        vm.prank(nodeOperator);
+        vettedGate.addNodeOperatorETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            proof,
+            nodeOperator
+        );
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries.length, 1);
+
+        assertTrue(vettedGate.isConsumed(nodeOperator));
+        assertEq(vettedGate.getReferralsCount(nodeOperator), 0);
+    }
+
     function test_addNodeOperatorETH_noReferrer() public {
         uint256 keysCount = 1;
         bytes32[] memory proof = merkleTree.getProof(0);
