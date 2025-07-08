@@ -7,7 +7,7 @@ interface ICSBondCurve {
     /// @dev Bond curve structure.
     ///
     /// It contains:
-    ///  - internals    |> intervals-based representation of the bond curve
+    ///  - intervals    |> intervals-based representation of the bond curve
     ///
     /// The interval is defined by:
     ///  - minKeysCount |> minimum keys count (inclusive) of the interval

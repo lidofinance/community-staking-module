@@ -140,7 +140,8 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         vm.prank(address(feeDistributor));
         lido.submit{ value: 1 ether }(address(0));
         uint256 distributed = feeDistributor.pendingSharesToDistribute();
-        feesTree.pushLeaf(abi.encode(nodeOperatorId, distributed));
+        uint256 claimed = feeDistributor.distributedShares(nodeOperatorId);
+        feesTree.pushLeaf(abi.encode(nodeOperatorId, claimed + distributed));
         feesTree.pushLeaf(abi.encode(type(uint64).max, 0));
 
         uint256[] memory strikesData = new uint256[](1);
@@ -169,10 +170,10 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         assertEq(
             feeDistributor.getFeesToDistribute(
                 nodeOperatorId,
-                distributed,
+                claimed + distributed,
                 feesTree.getProof(0)
             ),
-            distributed - feeDistributor.distributedShares(nodeOperatorId)
+            distributed
         );
     }
 
