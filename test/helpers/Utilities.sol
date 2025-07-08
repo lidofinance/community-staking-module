@@ -212,8 +212,7 @@ contract Utilities is CommonBase {
         // Basically, we need to access a solidity variable from the assembly to
         // tell the compiler that this assembly block is not in isolation.
         uint256 zero;
-        /// @solidity memory-safe-assembly
-        assembly {
+        assembly ("memory-safe") {
             let offset := mload(0x40) // Start the offset at the free memory pointer.
             calldatacopy(offset, zero, calldatasize())
 
@@ -263,8 +262,7 @@ contract Utilities is CommonBase {
     function _checkMemory() internal pure {
         bool zeroSlotIsNotZero;
         bool freeMemoryPointerOverflowed;
-        /// @solidity memory-safe-assembly
-        assembly {
+        assembly ("memory-safe") {
             // Write ones to the free memory, to make subsequent checks fail if
             // insufficient memory is allocated.
             mstore(mload(0x40), not(0))
