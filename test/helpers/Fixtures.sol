@@ -504,7 +504,8 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         address nodeOperatorAddress,
         uint256 keysCount
     ) internal returns (uint256 noId, uint256 startIndex) {
-        for (uint256 noId; ; ++noId) {
+        uint256 nosCount = csm.getNodeOperatorsCount();
+        for (; noId < nosCount; ++noId) {
             NodeOperator memory no = csm.getNodeOperator(noId);
             uint256 activeKeys = no.totalDepositedKeys - no.totalWithdrawnKeys;
             if (activeKeys >= keysCount) {

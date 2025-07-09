@@ -684,7 +684,7 @@ contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
         ejector.ejectBadPerformer(noId, keyIndex, refundRecipient);
     }
 
-    function test_triggerableWithdrawalsGateway() public {
+    function test_triggerableWithdrawalsGateway() public view {
         assertEq(
             address(ejector.triggerableWithdrawalsGateway()),
             csm.LIDO_LOCATOR().triggerableWithdrawalsGateway()

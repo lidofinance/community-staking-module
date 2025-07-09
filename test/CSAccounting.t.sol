@@ -4901,9 +4901,9 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     }
 
     function test_penalize() public assertInvariants {
-        uint256 shares = stETH.getSharesByPooledEth(1 ether);
+        uint256 amountToBurn = 1 ether;
+        uint256 shares = stETH.getSharesByPooledEth(amountToBurn);
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        uint256 amountToBurn = stETH.getPooledEthByShares(shares);
 
         vm.expectCall(
             locator.burner(),
@@ -4915,7 +4915,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         );
 
         vm.prank(address(stakingModule));
-        accounting.penalize(0, 1 ether);
+        accounting.penalize(0, amountToBurn);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertEq(
