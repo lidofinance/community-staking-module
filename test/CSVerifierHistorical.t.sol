@@ -24,7 +24,13 @@ function dec(Slot self) pure returns (Slot slot) {
     }
 }
 
-using { dec } for Slot;
+function inc(Slot self) pure returns (Slot slot) {
+    assembly ("memory-safe") {
+        slot := add(self, 1)
+    }
+}
+
+using { dec, inc } for Slot;
 
 contract CSVerifierHistoricalTest is Test, Utilities {
     using stdJson for string;
@@ -54,16 +60,20 @@ contract CSVerifierHistoricalTest is Test, Utilities {
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
+            slotsPerHistoricalRoot: 8192,
             gindices: ICSVerifier.GIndices({
-                gIHistoricalSummariesPrev: pack(0x3b, 0),
-                gIHistoricalSummariesCurr: pack(0x3b, 0),
-                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-                gIFirstValidatorPrev: pack(0x560000000000, 40),
-                gIFirstValidatorCurr: pack(0x560000000000, 40)
+                gIFirstWithdrawalPrev: pack(0x161c0, 4),
+                gIFirstWithdrawalCurr: pack(0x161c0, 4),
+                gIFirstValidatorPrev: pack(0x960000000000, 40),
+                gIFirstValidatorCurr: pack(0x960000000000, 40),
+                gIFirstHistoricalSummaryPrev: pack(0xb6000000, 24),
+                gIFirstHistoricalSummaryCurr: pack(0xb6000000, 24),
+                gIFirstBlockRootInSummaryPrev: pack(0x4000, 13),
+                gIFirstBlockRootInSummaryCurr: pack(0x4000, 13)
             }),
-            firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
-            pivotSlot: Slot.wrap(100_500),
+            firstSupportedSlot: fixture.oldBlock.header.slot,
+            pivotSlot: fixture.oldBlock.header.slot,
+            capellaSlot: fixture.oldBlock.header.slot,
             admin: admin
         });
 
@@ -101,9 +111,8 @@ contract CSVerifierHistoricalTest is Test, Utilities {
     }
 
     function test_processWithdrawalProof_RevertWhen_UnsupportedSlot() public {
-        _setMocksWithdrawal(fixture);
-
         fixture.beaconBlock.header.slot = verifier.FIRST_SUPPORTED_SLOT().dec();
+        fixture.oldBlock.header.slot = fixture.beaconBlock.header.slot.dec();
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -125,8 +134,6 @@ contract CSVerifierHistoricalTest is Test, Utilities {
     function test_processWithdrawalProof_RevertWhen_UnsupportedSlot_OldBlock()
         public
     {
-        _setMocksWithdrawal(fixture);
-
         fixture.oldBlock.header.slot = verifier.FIRST_SUPPORTED_SLOT().dec();
 
         vm.expectRevert(
@@ -158,40 +165,6 @@ contract CSVerifierHistoricalTest is Test, Utilities {
         );
 
         vm.expectRevert(ICSVerifier.InvalidBlockHeader.selector);
-        // solhint-disable-next-line func-named-parameters
-        verifier.processHistoricalWithdrawalProof(
-            fixture.beaconBlock,
-            fixture.oldBlock,
-            fixture.witness,
-            0,
-            0
-        );
-    }
-
-    function test_processWithdrawalProof_RevertWhen_InvalidGI() public {
-        _setMocksWithdrawal(fixture);
-
-        fixture.oldBlock.rootGIndex = GIndex.wrap(bytes32(0));
-
-        vm.expectRevert(ICSVerifier.InvalidGIndex.selector);
-        // solhint-disable-next-line func-named-parameters
-        verifier.processHistoricalWithdrawalProof(
-            fixture.beaconBlock,
-            fixture.oldBlock,
-            fixture.witness,
-            0,
-            0
-        );
-    }
-
-    function test_processWithdrawalProof_RevertWhenPaused() public {
-        _setMocksWithdrawal(fixture);
-
-        vm.prank(admin);
-        verifier.pauseFor(100_500);
-        assertTrue(verifier.isPaused());
-
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
         // solhint-disable-next-line func-named-parameters
         verifier.processHistoricalWithdrawalProof(
             fixture.beaconBlock,

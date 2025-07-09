@@ -8,11 +8,6 @@ for (const fork of ["deneb", "electra"]) {
   const Fork = ssz[fork];
 
   {
-    const gI = pack(Fork.BeaconState.getPathInfo(["historicalSummaries"]).gindex, 0); // limit = 0 because `historicalSummaries` is a singular bytes32 value and not a list.
-    console.log(`${fork}::gIHistoricalSummaries: `, toBytes32String(gI));
-  }
-
-  {
     const Withdrawals = Fork.BeaconBlock.getPathInfo([
       "body",
       "executionPayload",
@@ -35,7 +30,31 @@ for (const fork of ["deneb", "electra"]) {
 
     const gI = pack(Fork.BeaconState.getPathInfo(["validators", 0]).gindex, Validators.limit);
 
-    console.log(`${fork}::gIFirstValidator: `, toBytes32String(gI));
+    console.log(`${fork}::gIFirstValidator:`, toBytes32String(gI));
+  }
+
+  {
+    const HistoricalSummaries = Fork.BeaconState.getPathInfo(["historicalSummaries"]).type;
+    const gI = pack(
+      Fork.BeaconState.getPathInfo(["historicalSummaries", 0]).gindex,
+      HistoricalSummaries.limit,
+    );
+    console.log(`${fork}::gIFirstHistoricalSummary:`, toBytes32String(gI));
+  }
+
+  {
+    const HistoricalSummary = Fork.BeaconState.getPathInfo(["historicalSummaries", 0]).type;
+    const BlockRoots = Fork.BeaconState.getPathInfo(["blockRoots"]).type;
+
+    const gI = pack(
+      concatGindices([
+        HistoricalSummary.getPathInfo(["blockSummaryRoot"]).gindex,
+        BlockRoots.getPropertyGindex(0),
+      ]),
+      BlockRoots.length,
+    );
+
+    console.log(`${fork}::gIFirstBlockRootInSummary:`, toBytes32String(gI));
   }
 
   console.log();

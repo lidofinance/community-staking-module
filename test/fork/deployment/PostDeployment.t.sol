@@ -659,12 +659,12 @@ contract CSVerifierDeploymentTest is DeploymentBaseTest {
         assertEq(address(verifier.MODULE()), address(csm));
         assertEq(verifier.SLOTS_PER_EPOCH(), deployParams.slotsPerEpoch);
         assertEq(
-            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_PREV()),
-            GIndex.unwrap(deployParams.gIHistoricalSummaries)
+            GIndex.unwrap(verifier.GI_FIRST_HISTORICAL_SUMMARY_PREV()),
+            GIndex.unwrap(deployParams.gIFirstHistoricalSummary)
         );
         assertEq(
-            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_CURR()),
-            GIndex.unwrap(deployParams.gIHistoricalSummaries)
+            GIndex.unwrap(verifier.GI_FIRST_HISTORICAL_SUMMARY_CURR()),
+            GIndex.unwrap(deployParams.gIFirstHistoricalSummary)
         );
         assertEq(
             GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL_PREV()),
@@ -684,11 +684,15 @@ contract CSVerifierDeploymentTest is DeploymentBaseTest {
         );
         assertEq(
             Slot.unwrap(verifier.FIRST_SUPPORTED_SLOT()),
-            deployParams.verifierSupportedEpoch * deployParams.slotsPerEpoch
+            deployParams.verifierFirstSupportedSlot
         );
         assertEq(
             Slot.unwrap(verifier.PIVOT_SLOT()),
-            deployParams.verifierSupportedEpoch * deployParams.slotsPerEpoch
+            deployParams.verifierFirstSupportedSlot
+        );
+        assertEq(
+            Slot.unwrap(verifier.CAPELLA_SLOT()),
+            deployParams.capellaSlot
         );
     }
 
