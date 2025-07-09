@@ -70,8 +70,6 @@ interface ICSModule is
     error KeysLimitExceeded();
     error SigningKeysInvalidOffset();
 
-    error AlreadyWithdrawn();
-
     error InvalidAmount();
 
     error ZeroLocatorAddress();
