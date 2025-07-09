@@ -15,8 +15,10 @@ library Json {
     Vm internal constant vm =
         Vm(address(bytes20(uint160(uint256(keccak256("hevm cheat code"))))));
 
-    function newObj() internal returns (JsonObj memory obj) {
-        obj.ref = string(abi.encodePacked(address(this), _incrementId()));
+    function newObj(
+        string memory key
+    ) internal pure returns (JsonObj memory obj) {
+        obj.ref = key;
         obj.str = "";
     }
 
@@ -50,15 +52,6 @@ library Json {
         string memory value
     ) internal {
         obj.str = vm.serializeString(obj.ref, key, value);
-    }
-
-    function _incrementId() private returns (uint256 count) {
-        bytes32 slot = keccak256("json.id.counter");
-
-        assembly {
-            count := sload(slot)
-            sstore(slot, add(count, 1))
-        }
     }
 }
 
