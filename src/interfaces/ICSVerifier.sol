@@ -13,8 +13,10 @@ interface ICSVerifier {
         GIndex gIFirstWithdrawalCurr;
         GIndex gIFirstValidatorPrev;
         GIndex gIFirstValidatorCurr;
-        GIndex gIHistoricalSummariesPrev;
-        GIndex gIHistoricalSummariesCurr;
+        GIndex gIFirstHistoricalSummaryPrev;
+        GIndex gIFirstHistoricalSummaryCurr;
+        GIndex gIFirstBlockRootInSummaryPrev;
+        GIndex gIFirstBlockRootInSummaryCurr;
     }
 
     struct ProvableBeaconBlockHeader {
@@ -56,7 +58,6 @@ interface ICSVerifier {
     // A witness for a block header which root is accessible via `historical_summaries` field.
     struct HistoricalHeaderWitness {
         BeaconBlockHeader header;
-        GIndex rootGIndex;
         bytes32[] proof;
     }
 
@@ -72,6 +73,7 @@ interface ICSVerifier {
     error ZeroWithdrawalAddress();
     error ZeroAdminAddress();
     error InvalidPivotSlot();
+    error InvalidCapellaSlot();
 
     function PAUSE_ROLE() external view returns (bytes32);
 
@@ -81,6 +83,8 @@ interface ICSVerifier {
 
     function SLOTS_PER_EPOCH() external view returns (uint64);
 
+    function SLOTS_PER_HISTORICAL_ROOT() external view returns (uint64);
+
     function GI_FIRST_WITHDRAWAL_PREV() external view returns (GIndex);
 
     function GI_FIRST_WITHDRAWAL_CURR() external view returns (GIndex);
@@ -89,13 +93,25 @@ interface ICSVerifier {
 
     function GI_FIRST_VALIDATOR_CURR() external view returns (GIndex);
 
-    function GI_HISTORICAL_SUMMARIES_PREV() external view returns (GIndex);
+    function GI_FIRST_HISTORICAL_SUMMARY_PREV() external view returns (GIndex);
 
-    function GI_HISTORICAL_SUMMARIES_CURR() external view returns (GIndex);
+    function GI_FIRST_HISTORICAL_SUMMARY_CURR() external view returns (GIndex);
+
+    function GI_FIRST_BLOCK_ROOT_IN_SUMMARY_PREV()
+        external
+        view
+        returns (GIndex);
+
+    function GI_FIRST_BLOCK_ROOT_IN_SUMMARY_CURR()
+        external
+        view
+        returns (GIndex);
 
     function FIRST_SUPPORTED_SLOT() external view returns (Slot);
 
     function PIVOT_SLOT() external view returns (Slot);
+
+    function CAPELLA_SLOT() external view returns (Slot);
 
     function WITHDRAWAL_ADDRESS() external view returns (address);
 

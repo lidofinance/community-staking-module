@@ -4,7 +4,7 @@
 pragma solidity 0.8.24;
 
 import { DeployBase } from "./DeployBase.s.sol";
-import { GIndicies } from "./constants/GIndicies.sol";
+import { GIndices } from "./constants/GIndices.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 contract DeployHolesky is DeployBase {
@@ -30,11 +30,14 @@ contract DeployHolesky is DeployBase {
 
         // Verifier
         // current deployment is on Capella
-        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_ELECTRA;
-        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_ELECTRA;
-        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_ELECTRA;
+        config.slotsPerHistoricalRoot = 8192; // @see https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters
+        config.gIFirstWithdrawal = GIndices.FIRST_WITHDRAWAL_ELECTRA;
+        config.gIFirstValidator = GIndices.FIRST_VALIDATOR_ELECTRA;
+        config.gIFirstHistoricalSummary = GIndices.FIRST_HISTORICAL_SUMMARY_ELECTRA; // prettier-ignore
+        config.gIFirstBlockRootInSummary = GIndices.FIRST_BLOCK_ROOT_IN_SUMMARY_ELECTRA; // prettier-ignore
+        config.verifierFirstSupportedSlot = 115968 * config.slotsPerEpoch; // @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L42
+        config.capellaSlot = 256 * config.slotsPerEpoch; // @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L34
 
-        config.verifierSupportedEpoch = 29696;
         // Accounting
         // 2 -> 1.9 -> 1.8 -> 1.7 -> 1.6 -> 1.5
         config.defaultBondCurve.push([1, 2 ether]);
