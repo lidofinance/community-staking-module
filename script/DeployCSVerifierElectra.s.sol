@@ -69,7 +69,7 @@ abstract contract DeployCSVerifier is Script {
         }
         vm.stopBroadcast();
 
-        JsonObj memory deployJson = Json.newObj();
+        JsonObj memory deployJson = Json.newObj("artifact");
         deployJson.set("CSVerifier", address(verifier));
         vm.writeJson(deployJson.str, _deployJsonFilename());
         console.log("CSVerifier deployed at:", address(verifier));

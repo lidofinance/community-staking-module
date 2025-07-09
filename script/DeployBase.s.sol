@@ -663,7 +663,7 @@ abstract contract DeployBase is Script {
             strikes.grantRole(strikes.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             strikes.revokeRole(strikes.DEFAULT_ADMIN_ROLE(), deployer);
 
-            JsonObj memory deployJson = Json.newObj();
+            JsonObj memory deployJson = Json.newObj("artifact");
             deployJson.set("ChainId", chainId);
             deployJson.set("CSModule", address(csm));
             deployJson.set("CSModuleImpl", address(csmImpl));

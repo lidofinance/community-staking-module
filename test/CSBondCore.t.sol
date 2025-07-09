@@ -488,8 +488,7 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
 
         uint256 bondSharesBefore = bondCore.getBondShares(0);
         uint256 burnShares = stETH.getSharesByPooledEth(33 ether);
-        uint256 sharesToBurn = stETH.getSharesByPooledEth(32 ether);
-        uint256 amountToBurn = stETH.getPooledEthByShares(sharesToBurn);
+        uint256 amountToBurn = 32 ether;
         vm.expectEmit(address(bondCore));
         emit ICSBondCore.BondBurned(
             0,
@@ -502,7 +501,7 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             abi.encodeWithSelector(
                 IBurner.requestBurnShares.selector,
                 address(bondCore),
-                stETH.getSharesByPooledEth(32 ether)
+                stETH.getSharesByPooledEth(amountToBurn)
             )
         );
 
