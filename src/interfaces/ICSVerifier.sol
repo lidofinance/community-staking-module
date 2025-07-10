@@ -62,7 +62,6 @@ interface ICSVerifier {
     }
 
     error RootNotFound();
-    error InvalidGIndex();
     error InvalidBlockHeader();
     error InvalidChainConfig();
     error PartialWithdrawal();
