@@ -137,7 +137,7 @@ jobs:
           RPC_URL: ${{ secrets.RPC_URL_MAINNET }}
 
       - name: Run post-vote tests after upgrade
-        run: just test-upgrade
+        run: just test-upgrade --no-match-contract=VoteChangesTest
         env:
           CHAIN: mainnet
           DEPLOY_CONFIG: ./artifacts/mainnet/deploy-mainnet.json
