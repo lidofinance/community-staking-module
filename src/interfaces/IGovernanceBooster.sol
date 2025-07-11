@@ -13,7 +13,9 @@ interface IGovernanceBooster {
     struct BoostInfo {
         bool boosted; // Whether the operator is boosted
         uint256 oldCurveId; // The old curve ID before the boost
+        uint256 boostCurveId; // The curve ID used for the boost
         uint256 boostDeposit; // The amount of LDO tokens used for the boost
+        uint256 minUnboostTime; // The timestamp when the operator can be unboosted
     }
 
     event NodeOperatorBoosted(
@@ -52,6 +54,8 @@ interface IGovernanceBooster {
     error InvalidDelegateAddress();
     error NodeOperatorDoesNotExist();
     error NotAllowedToBoost();
+    error NotAllowedToUnboostYet();
+    error InvalidMinBoostDuration();
 
     function PAUSE_ROLE() external view returns (bytes32);
 
@@ -107,4 +111,26 @@ interface IGovernanceBooster {
     /// @notice Sets the delegate address for the boosts.
     /// @param _delegate The new delegate address.
     function setDelegate(address _delegate) external;
+
+    /// @notice Sets the minimum boost duration.
+    /// @param _minBoostDuration The new minimum boost duration in seconds.
+    function setMinBoostDuration(uint256 _minBoostDuration) external;
+
+    /// @notice Updates the delegation for the boosts.
+    function updateDelegation() external;
+
+    /// @notice Returns the total amount of LDO tokens used for boosts in the contract.
+    function totalBoostTokens() external view returns (uint256);
+
+    /// @notice Returns the boost deposit amount.
+    function boostDeposit() external view returns (uint256);
+
+    /// @notice Returns the minimum boost duration in seconds.
+    function minBoostDuration() external view returns (uint256);
+
+    /// @notice Returns the delegate address for the boosts.
+    function delegate() external view returns (address);
+
+    /// @notice Returns the curve ID used for boosts.
+    function curveId() external view returns (uint256);
 }

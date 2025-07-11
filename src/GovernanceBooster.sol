@@ -48,6 +48,9 @@ contract GovernanceBooster is
     /// @dev Boost deposit amount
     uint256 public boostDeposit;
 
+    /// @dev Minimum boost duration in seconds
+    uint256 public minBoostDuration;
+
     /// @dev Delegate address to delegate boost deposits
     address public delegate;
 
@@ -55,7 +58,7 @@ contract GovernanceBooster is
     mapping(uint256 => BoostInfo) internal _boostedOperatorsInfo;
 
     /// @dev Total amount of LDO tokens used for boosts in the contract
-    uint256 public totalBoosts;
+    uint256 public totalBoostTokens;
 
     constructor(
         address module,
@@ -89,26 +92,18 @@ contract GovernanceBooster is
         uint256 _curveId,
         uint256 _boostDeposit,
         address _delegate,
+        uint256 _minBoostDuration,
         address admin
     ) external initializer {
         __AccessControlEnumerable_init();
 
-        if (_curveId == ACCOUNTING.DEFAULT_BOND_CURVE_ID()) {
-            revert InvalidCurveId();
-        }
-        if (_boostDeposit == 0) {
-            revert InvalidBoostDeposit();
-        }
-        if (_delegate == address(0)) {
-            revert ZeroDelegateAddress();
-        }
         if (admin == address(0)) {
             revert ZeroAdminAddress();
         }
 
-        // @dev there is no check for curve existence as this contract might be created before the curve is added
-        curveId = _curveId;
-        boostDeposit = _boostDeposit;
+        _setCurveId(_curveId, false); // Allow setting the curve ID without checking existence
+        _setBoostDeposit(_boostDeposit);
+        _setMinBoostDuration(_minBoostDuration);
         _setDelegate(_delegate);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -134,12 +129,16 @@ contract GovernanceBooster is
 
         LDO.transferFrom(msg.sender, address(this), boostDeposit);
 
-        totalBoosts += boostDeposit;
+        totalBoostTokens += boostDeposit;
+
+        uint256 oldCurveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
 
         _boostedOperatorsInfo[nodeOperatorId] = BoostInfo({
             boosted: true,
-            oldCurveId: curveId,
-            boostDeposit: boostDeposit
+            oldCurveId: oldCurveId,
+            boostCurveId: curveId,
+            boostDeposit: boostDeposit,
+            minUnboostTime: block.timestamp + minBoostDuration
         });
 
         ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
@@ -162,18 +161,29 @@ contract GovernanceBooster is
             revert NotBoosted();
         }
 
+        if (
+            block.timestamp <
+            _boostedOperatorsInfo[nodeOperatorId].minUnboostTime
+        ) {
+            revert NotAllowedToUnboostYet();
+        }
+
         LDO.transfer(msg.sender, boostInfo.boostDeposit);
 
-        totalBoosts -= boostInfo.boostDeposit;
+        totalBoostTokens -= boostInfo.boostDeposit;
 
-        if (ACCOUNTING.getBondCurveId(nodeOperatorId) == curveId) {
+        if (
+            ACCOUNTING.getBondCurveId(nodeOperatorId) == boostInfo.boostCurveId
+        ) {
             ACCOUNTING.setBondCurve(nodeOperatorId, boostInfo.oldCurveId);
         }
 
         _boostedOperatorsInfo[nodeOperatorId] = BoostInfo({
             boosted: false,
             oldCurveId: 0,
-            boostDeposit: 0
+            boostCurveId: 0,
+            boostDeposit: 0,
+            minUnboostTime: 0
         });
 
         emit NodeOperatorUnboosted(msg.sender, nodeOperatorId);
@@ -183,33 +193,14 @@ contract GovernanceBooster is
     function setBoostDeposit(
         uint256 _boostDeposit
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (_boostDeposit == 0) {
-            revert InvalidBoostDeposit();
-        }
-        if (_boostDeposit == boostDeposit) {
-            revert InvalidBoostDeposit();
-        }
-
-        boostDeposit = _boostDeposit;
-
-        emit BoostDepositSet(_boostDeposit);
+        _setBoostDeposit(_boostDeposit);
     }
 
     /// @inheritdoc IGovernanceBooster
     function setCurveId(
         uint256 _curveId
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (_curveId == ACCOUNTING.DEFAULT_BOND_CURVE_ID()) {
-            revert InvalidCurveId();
-        }
-        if (_curveId == curveId) {
-            revert InvalidCurveId();
-        }
-        if (ACCOUNTING.getCurvesCount() <= _curveId) {
-            revert CurveDoesNotExist();
-        }
-        curveId = _curveId;
-        emit CurveIdSet(_curveId);
+        _setCurveId(_curveId, true);
     }
 
     /// @inheritdoc IGovernanceBooster
@@ -219,18 +210,15 @@ contract GovernanceBooster is
         _setDelegate(_delegate);
     }
 
-    function _setDelegate(address _delegate) internal {
-        if (_delegate == address(0)) {
-            revert ZeroDelegateAddress();
-        }
-        if (_delegate == delegate) {
-            revert InvalidDelegateAddress();
-        }
+    /// @inheritdoc IGovernanceBooster
+    function setMinBoostDuration(
+        uint256 _minBoostDuration
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setMinBoostDuration(_minBoostDuration);
+    }
 
-        delegate = _delegate;
-
-        emit DelegateSet(_delegate);
-
+    /// @inheritdoc IGovernanceBooster
+    function updateDelegation() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _updateDelegation();
     }
 
@@ -239,7 +227,7 @@ contract GovernanceBooster is
         _onlyRecoverer();
         if (token == address(LDO)) {
             uint256 balance = LDO.balanceOf(address(this));
-            uint256 allowedToRecover = balance - totalBoosts;
+            uint256 allowedToRecover = balance - totalBoostTokens;
             if (amount > allowedToRecover) {
                 amount = allowedToRecover;
             }
@@ -261,6 +249,61 @@ contract GovernanceBooster is
         uint256 nodeOperatorId
     ) external view returns (BoostInfo memory) {
         return _boostedOperatorsInfo[nodeOperatorId];
+    }
+
+    function _setBoostDeposit(uint256 _boostDeposit) internal {
+        if (_boostDeposit == 0) {
+            revert InvalidBoostDeposit();
+        }
+        if (_boostDeposit == boostDeposit) {
+            revert InvalidBoostDeposit();
+        }
+
+        boostDeposit = _boostDeposit;
+
+        emit BoostDepositSet(_boostDeposit);
+    }
+
+    function _setCurveId(uint256 _curveId, bool checkExistance) internal {
+        if (_curveId == ACCOUNTING.DEFAULT_BOND_CURVE_ID()) {
+            revert InvalidCurveId();
+        }
+        if (_curveId == curveId) {
+            revert InvalidCurveId();
+        }
+        if (checkExistance && ACCOUNTING.getCurvesCount() <= _curveId) {
+            revert CurveDoesNotExist();
+        }
+
+        curveId = _curveId;
+
+        emit CurveIdSet(_curveId);
+    }
+
+    function _setDelegate(address _delegate) internal {
+        if (_delegate == address(0)) {
+            revert ZeroDelegateAddress();
+        }
+        if (_delegate == delegate) {
+            revert InvalidDelegateAddress();
+        }
+
+        delegate = _delegate;
+
+        emit DelegateSet(_delegate);
+
+        _updateDelegation();
+    }
+
+    function _setMinBoostDuration(uint256 _minBoostDuration) internal {
+        if (_minBoostDuration == 0) {
+            revert InvalidMinBoostDuration();
+        }
+        if (_minBoostDuration == minBoostDuration) {
+            revert InvalidMinBoostDuration();
+        }
+
+        minBoostDuration = _minBoostDuration;
     }
 
     function _updateDelegation() internal {
