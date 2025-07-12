@@ -5,20 +5,18 @@ from typing import Iterable
 import os
 
 import requests
-from urllib3 import Retry
 from web3 import Web3
 
 scores = {
     "snapshot-vote": 1,
-    "aragon-vote": 1,
-    "galxe-score": 1,
-    "git-poap": 1
+    "aragon-vote": 2,
+    "galxe-score-4-10": 4,
+    "galxe-score-above-10": 5,
+    "git-poap": 2
 }
 
 MIN_SCORE = 3
 MAX_SCORE = 6
-
-REQUIRED_GALXE_POINTS = 5
 
 
 def snapshot_vote(addresses: Iterable[str]) -> bool:
@@ -80,12 +78,16 @@ def aragon_vote(addresses: Iterable[str]) -> bool:
 
 def galxe_scores(addresses: Iterable[str]) -> bool:
     with open("galxe_scores.json", "r") as f:
-        eligible_addresses = [item["address"]["address"].lower() for item in json.load(f) if
-                              item["points"] >= REQUIRED_GALXE_POINTS]
-    for eligible_address in eligible_addresses:
-        if eligible_address in addresses:
-            return True
-    return False
+        addr_to_points = {item["address"]["address"].lower(): item["points"] for item in json.load(f)}
+
+    score = 0
+    for address in addresses:
+        point = addr_to_points.get(address, 0)
+        if point > 10:
+            score += scores["galxe-score-above-10"]
+        elif 4 <= point <= 10:
+            score += scores["galxe-score-4-10"]
+    return score
 
 
 def gitpoap(addresses: Iterable[str]) -> bool:
@@ -144,11 +146,9 @@ def main():
         "git-poap": gitpoap(addresses)
     }
 
-    total_score = 0
+    total_score = sum(results.values())
     for key, present in results.items():
         print(f"{key.replace('-', ' ').title()}: {'✅' if present else '❌'}")
-        if present:
-            total_score += scores[key]
     print(f"Total score: {total_score}")
     if total_score < MIN_SCORE:
         print(f"❌ Score is below the minimum required in the category ({MIN_SCORE}).")

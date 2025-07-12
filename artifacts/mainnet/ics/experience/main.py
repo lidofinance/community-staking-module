@@ -13,18 +13,20 @@ import json
 from typing import Iterable
 
 scores = {
-    "eth-staker": 1,
-    "stake-cat": 1,
-    "obol-techne-base": 1,
-    "obol-techne-bronze": 1,
-    "obol-techne-silver": 1,
-    "ssv-verified": 1,
-    "csm-testnet": 1,
-    "csm-mainnet": 1
+    "eth-staker": 6,
+    "stake-cat": 6,
+    "obol-techne-base": 4,
+    "obol-techne-bronze": 5,
+    "obol-techne-silver": 6,
+    "ssv-verified": 7,
+    "csm-testnet": 4,  # TODO Circles verification should get 5 here
+    "csm-mainnet": 6,
+    # "sdvtm-testnet": 5,
+    # "sdvtm-mainnet": 7
 }
 
-MIN_SCORE = 3
-MAX_SCORE = 6
+MIN_SCORE = 5
+MAX_SCORE = 8
 
 def is_eth_staker(addresses: Iterable[str]) -> bool:
     """
