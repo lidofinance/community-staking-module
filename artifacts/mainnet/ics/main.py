@@ -16,6 +16,7 @@ exclude_files = [
     "exclude/inactive.json",
     "exclude/pros.json",
     "exclude/ssv_delegated.json",
+    "exclude/self_exclusion.json",
 ]
 
 def main():
