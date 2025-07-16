@@ -125,7 +125,7 @@ contract DeployHoodi is DeployBase {
         // GateSeal
         config.gateSealFactory = 0xA402349F560D45310D301E92B1AA4DeCABe147B3;
         config.sealingCommittee = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
-        config.sealDuration = 6 days;
+        config.sealDuration = 11 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
         // DG
