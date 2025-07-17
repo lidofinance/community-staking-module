@@ -235,8 +235,16 @@ _deploy-impl *args:
 deploy-impl-live *args:
     ARTIFACTS_DIR=./artifacts/latest/ just _deploy-impl --broadcast --verify {{args}}
 
+    cp ./broadcast/{{deploy_implementations_script_name}}.s.sol/\
+        $(cast chain-id --rpc-url=$RPC_URL)\
+        /deploy-latest.json ./artifacts/latest/transactions.json
+
 deploy-impl-dry *args:
     just _deploy-impl {{args}}
+
+    cp ./broadcast/{{deploy_implementations_script_name}}.s.sol/\
+        $(cast chain-id --rpc-url=$RPC_URL)\
+        /dry-run/deploy-latest.json ./artifacts/local/transactions.json
 
 deploy-local *args:
     just make-fork &
