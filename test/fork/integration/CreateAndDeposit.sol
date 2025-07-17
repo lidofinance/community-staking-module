@@ -1375,7 +1375,7 @@ contract ObtainDepositDataTest is IntegrationTestBase {
         public
         assertInvariants
     {
-        csm.cleanDepositQueue({ maxItems: csm.getNonce() });
+        csm.cleanDepositQueue({ maxItems: 2 * csm.getNonce() });
         (uint128 legacyQueueHeadBefore, uint128 legacyQueueTailBefore) = csm
             .depositQueuePointers(csm.QUEUE_LEGACY_PRIORITY());
         Batch legacyQueueItemBefore = csm.depositQueueItem(

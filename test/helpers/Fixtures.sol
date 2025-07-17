@@ -476,7 +476,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     function getDepositableNodeOperator(
         address nodeOperatorAddress
     ) internal returns (uint256 noId, uint256 keysCount) {
-        csm.cleanDepositQueue({ maxItems: csm.getNonce() });
+        csm.cleanDepositQueue({ maxItems: 2 * csm.getNonce() });
         for (uint256 i = 0; i < csm.QUEUE_LOWEST_PRIORITY(); ++i) {
             (uint128 head, ) = csm.depositQueuePointers(i);
             Batch batch = csm.depositQueueItem(i, head);
