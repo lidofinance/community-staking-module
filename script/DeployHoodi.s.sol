@@ -20,10 +20,10 @@ contract DeployHoodi is DeployBase {
         config.secondsPerSlot = 12;
         config.slotsPerEpoch = 32;
         config.clGenesisTime = 1742213400;
-        config.oracleReportEpochsPerFrame = 225; // 1 day
+        config.oracleReportEpochsPerFrame = 1575; // 7 days
         config.fastLaneLengthSlots = 32;
         config.consensusVersion = 3;
-        config.oracleMembers = new address[](11);
+        config.oracleMembers = new address[](12);
         config.oracleMembers[0] = 0xcA80ee7313A315879f326105134F938676Cfd7a9;
         config.oracleMembers[1] = 0xf03B8DC8762B97F13Ac82e6F94bE3Ed002FF7459;
         config.oracleMembers[2] = 0x1932f53B1457a5987791a40Ba91f71c5Efd5788F;
@@ -35,7 +35,8 @@ contract DeployHoodi is DeployBase {
         config.oracleMembers[8] = 0xB1cC91878c1831893D39C2Bb0988404ca5Fa7918;
         config.oracleMembers[9] = 0xfe43A8B0b481Ae9fB1862d31826532047d2d538c;
         config.oracleMembers[10] = 0x43C45C2455C49eed320F463fF4f1Ece3D2BF5aE2;
-        config.hashConsensusQuorum = 6;
+        config.oracleMembers[11] = 0x948A62cc0414979dc7aa9364BA5b96ECb29f8736;
+        config.hashConsensusQuorum = 7;
 
         // Verifier
         config.slotsPerHistoricalRoot = 8192; // @see https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters
@@ -124,7 +125,7 @@ contract DeployHoodi is DeployBase {
         // GateSeal
         config.gateSealFactory = 0xA402349F560D45310D301E92B1AA4DeCABe147B3;
         config.sealingCommittee = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
-        config.sealDuration = 6 days;
+        config.sealDuration = 11 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
         // DG
