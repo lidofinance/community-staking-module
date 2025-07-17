@@ -238,10 +238,10 @@ deploy-impl-live *args:
 deploy-impl-dry *args:
     just _deploy-impl {{args}}
 
-deploy-local:
+deploy-local *args:
     just make-fork &
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
-    just deploy
+    just deploy {{args}}
     just _warn "anvil is kept running in the background: {{anvil_rpc_url}}"
 
 # Deploy CSM v2 components, upgrade CSM, run deployment, integration, and post-upgrade tests
