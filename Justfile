@@ -235,13 +235,21 @@ _deploy-impl *args:
 deploy-impl-live *args:
     ARTIFACTS_DIR=./artifacts/latest/ just _deploy-impl --broadcast --verify {{args}}
 
+    cp ./broadcast/{{deploy_implementations_script_name}}.s.sol/\
+        $(cast chain-id --rpc-url=$RPC_URL)\
+        /deploy-latest.json ./artifacts/latest/transactions.json
+
 deploy-impl-dry *args:
     just _deploy-impl {{args}}
 
-deploy-local:
+    cp ./broadcast/{{deploy_implementations_script_name}}.s.sol/\
+        $(cast chain-id --rpc-url=$RPC_URL)\
+        /dry-run/deploy-latest.json ./artifacts/local/transactions.json
+
+deploy-local *args:
     just make-fork &
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
-    just deploy
+    just deploy {{args}}
     just _warn "anvil is kept running in the background: {{anvil_rpc_url}}"
 
 # Deploy CSM v2 components, upgrade CSM, run deployment, integration, and post-upgrade tests
