@@ -11,9 +11,11 @@ More on CSM in the [docs](https://docs.lido.fi/staking-modules/csm/intro).
 
 ## Getting Started
 
-- Install [Foundry tools](https://book.getfoundry.sh/getting-started/installation)
+- Install [Foundry tools](https://book.getfoundry.sh/getting-started/installation) (version 1.2.3, see `.foundryref`)
 
-- Install [Just](https://github.com/casey/just)
+- Install [Just](https://github.com/casey/just) (version 1.24.0 or later)
+
+- install [jq](https://jqlang.org/download/) (version 1.6 or later)
 
 > Some Linux distributions (like Arch Linux) might require additional install of [netcat (nc)](https://en.wikipedia.org/wiki/Netcat). The preferred version is OpenBSD.
 
