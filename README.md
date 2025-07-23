@@ -15,7 +15,7 @@ More on CSM in the [docs](https://docs.lido.fi/staking-modules/csm/intro).
 
 - Install [Just](https://github.com/casey/just) (version 1.24.0 or later)
 
-- install [jq](https://jqlang.org/download/) (version 1.6 or later)
+- Install [jq](https://jqlang.org/download/) (version 1.6 or later)
 
 > Some Linux distributions (like Arch Linux) might require additional install of [netcat (nc)](https://en.wikipedia.org/wiki/Netcat). The preferred version is OpenBSD.
 
