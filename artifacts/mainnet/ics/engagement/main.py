@@ -1,11 +1,9 @@
 # Proof of engagement
-import json
+import csv
 import sys
 from typing import Iterable
-import os
 
 import requests
-from web3 import Web3
 
 scores = {
     "snapshot-vote": 1,
@@ -13,24 +11,31 @@ scores = {
     "galxe-score-4-10": 4,
     "galxe-score-above-10": 5,
     "git-poap": 2
+    # TODO add note about high-signal score
 }
 
-MIN_SCORE = 3
-MAX_SCORE = 6
+MIN_SCORE = 2
+MAX_SCORE = 7
+
+SNAPSHOT_VOTE_TIMESTAMP = 1750758263  # TODO update
 
 
-def snapshot_vote(addresses: Iterable[str]) -> bool:
+def snapshot_vote(addresses: Iterable[str]) -> int:
     """
     Check if the address has participated in Snapshot votes.
     """
     lido_space = "lido-snapshot.eth"
+    required_vp = 100
+    required_votes_count = 3
     query = """
     query Votes {
       votes (
-        first: 1
+        first: %s
         where: {
           space: "%s"
           voter_in: [%s]
+          vp_gt: %s
+          created_lt: %s
         }
       ) {
         id
@@ -42,43 +47,85 @@ def snapshot_vote(addresses: Iterable[str]) -> bool:
         }
       }
     }
-    """ % (lido_space, ", ".join(map(lambda x: '"' + x + '"', addresses)))
+    """ % (
+        required_votes_count,
+        lido_space,
+        ", ".join(map(lambda x: '"' + x + '"', addresses)),
+        required_vp,
+        SNAPSHOT_VOTE_TIMESTAMP
+    )
     result = requests.get("https://hub.snapshot.org/graphql", json={"query": query}).json()
-    if result["data"]["votes"]:
-        return True
-    return False
+    if len(result["data"]["votes"]) == required_votes_count:
+        return scores["snapshot-vote"]
+    return 0
 
 
-def aragon_vote(addresses: Iterable[str]) -> bool:
+def aragon_vote(addresses: Iterable[str]) -> int:
     """
     Check if the address has participated in Aragon votes.
     """
-    # Ethereum mainnet RPC endpoint. Preferably use Infura or other provider allowing fetching logs with no strict range limits.
-    rpc_url = os.environ.get("http://localhost:8545/")
-    w3 = Web3(Web3.HTTPProvider(rpc_url))
 
-    voting_address = Web3.to_checksum_address("0x2e59A20f205bB85a89C53f1936454680651E618e")
-    voting_deployment_block = 11473216
-
-    # event CastVote(uint256 indexed voteId, address indexed voter, bool supports, uint256 stake);
-    event_signature_hash = w3.keccak(text="CastVote(uint256,address,bool,uint256)").hex()
-    logs = w3.eth.get_logs({
-        "fromBlock": voting_deployment_block,
-        "toBlock": "latest",
-        "address": voting_address,
-        "topics": [event_signature_hash]
-    })
-    # topic1 is voteId, topic2 is voter
-    for log in logs:
-        voter = "0x" + log["topics"][2].hex()[-40:]
-        if voter.lower() in addresses:
-            return True
-    return False
+    with open("eligible_aragon_voters.csv", "r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if row and row[0].strip().lower() in addresses:
+                return scores["aragon-vote"]
+    return 0
 
 
-def galxe_scores(addresses: Iterable[str]) -> bool:
-    with open("galxe_scores.json", "r") as f:
-        addr_to_points = {item["address"]["address"].lower(): item["points"] for item in json.load(f)}
+def galxe_scores(addresses: Iterable[str]) -> int:
+    api_url = "https://graphigo.prd.galaxy.eco/query"
+    lido_space_id = 22849
+    query = """
+        query($spaceId: Int, $cursor: String) {
+      space(id:$spaceId) {
+        id
+        name
+        loyaltyPointsRanks(first:100,cursorAfter:$cursor)
+        {
+          pageInfo{
+            hasNextPage
+            endCursor
+          }
+          edges {
+            node {
+              points
+              address {
+                username
+                address
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    def fetch_all_items():
+        cursor = None
+        all_items = []
+        while True:
+            variables = {"spaceId": lido_space_id, "cursor": cursor}
+            response = requests.post(
+                api_url,
+                json={"query": query, "variables": variables},
+                headers={"Content-Type": "application/json"}
+            )
+            response.raise_for_status()
+            data = response.json()['data']['space']['loyaltyPointsRanks']
+
+            for edge in data['edges']:
+                all_items.append(edge['node'])
+
+            page_info = data['pageInfo']
+            if not page_info['hasNextPage']:
+                break
+            cursor = page_info['endCursor']
+            print(f"    Fetched {len(all_items)} items from Galxe API.")
+        return all_items
+
+    all_items = fetch_all_items()
+    addr_to_points = {item["address"]["address"].lower(): item["points"] for item in all_items}
 
     score = 0
     for address in addresses:
@@ -90,7 +137,7 @@ def galxe_scores(addresses: Iterable[str]) -> bool:
     return score
 
 
-def gitpoap(addresses: Iterable[str]) -> bool:
+def gitpoap(addresses: Iterable[str]) -> int:
     url = "https://public-api.gitpoap.io/v1"
 
     gitpoap_events = {
@@ -123,12 +170,12 @@ def gitpoap(addresses: Iterable[str]) -> bool:
 
         poap_holders = response.json().get("addresses", [])
         if any(address.lower() in poap_holders for address in addresses):
-            print(f"Found GitPoap for event '{event_name}'")
-            return True
+            print(f"    Found GitPoap for event '{event_name}'")
+            return scores["git-poap"]
         else:
-            print(f"No GitPoap found for event '{event_name}' in the provided addresses.")
+            print(f"    No GitPoap found for event '{event_name}' in the provided addresses.")
 
-    return False
+    return 0
 
 
 def main():
@@ -146,12 +193,14 @@ def main():
         "git-poap": gitpoap(addresses)
     }
 
-    total_score = sum(results.values())
-    for key, present in results.items():
-        print(f"{key.replace('-', ' ').title()}: {'✅' if present else '❌'}")
-    print(f"Total score: {total_score}")
+    total_score = 0
+    for key, score in results.items():
+        print(f"{key.replace('-', ' ').title()}: {score if score else '❌'}")
+        if score:
+            total_score += score
+    print(f"Aggregate score from all categories: {total_score}")
     if total_score < MIN_SCORE:
-        print(f"❌ Score is below the minimum required in the category ({MIN_SCORE}).")
+        print(f"❌ The score is below the minimum required for this category ({MIN_SCORE}).")
     else:
         final_score = min(total_score, MAX_SCORE)
         if total_score > MAX_SCORE:

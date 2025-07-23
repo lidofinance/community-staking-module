@@ -8,19 +8,25 @@
 
 import sys
 import csv
-import os
 import json
+import time
 from typing import Iterable
 
+import requests
+
 scores = {
+    # TODO exclude non-slashed
     "eth-staker": 6,
     "stake-cat": 6,
+    # TODO think about writing script to fetch obol nfts
     "obol-techne-base": 4,
     "obol-techne-bronze": 5,
     "obol-techne-silver": 6,
+    # TODO exclude pros from ssv verified
     "ssv-verified": 7,
     "csm-testnet": 4,  # TODO Circles verification should get 5 here
     "csm-mainnet": 6,
+    # TODO ask Remus. It'll be static files
     # "sdvtm-testnet": 5,
     # "sdvtm-mainnet": 7
 }
@@ -28,102 +34,116 @@ scores = {
 MIN_SCORE = 5
 MAX_SCORE = 8
 
-def is_eth_staker(addresses: Iterable[str]) -> bool:
-    """
-    Check if the address is in the eth-staker list.
-    """
-    with open("eth-staker-solo-stakers.csv", "r") as f:
-        for line in f:
-            if line.strip().lower() in addresses:
-                return True
-    return False
 
-def is_stake_cat(addresses: Iterable[str]) -> bool:
+def is_addresses_in_csv(addresses: Iterable[str], csv_file: str) -> bool:
     """
-    Check if the address is in the stake-cat list.
+    Returns True if any address in `addresses` is found in the first column of the given CSV file.
+    The CSV file should contain a single column with addresses or a header with 'Address'.
     """
-    with open("stake-cat-solo-B.csv", "r") as f:
-        for line in f:
-            if line.strip().lower() in addresses:
-                return True
-    return False
-
-def is_obol_techne_base(addresses: Iterable[str]) -> bool:
-    """
-    Check if the address is in the Obol Techne Base credentials CSV.
-    """
-    with open("obol-techne-credentials-base.csv", newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
+    with open(csv_file, "r") as f:
+        reader = csv.reader(f)
         for row in reader:
-            if row["HolderAddress"].strip().lower() in addresses:
+            if row and row[0].strip().lower() in addresses:
                 return True
     return False
 
-def is_obol_techne_bronze(addresses: Iterable[str]) -> bool:
-    """
-    Check if the address is in the Obol Techne Bronze credentials CSV.
-    """
-    with open("obol-techne-credentials-bronze.csv", newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if row["HolderAddress"].strip().lower() in addresses:
-                return True
-    return False
 
-def is_obol_techne_silver(addresses: Iterable[str]) -> bool:
+def eth_staker_score(addresses: Iterable[str]) -> int:
     """
-    Check if the address is in the Obol Techne Silver credentials CSV.
+    Returns the score for EthStaker solo-staker list if any address is present, otherwise 0.
     """
-    with open("obol-techne-credentials-silver.csv", newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if row["HolderAddress"].strip().lower() in addresses:
-                return True
-    return False
+    if is_addresses_in_csv(addresses, "eth-staker-solo-stakers.csv"):
+        return scores["eth-staker"]
+    return 0
 
-def is_ssv_verified(addresses: Iterable[str]) -> bool:
+def stake_cat_score(addresses: Iterable[str]) -> int:
     """
-    Check if the address is in the SSV verified operators list.
+    Returns the score for StakeCat solo-staker list (mainnet or gnosis) if any address is present, otherwise 0.
     """
-    with open("ssv-verified-operators.csv", "r") as f:
-        for line in f:
-            if line.strip().lower() in addresses:
-                return True
-    return False
+    if is_addresses_in_csv(addresses, "stake-cat-solo-B.csv"):
+        return scores["stake-cat"]
+    if is_addresses_in_csv(addresses, "stake-cat-gnosischain.csv"):
+        return scores["stake-cat"]
+    return 0
 
-def is_csm_testnet(addresses: Iterable[str]) -> bool:
+def obol_techne_score(addresses: Iterable[str]) -> int:
     """
-    Checks if any of the addresses is a CSM testnet operator with all validators above the threshold in all logs.
+    Returns the highest Obol Techne credential score for the given addresses, or 0 if none found.
     """
-    return _check_csm_performance_logs(addresses, "node_operator_addresses_hoodi.json", "hoodi-performance-logs")
 
-def is_csm_mainnet(addresses: Iterable[str]) -> bool:
-    """
-    Checks if any of the addresses is a CSM Mainnet operator with all validators above the threshold in all logs.
-    """
-    return _check_csm_performance_logs(addresses, "node_operator_addresses_mainnet.json", "mainnet-performance-logs")
+    if is_addresses_in_csv(addresses, "obol-techne-credentials-silver.csv"):
+        return scores["obol-techne-silver"]
+    elif is_addresses_in_csv(addresses, "obol-techne-credentials-bronze.csv"):
+        return scores["obol-techne-bronze"]
+    elif is_addresses_in_csv(addresses, "obol-techne-credentials-base.csv"):
+        return scores["obol-techne-base"]
+    return 0
 
-def _check_csm_performance_logs(addresses: Iterable[str], node_operators_file_name, perf_logs_dir) -> bool:
-    with open(node_operators_file_name, 'r') as f:
+def ssv_verified_score(addresses: Iterable[str]) -> int:
+    """
+    Returns the score for SSV Verified Operators if any address is present, otherwise 0.
+    """
+    if is_addresses_in_csv(addresses, "ssv-verified-operators.csv"):
+        return scores["ssv-verified"]
+    return 0
+
+def csm_testnet_score(addresses: Iterable[str]) -> int:
+    """
+    Returns the score for CSM testnet participation if any address is eligible, otherwise 0.
+    """
+    perf_reports = [
+        "QmTpTekd8qV9mn46pYzT9fkHtYHyQguZrbGdF233YYibvY"
+    ]
+    if _check_csm_performance_logs(addresses, "node_operator_owners_hoodi.json", perf_reports):
+        return scores["csm-testnet"]
+    return 0
+
+def csm_mainnet_score(addresses: Iterable[str]) -> int:
+    """
+    Returns the score for CSM mainnet participation if any address is eligible, otherwise 0.
+    """
+    perf_reports = [
+        "QmaHU6Ah99Yk6kQVtSrN4inxqqYoU6epZ5UKyDvwdYUKAS"
+    ]
+    if _check_csm_performance_logs(addresses, "node_operator_owners_mainnet.json", perf_reports):
+        return scores["csm-mainnet"]
+    return 0
+
+def _request_performance_report(report_file, retries=3, delay=2):
+    url = f"https://ipfs.io/ipfs/{report_file}"
+    for attempt in range(retries):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            return response.json()
+        except (requests.HTTPError, requests.JSONDecodeError) as e:
+            print(f"Error fetching report {report_file}: {e}")
+            if attempt < retries - 1:
+                time.sleep(delay)
+                continue
+            raise e
+    raise Exception(f"Failed to fetch report {report_file}")
+
+
+def _check_csm_performance_logs(addresses: Iterable[str], no_owners_file_name, perf_reports) -> bool:
+    """
+    Returns True if any address is a node operator with all validators above the threshold in all logs.
+    Used for both testnet and mainnet CSM checks.
+    """
+    with open(no_owners_file_name, 'r') as f:
         node_operators = json.load(f)
 
     address_to_id = {}
-    for no_id, info in node_operators.items():
-        for key in ['managerAddress', 'rewardAddress']:
-            addr = info.get(key, '').lower()
-            if addr:
-                address_to_id[addr] = no_id
+    for no_id, addr in node_operators.items():
+        address_to_id[addr.lower()] = no_id
 
     addresses = set(addresses)
     found_ids = set(address_to_id[a] for a in addresses if a in address_to_id)
     if not found_ids:
         return False
 
-    for fname in os.listdir(perf_logs_dir):
-        if not fname.endswith('.json'):
-            continue
-        with open(os.path.join(perf_logs_dir, fname), 'r') as f:
-            data = json.load(f)
+    for report in perf_reports:
+        data = _request_performance_report(report)
         threshold = data.get('threshold', 0)
         operators = data.get('operators', {})
         # If any operator id for the addresses is eligible in this log, continue
@@ -156,27 +176,25 @@ def main():
         return
     addresses = set([a.strip().lower() for a in sys.argv[1:]])
     print(f"Your addresses: {', '.join(addresses)}")
-    print("Checking addresses for proof of experience...")
+    print("Evaluating proof of experience scores for each category...")
 
-    results = {
-        "eth-staker": is_eth_staker(addresses),
-        "stake-cat": is_stake_cat(addresses),
-        "obol-techne-base": is_obol_techne_base(addresses),
-        "obol-techne-bronze": is_obol_techne_bronze(addresses),
-        "obol-techne-silver": is_obol_techne_silver(addresses),
-        "ssv-verified": is_ssv_verified(addresses),
-        "csm-testnet": is_csm_testnet(addresses),
-        "csm-mainnet": is_csm_mainnet(addresses)
+    results: dict[str, int] = {
+        "eth-staker": eth_staker_score(addresses),
+        "stake-cat": stake_cat_score(addresses),
+        "obol-techne": obol_techne_score(addresses),
+        "ssv-verified": ssv_verified_score(addresses),
+        "csm-testnet": csm_testnet_score(addresses),
+        "csm-mainnet": csm_mainnet_score(addresses)
     }
 
     total_score = 0
-    for key, present in results.items():
-        print(f"{key.replace('-', ' ').title()}: {'✅' if present else '❌'}")
-        if present:
-            total_score += scores[key]
-    print(f"Total score: {total_score}")
+    for key, score in results.items():
+        print(f"{key.replace('-', ' ').title()}: {score if score else '❌'}")
+        if score:
+            total_score += score
+    print(f"Aggregate score from all categories: {total_score}")
     if total_score < MIN_SCORE:
-        print(f"❌ Score is below the minimum required in the category ({MIN_SCORE}).")
+        print(f"❌ The score is below the minimum required for this category ({MIN_SCORE}).")
     else:
         final_score = min(total_score, MAX_SCORE)
         if total_score > MAX_SCORE:

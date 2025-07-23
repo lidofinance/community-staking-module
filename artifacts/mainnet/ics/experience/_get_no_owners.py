@@ -14,11 +14,11 @@ with open("../abi/csm_abi.json", "r") as file:
 REFERENCE_BLOCK_MAINNET = 22773472 # TODO: Update
 REFERENCE_BLOCK_HOODI = 727304 # TODO: Update
 
-OUTPUT_FILE_MAINNET = 'node_operator_addresses_mainnet.json'
-OUTPUT_FILE_HOODI = 'node_operator_addresses_hoodi.json'
+OUTPUT_FILE_MAINNET = 'node_operator_owners_mainnet.json'
+OUTPUT_FILE_HOODI = 'node_operator_owners_hoodi.json'
 
 
-async def fetch_node_operator_addresses(provider_url, contract_address, reference_block, json_output):
+async def fetch_node_operator_owners(provider_url, contract_address, reference_block, json_output):
     w3 = AsyncWeb3(AsyncHTTPProvider(provider_url))
     contract = w3.eth.contract(address=contract_address, abi=CSM_ABI, decode_tuples=True)
 
@@ -38,11 +38,7 @@ async def fetch_node_operator_addresses(provider_url, contract_address, referenc
             except asyncio.QueueEmpty:
                 break
             node_operator = await contract.functions.getNodeOperator(i).call(block_identifier=reference_block)
-            node_operators[i] = {
-                'managerAddress': node_operator.managerAddress,
-                'rewardAddress': node_operator.rewardAddress,
-                'extendedManagerPermissions': node_operator.extendedManagerPermissions,
-            }
+            node_operators[i] = node_operator.managerAddress if node_operator.extendedManagerPermissions else node_operator.rewardAddress
             processed["num"] += 1
             if processed["num"] % 10 == 0:
                 print(f"Fetched {processed['num']}/{count} node operators.")
@@ -59,5 +55,5 @@ async def fetch_node_operator_addresses(provider_url, contract_address, referenc
 
 
 if __name__ == '__main__':
-    asyncio.run(fetch_node_operator_addresses(PROVIDER_URL_MAINNET, CONTRACT_ADDRESS_MAINNET, REFERENCE_BLOCK_MAINNET, OUTPUT_FILE_MAINNET))
-    asyncio.run(fetch_node_operator_addresses(PROVIDER_URL_HOODI, CONTRACT_ADDRESS_HOODI, REFERENCE_BLOCK_HOODI, OUTPUT_FILE_HOODI))
+    asyncio.run(fetch_node_operator_owners(PROVIDER_URL_MAINNET, CONTRACT_ADDRESS_MAINNET, REFERENCE_BLOCK_MAINNET, OUTPUT_FILE_MAINNET))
+    asyncio.run(fetch_node_operator_owners(PROVIDER_URL_HOODI, CONTRACT_ADDRESS_HOODI, REFERENCE_BLOCK_HOODI, OUTPUT_FILE_HOODI))

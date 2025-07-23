@@ -3,7 +3,7 @@ import csv
 import requests
 
 def main():
-    items = requests.get("https://api.ssv.network/api/v4/mainnet/operators?type=verified_operator&page=1&perPage=5000").json()["operators"]
+    items = requests.get("https://api.ssv.network/api/v4/mainnet/operators?type=verified_operator&page=1&perPage=1000").json()["operators"]
     output_csv = "ssv-verified-operators.csv"
 
     items = set([item["owner_address"] for item in items])
