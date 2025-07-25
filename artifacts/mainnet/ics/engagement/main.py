@@ -207,7 +207,7 @@ def main():
         return
     addresses = set([a.strip().lower() for a in sys.argv[1:]])
     print(f"Your addresses: {', '.join(addresses)}")
-    print("Checking addresses for proof of engagement...")
+    print("Checking addresses for Proof of Engagement...")
 
     results = {
         "snapshot-vote": snapshot_vote(addresses),
@@ -223,7 +223,7 @@ def main():
         print(f"    {key.replace('-', ' ').title()}: {score if score else '❌'}")
         if score:
             total_score += score
-    print(f"Aggregate score from all categories: {total_score}")
+    print(f"Aggregate score from all sources: {total_score}")
     if total_score < MIN_SCORE:
         print(f"❌ The score is below the minimum required for this category ({MIN_SCORE}).")
     else:

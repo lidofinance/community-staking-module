@@ -11,6 +11,7 @@ import csv
 import json
 import time
 from typing import Iterable
+from datetime import datetime
 
 import requests
 
@@ -93,7 +94,12 @@ def csm_testnet_score(addresses: Iterable[str]) -> int:
     perf_reports = [
         "QmTpTekd8qV9mn46pYzT9fkHtYHyQguZrbGdF233YYibvY"
     ]
-    if _check_csm_performance_logs(addresses, "node_operator_owners_hoodi.json", perf_reports):
+    if _check_csm_performance_logs(
+            addresses,
+            "node_operator_owners_hoodi.json",
+            perf_reports,
+            "Testnet"  # Network name for logging
+    ):
         return scores["csm-testnet"]
     return 0
 
@@ -104,7 +110,12 @@ def csm_mainnet_score(addresses: Iterable[str]) -> int:
     perf_reports = [
         "QmaHU6Ah99Yk6kQVtSrN4inxqqYoU6epZ5UKyDvwdYUKAS"
     ]
-    if _check_csm_performance_logs(addresses, "node_operator_owners_mainnet.json", perf_reports):
+    if _check_csm_performance_logs(
+            addresses,
+            "node_operator_owners_mainnet.json",
+            perf_reports,
+            "Mainnet"  # Network name for logging
+    ):
         return scores["csm-mainnet"]
     return 0
 
@@ -124,7 +135,7 @@ def _request_performance_report(report_file, retries=3, delay=2):
     raise Exception(f"Failed to fetch report {report_file}")
 
 
-def _check_csm_performance_logs(addresses: Iterable[str], no_owners_file_name, perf_reports) -> bool:
+def _check_csm_performance_logs(addresses: Iterable[str], no_owners_file_name, perf_reports, network_name) -> bool:
     """
     Returns True if any address is a node operator with all validators above the threshold in all logs.
     Used for both testnet and mainnet CSM checks.
@@ -140,7 +151,7 @@ def _check_csm_performance_logs(addresses: Iterable[str], no_owners_file_name, p
     found_ids = set(address_to_id[a] for a in addresses if a in address_to_id)
     if not found_ids:
         return False
-    print("    Found node operator IDs for given addresses:", ", ".join(found_ids))
+    print(f"    Found node operator IDs for given addresses on {network_name}:", ", ".join(found_ids))
 
     for report in perf_reports:
         data = _request_performance_report(report)
@@ -163,7 +174,9 @@ def _check_csm_performance_logs(addresses: Iterable[str], no_owners_file_name, p
                     all_valid = False
                     break
             if all_valid:
-                print(f"    Node Operator {no_id} is eligible in performance report {report}.")
+                report_data = datetime.fromtimestamp(data['blockstamp']['block_timestamp'])
+                report_block = data['blockstamp']['block_number']
+                print(f"    {network_name} Node Operator {no_id} is eligible in performance report {report} at {report_data} (block {report_block}).")
                 eligible_in_log = True
                 break
         if not eligible_in_log:
@@ -177,7 +190,7 @@ def main():
         return
     addresses = set([a.strip().lower() for a in sys.argv[1:]])
     print(f"Your addresses: {', '.join(addresses)}")
-    print("Evaluating proof of experience scores for each category...")
+    print("Checking addresses for Proof of Experience...")
 
     results: dict[str, int] = {
         "eth-staker": eth_staker_score(addresses),
@@ -194,7 +207,7 @@ def main():
         print(f"    {key.replace('-', ' ').title()}: {score if score else '❌'}")
         if score:
             total_score += score
-    print(f"Aggregate score from all categories: {total_score}")
+    print(f"Aggregate score from all sources: {total_score}")
     if total_score < MIN_SCORE:
         print(f"❌ The score is below the minimum required for this category ({MIN_SCORE}).")
     else:
