@@ -15,7 +15,7 @@ from typing import Iterable
 import requests
 
 scores = {
-    # TODO exclude non-slashed
+    # TODO exclude slashed
     "eth-staker": 6,
     "stake-cat": 6,
     # TODO think about writing script to fetch obol nfts

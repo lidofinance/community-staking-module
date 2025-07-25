@@ -11,8 +11,10 @@ scores = {
     "galxe-score-4-10": 4,
     "galxe-score-above-10": 5,
     "git-poap": 2
-    # TODO add note about high-signal score
 }
+
+HIGH_SIGNAL_MIN_SCORE = 2
+HIGH_SIGNAL_MAX_SCORE = 5
 
 MIN_SCORE = 2
 MAX_SCORE = 7
@@ -121,7 +123,6 @@ def galxe_scores(addresses: Iterable[str]) -> int:
             if not page_info['hasNextPage']:
                 break
             cursor = page_info['endCursor']
-            print(f"    Fetched {len(all_items)} items from Galxe API.")
         return all_items
 
     all_items = fetch_all_items()
@@ -172,11 +173,37 @@ def gitpoap(addresses: Iterable[str]) -> int:
         if any(address.lower() in poap_holders for address in addresses):
             print(f"    Found GitPoap for event '{event_name}'")
             return scores["git-poap"]
-        else:
-            print(f"    No GitPoap found for event '{event_name}' in the provided addresses.")
 
     return 0
 
+
+def high_signal() -> int:
+    print("For taking into account high-signal score, please visit the https://app.highsignal.xyz/ and enter the given score manually")
+    hs_points = 0
+    try:
+        high_signal_score = int(input("High-signal score (0-100): "))
+    except ValueError:
+        print("Invalid input for high-signal score. Defaulting to 0.")
+        hs_points = 0
+    else:
+        if high_signal_score < 0 or high_signal_score > 100:
+            print("Invalid input for high-signal score. Defaulting to 0.")
+            hs_points = 0
+        # - 2 points if 30 ≤ High Signal score ≤ 40
+        # - 3 points if 40 < High Signal score ≤ 60
+        # - 4 points if 60 < High Signal score ≤ 80
+        # - 5 points if High Signal score > 80
+        elif 30 <= high_signal_score <= 40:
+            hs_points = 2
+        elif 40 < high_signal_score <= 60:
+            hs_points = 3
+        elif 60 < high_signal_score <= 80:
+            hs_points = 4
+        elif high_signal_score > 80:
+            hs_points = 5
+        else:
+            print("High-signal score is below the minimum threshold (30). No additional points awarded.")
+    return hs_points
 
 def main():
     if len(sys.argv) < 2:
@@ -190,7 +217,8 @@ def main():
         "snapshot-vote": snapshot_vote(addresses),
         "aragon-vote": aragon_vote(addresses),
         "galxe-score": galxe_scores(addresses),
-        "git-poap": gitpoap(addresses)
+        "git-poap": gitpoap(addresses),
+        "high-signal": high_signal()
     }
 
     total_score = 0
