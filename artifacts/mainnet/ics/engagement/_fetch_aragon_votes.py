@@ -1,10 +1,10 @@
-import json
 from collections import defaultdict
 
 from web3 import Web3
 
 RPC_URL = "http://localhost:8545/"
 ARAGON_BLOCK_CUTOFF = 22773472 # TODO update
+REQUIRED_LDO = 100 * 10 ** 18  # 100 LDO in wei
 
 if __name__ == '__main__':
     w3 = Web3(Web3.HTTPProvider(RPC_URL))
@@ -22,12 +22,11 @@ if __name__ == '__main__':
 
     voters = defaultdict(set)
     for log in logs:
-        # filter out votes with less than 100 LDO
-        if log.args.stake >= 100 * 10**18:
+        # filter out votes with less than required LDO
+        if log.args.stake >= REQUIRED_LDO:
             voters[log.args.voter.lower()].add(log.args.voteId)
-    # filter out addresses that have voted only once
-    voters = {v.lower() for v in voters if len(voters[v]) >= 2}
 
-    with open("eligible_aragon_voters.csv", "w") as f:
-        for address in sorted(voters):
-            f.write(f"{address}\n")
+    with open("aragon_voters.csv", "w") as f:
+        f.write("Address,VoteCount\n")
+        for address, vote_ids in voters.items():
+            f.write(f"{address},{len(vote_ids)}\n")

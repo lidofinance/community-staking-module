@@ -7,9 +7,6 @@ ETHEREUM_BLOCK_CUTOFF = 22773472 # TODO Update block from ethereum
 ARBITRUM_PROVIDER_URL = 'http://localhost:8545/'
 ETHEREUM_PROVIDER_URL = 'http://localhost:8545/'
 
-# event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
-event = "Transfer(address,address,uint256)"
-
 def fetch_nft_holders(rpc: str, address: str, from_block: int, to_block: int) -> set:
     w3 = Web3(Web3.HTTPProvider(rpc))
     contract = w3.eth.contract(address=w3.to_checksum_address(address), abi=[{
@@ -30,27 +27,27 @@ def fetch_nft_holders(rpc: str, address: str, from_block: int, to_block: int) ->
     return holders
 
 if __name__ == '__main__':
-    # obol_techne_base = fetch_nft_holders(
-    #     ARBITRUM_PROVIDER_URL,
-    #     "0x3cbBcc4381E0812F89175798AE7be2F47bC22021",
-    #     from_block=182715383,
-    #     to_block=ARBITRUM_BLOCK_CUTOFF
-    # )
-    # print(f"Found {len(obol_techne_base)} Obol Techne Base holders.")
-    # with open("obol-techne-credentials-base.csv", "w") as f:
-    #     for holder in sorted(obol_techne_base):
-    #         f.write(f"{holder}\n")
-    #
-    # obol_techne_bronze = fetch_nft_holders(
-    #     ARBITRUM_PROVIDER_URL,
-    #     "0x88Cb2eFFB9301138216368caf69c146E0A65374F",
-    #     from_block=223252032,
-    #     to_block=ARBITRUM_BLOCK_CUTOFF
-    # )
-    # print(f"Found {len(obol_techne_bronze)} Obol Techne Bronze holders.")
-    # with open("obol-techne-credentials-bronze.csv", "w") as f:
-    #     for holder in sorted(obol_techne_bronze):
-    #         f.write(f"{holder}\n")
+    obol_techne_base = fetch_nft_holders(
+        ARBITRUM_PROVIDER_URL,
+        "0x3cbBcc4381E0812F89175798AE7be2F47bC22021",
+        from_block=182715383,
+        to_block=ARBITRUM_BLOCK_CUTOFF
+    )
+    print(f"Found {len(obol_techne_base)} Obol Techne Base holders.")
+    with open("obol-techne-credentials-base.csv", "w") as f:
+        for holder in sorted(obol_techne_base):
+            f.write(f"{holder}\n")
+
+    obol_techne_bronze = fetch_nft_holders(
+        ARBITRUM_PROVIDER_URL,
+        "0x88Cb2eFFB9301138216368caf69c146E0A65374F",
+        from_block=223252032,
+        to_block=ARBITRUM_BLOCK_CUTOFF
+    )
+    print(f"Found {len(obol_techne_bronze)} Obol Techne Bronze holders.")
+    with open("obol-techne-credentials-bronze.csv", "w") as f:
+        for holder in sorted(obol_techne_bronze):
+            f.write(f"{holder}\n")
 
     obol_techne_silver = fetch_nft_holders(
         ETHEREUM_PROVIDER_URL,

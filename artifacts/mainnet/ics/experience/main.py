@@ -18,13 +18,11 @@ scores = {
     # TODO exclude slashed
     "eth-staker": 6,
     "stake-cat": 6,
-    # TODO think about writing script to fetch obol nfts
     "obol-techne-base": 4,
     "obol-techne-bronze": 5,
     "obol-techne-silver": 6,
-    # TODO exclude pros from ssv verified
     "ssv-verified": 7,
-    "csm-testnet": 4,  # TODO Circles verification should get 5 here
+    "csm-testnet": 4,  # TODO Circles verification should give 5 here
     "csm-mainnet": 6,
     # TODO ask Remus. It'll be static files
     # "sdvtm-testnet": 5,
@@ -44,6 +42,7 @@ def is_addresses_in_csv(addresses: Iterable[str], csv_file: str) -> bool:
         reader = csv.reader(f)
         for row in reader:
             if row and row[0].strip().lower() in addresses:
+                print(f"    Found address {row[0]} in {csv_file}")
                 return True
     return False
 
@@ -141,6 +140,7 @@ def _check_csm_performance_logs(addresses: Iterable[str], no_owners_file_name, p
     found_ids = set(address_to_id[a] for a in addresses if a in address_to_id)
     if not found_ids:
         return False
+    print("    Found node operator IDs for given addresses:", ", ".join(found_ids))
 
     for report in perf_reports:
         data = _request_performance_report(report)
@@ -163,6 +163,7 @@ def _check_csm_performance_logs(addresses: Iterable[str], no_owners_file_name, p
                     all_valid = False
                     break
             if all_valid:
+                print(f"    Node Operator {no_id} is eligible in performance report {report}.")
                 eligible_in_log = True
                 break
         if not eligible_in_log:
@@ -187,9 +188,10 @@ def main():
         "csm-mainnet": csm_mainnet_score(addresses)
     }
 
+    print("\nResults:")
     total_score = 0
     for key, score in results.items():
-        print(f"{key.replace('-', ' ').title()}: {score if score else '❌'}")
+        print(f"    {key.replace('-', ' ').title()}: {score if score else '❌'}")
         if score:
             total_score += score
     print(f"Aggregate score from all categories: {total_score}")
