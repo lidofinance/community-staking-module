@@ -6,20 +6,27 @@ from typing import Iterable
 import requests
 
 scores = {
+    # TODO print voted on X votes
     "snapshot-vote": 1,
+    # TODO print voted on X votes
     "aragon-vote": 2,
+    # TODO print galxe score
     "galxe-score-4-10": 4,
     "galxe-score-above-10": 5,
-    "git-poap": 2
+    "git-poap": 2,
+    "high-signal-30": 2,
+    "high-signal-40": 3,
+    "high-signal-60": 4,
+    "high-signal-80": 5,
 }
-
-HIGH_SIGNAL_MIN_SCORE = 2
-HIGH_SIGNAL_MAX_SCORE = 5
 
 MIN_SCORE = 2
 MAX_SCORE = 7
 
 SNAPSHOT_VOTE_TIMESTAMP = 1750758263  # TODO update
+REQUIRED_SNAPSHOT_VOTES = 3
+REQUIRED_SNAPSHOT_VP = 100  # 100 LDO
+REQUIRED_ARAGON_VOTES = 2
 
 
 def snapshot_vote(addresses: Iterable[str]) -> int:
@@ -27,8 +34,6 @@ def snapshot_vote(addresses: Iterable[str]) -> int:
     Check if the address has participated in Snapshot votes.
     """
     lido_space = "lido-snapshot.eth"
-    required_vp = 100
-    required_votes_count = 3
     query = """
     query Votes {
       votes (
@@ -50,14 +55,16 @@ def snapshot_vote(addresses: Iterable[str]) -> int:
       }
     }
     """ % (
-        required_votes_count,
+        REQUIRED_SNAPSHOT_VOTES,
         lido_space,
         ", ".join(map(lambda x: '"' + x + '"', addresses)),
-        required_vp,
+        REQUIRED_SNAPSHOT_VP,
         SNAPSHOT_VOTE_TIMESTAMP
     )
     result = requests.get("https://hub.snapshot.org/graphql", json={"query": query}).json()
-    if len(result["data"]["votes"]) == required_votes_count:
+    votes_count = len(result["data"]["votes"])
+    if votes_count == REQUIRED_SNAPSHOT_VOTES:
+        print(f"    Found {votes_count} Snapshot votes (in sum) for given addresses")
         return scores["snapshot-vote"]
     return 0
 
@@ -67,11 +74,17 @@ def aragon_vote(addresses: Iterable[str]) -> int:
     Check if the address has participated in Aragon votes.
     """
 
-    with open("eligible_aragon_voters.csv", "r") as f:
-        reader = csv.reader(f)
+    with open("aragon_voters.csv", "r") as f:
+        reader = csv.DictReader(f)
+        total_votes_count = 0
         for row in reader:
-            if row and row[0].strip().lower() in addresses:
-                return scores["aragon-vote"]
+            address = row["Address"]
+            votes_count = int(row["VoteCount"])
+            if address.strip().lower() in addresses:
+                total_votes_count += votes_count
+                print(f"    Found {votes_count} Aragon votes for address {address}")
+    if total_votes_count > REQUIRED_ARAGON_VOTES:
+        return scores["aragon-vote"]
     return 0
 
 
@@ -132,35 +145,22 @@ def galxe_scores(addresses: Iterable[str]) -> int:
     for address in addresses:
         point = addr_to_points.get(address, 0)
         if point > 10:
-            score += scores["galxe-score-above-10"]
+            score = scores["galxe-score-above-10"]
+            # max score, no need to check further
+            print(f"    Found {point} Galxe score for address {address}")
+            return score
         elif 4 <= point <= 10:
-            score += scores["galxe-score-4-10"]
+            print(f"    Found {point} Galxe score for address {address}")
+            score = scores["galxe-score-4-10"]
     return score
 
 
 def gitpoap(addresses: Iterable[str]) -> int:
     url = "https://public-api.gitpoap.io/v1"
 
-    gitpoap_events = {
-        129: "2022 NiceNode Contributor",
-        807: "2023 NiceNode Contributor",
-        985: "2023 Rocket Rescue Node Contributor",
-        1107: "2024 Rocket Rescue Node Contributor",
-        1088: "2024 CoinCashew Contributor",
-        733: "2023 CoinCashew Contributor",
-        512: "2022 CoinCashew Contributor",
-        511: "2021 CoinCashew Contributor",
-        510: "2020 CoinCashew Contributor",
-        861: "2023 DAppNode Contributor",
-        1133: "2025 Stereum Contributor",
-        1084: "2024 Stereum Contributor",
-        838: "2023 Stereum Contributor",
-        122: "2022 Stereum Contributor",
-        121: "2021 Stereum Contributor",
-        2: "2022 Wagyu Key Gen Contributor",
-        854: "2023 Wagyu Key Gen Contributor",
-        23: "2021 Wagyu Key Gen Contributor"
-    }
+    with open("gitpoap_events.csv", "r") as f:
+        reader = csv.DictReader(f)
+        gitpoap_events = {row["ID"]: row["Name"] for row in reader}
     s = requests.Session()
     a = requests.adapters.HTTPAdapter(max_retries=3)
     s.mount('https://', a)
@@ -178,31 +178,27 @@ def gitpoap(addresses: Iterable[str]) -> int:
 
 
 def high_signal() -> int:
-    print("For taking into account high-signal score, please visit the https://app.highsignal.xyz/ and enter the given score manually")
+    # TODO if there is an api key, use it to fetch the score
+    print("    ⚠️ For taking into account high-signal score, please visit the https://app.highsignal.xyz/ and enter the given score manually")
     hs_points = 0
     try:
-        high_signal_score = int(input("High-signal score (0-100): "))
+        high_signal_score = int(input("    High-signal score (0-100): "))
     except ValueError:
-        print("Invalid input for high-signal score. Defaulting to 0.")
+        print("    Invalid input for high-signal score. Defaulting to 0.")
         hs_points = 0
     else:
         if high_signal_score < 0 or high_signal_score > 100:
-            print("Invalid input for high-signal score. Defaulting to 0.")
-            hs_points = 0
-        # - 2 points if 30 ≤ High Signal score ≤ 40
-        # - 3 points if 40 < High Signal score ≤ 60
-        # - 4 points if 60 < High Signal score ≤ 80
-        # - 5 points if High Signal score > 80
+            print("    Invalid input for high-signal score. Defaulting to 0.")
         elif 30 <= high_signal_score <= 40:
-            hs_points = 2
+            hs_points = scores["high-signal-30"]
         elif 40 < high_signal_score <= 60:
-            hs_points = 3
+            hs_points = scores["high-signal-40"]
         elif 60 < high_signal_score <= 80:
-            hs_points = 4
+            hs_points = scores["high-signal-60"]
         elif high_signal_score > 80:
-            hs_points = 5
+            hs_points = scores["high-signal-80"]
         else:
-            print("High-signal score is below the minimum threshold (30). No additional points awarded.")
+            print("    High-signal score is below the minimum threshold (30). No additional points awarded.")
     return hs_points
 
 def main():
@@ -222,8 +218,9 @@ def main():
     }
 
     total_score = 0
+    print("\nResults:")
     for key, score in results.items():
-        print(f"{key.replace('-', ' ').title()}: {score if score else '❌'}")
+        print(f"    {key.replace('-', ' ').title()}: {score if score else '❌'}")
         if score:
             total_score += score
     print(f"Aggregate score from all categories: {total_score}")
