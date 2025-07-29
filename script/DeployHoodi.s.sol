@@ -92,9 +92,9 @@ contract DeployHoodi is DeployBase {
             .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
         config.identifiedCommunityStakersGateCurveId = 2;
         config
-            .identifiedCommunityStakersGateTreeRoot = 0x30e01b38a2c9a20b4f530f068d9277700f9d19f3e06098509d4034888ee0ac7c; // See the first value in artifacts/hoodi/ics/merkle-tree.json
+            .identifiedCommunityStakersGateTreeRoot = 0x6ddbc639b18ef7eee4e4262baf6e2bec58724b40b9e557df4bc78a0d9c2e0607; // See the first value in artifacts/hoodi/ics/merkle-tree.json
         config
-            .identifiedCommunityStakersGateTreeCid = "bafkreigdvtiwusfrhd7ktonrwpiqlqga23usghv4odgjtj4nuyqsmv5yyu";
+            .identifiedCommunityStakersGateTreeCid = "bafkreicr363zly5gj3gkpmamu2qzcpevw6tylwc767fxi3vfc2skcxanfi";
         // 1.5 -> 1.3
         config.identifiedCommunityStakersGateBondCurve.push([1, 1.5 ether]);
         config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
