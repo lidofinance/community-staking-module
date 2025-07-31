@@ -1,6 +1,8 @@
 # Proof of engagement
 import csv
+import os
 import sys
+from pathlib import Path
 from typing import Iterable
 
 import requests
@@ -27,6 +29,9 @@ SNAPSHOT_VOTE_TIMESTAMP = 1750758263  # TODO update
 REQUIRED_SNAPSHOT_VOTES = 3
 REQUIRED_SNAPSHOT_VP = 100  # 100 LDO
 REQUIRED_ARAGON_VOTES = 2
+
+
+current_dir = Path(__file__).parent.resolve()
 
 
 def snapshot_vote(addresses: Iterable[str]) -> int:
@@ -74,7 +79,7 @@ def aragon_vote(addresses: Iterable[str]) -> int:
     Check if the address has participated in Aragon votes.
     """
 
-    with open("aragon_voters.csv", "r") as f:
+    with open(current_dir / "aragon_voters.csv", "r") as f:
         reader = csv.DictReader(f)
         total_votes_count = 0
         for row in reader:
@@ -158,7 +163,7 @@ def galxe_scores(addresses: Iterable[str]) -> int:
 def gitpoap(addresses: Iterable[str]) -> int:
     url = "https://public-api.gitpoap.io/v1"
 
-    with open("gitpoap_events.csv", "r") as f:
+    with open(current_dir / "gitpoap_events.csv", "r") as f:
         reader = csv.DictReader(f)
         gitpoap_events = {row["ID"]: row["Name"] for row in reader}
     s = requests.Session()

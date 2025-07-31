@@ -10,6 +10,7 @@ import sys
 import csv
 import json
 import time
+from pathlib import Path
 from typing import Iterable
 from datetime import datetime
 
@@ -32,13 +33,14 @@ scores = {
 MIN_SCORE = 5
 MAX_SCORE = 8
 
+current_dir = Path(__file__).parent.resolve()
 
 def is_addresses_in_csv(addresses: Iterable[str], csv_file: str) -> bool:
     """
     Returns True if any address in `addresses` is found in the first column of the given CSV file.
     The CSV file should contain a single column with addresses or a header with 'Address'.
     """
-    with open(csv_file, "r") as f:
+    with open(current_dir / csv_file, "r") as f:
         reader = csv.reader(f)
         for row in reader:
             if row and row[0].strip().lower() in addresses:
@@ -158,7 +160,7 @@ def _check_csm_performance_logs(addresses: Iterable[str], no_owners_file_name, p
     Returns True if any address is a node operator with all validators above the threshold in all logs.
     Used for both testnet and mainnet CSM checks.
     """
-    with open(no_owners_file_name, 'r') as f:
+    with open(current_dir / no_owners_file_name, 'r') as f:
         node_operators = json.load(f)
 
     address_to_id = {}
