@@ -25,9 +25,8 @@ scores = {
     "ssv-verified": 7,
     "csm-testnet": 4,  # TODO Circles verification should give 5 here
     "csm-mainnet": 6,
-    # TODO ask Remus. It'll be static files
-    # "sdvtm-testnet": 5,
-    # "sdvtm-mainnet": 7
+    "sdvtm-testnet": 5,
+    "sdvtm-mainnet": 7
 }
 
 MIN_SCORE = 5
@@ -86,6 +85,25 @@ def ssv_verified_score(addresses: Iterable[str]) -> int:
     if is_addresses_in_csv(addresses, "ssv-verified-operators.csv"):
         return scores["ssv-verified"]
     return 0
+
+
+def sdvtm_testnet_score(addresses: Iterable[str]) -> int:
+    """
+    Returns the score for SDVTM testnet participation if any address is eligible, otherwise 0.
+    """
+    if is_addresses_in_csv(addresses, "sdvtm-testnet.csv"):
+        return scores["sdvtm-testnet"]
+    return 0
+
+
+def sdvtm_mainnet_score(addresses: Iterable[str]) -> int:
+    """
+    Returns the score for SDVTM mainnet participation if any address is eligible, otherwise 0.
+    """
+    if is_addresses_in_csv(addresses, "sdvtm-mainnet.csv"):
+        return scores["sdvtm-mainnet"]
+    return 0
+
 
 def csm_testnet_score(addresses: Iterable[str]) -> int:
     """
@@ -197,6 +215,8 @@ def main():
         "stake-cat": stake_cat_score(addresses),
         "obol-techne": obol_techne_score(addresses),
         "ssv-verified": ssv_verified_score(addresses),
+        "sdvtm-testnet": sdvtm_testnet_score(addresses),
+        "sdvtm-mainnet": sdvtm_mainnet_score(addresses),
         "csm-testnet": csm_testnet_score(addresses),
         "csm-mainnet": csm_mainnet_score(addresses)
     }
