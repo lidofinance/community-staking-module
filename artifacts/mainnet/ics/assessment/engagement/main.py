@@ -182,28 +182,54 @@ def gitpoap(addresses: Iterable[str]) -> int:
     return 0
 
 
-def high_signal() -> int:
-    # TODO if there is an api key, use it to fetch the score
-    print("    ⚠️ For taking into account high-signal score, please visit the https://app.highsignal.xyz/ and enter the given score manually")
-    hs_points = 0
-    try:
-        high_signal_score = int(input("    High-signal score (0-100): "))
-    except ValueError:
-        print("    Invalid input for high-signal score. Defaulting to 0.")
-        hs_points = 0
+def high_signal(addresses: Iterable[str]) -> int:
+    if api_key := os.getenv("HIGH_SIGNAL_API_KEY"):
+        high_signal_url = "https://app.highsignal.xyz/api/users/"
+        params = {
+            "apiKey": api_key,
+            "project": "lido"
+        }
+        results = []
+        curr_page = 1
+        while True:
+            params["page"] = curr_page
+            response = requests.get(high_signal_url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            results.extend(data.get("data", []))
+            if data["maxPage"] == curr_page:
+                break
+            curr_page += 1
+        high_signal_score = 0
+        for result in results:
+            for address in addresses:
+                if address.lower() in map(lambda x: x.lower(), result.get("addresses", [])):
+                    high_signal_score = max(result.get("score", 0), high_signal_score)
+                    print(f"    Found High-signal score {high_signal_score} for address {address}")
+        if high_signal_score == 0:
+            print("    No High-signal score found for the given addresses.")
+            return 0
     else:
-        if high_signal_score < 0 or high_signal_score > 100:
+        print("    ⚠️ For taking into account high-signal score, please visit the https://app.highsignal.xyz/ and enter the given score manually")
+        try:
+            high_signal_score = int(input("    High-signal score (0-100): "))
+        except ValueError:
             print("    Invalid input for high-signal score. Defaulting to 0.")
-        elif 30 <= high_signal_score <= 40:
-            hs_points = scores["high-signal-30"]
-        elif 40 < high_signal_score <= 60:
-            hs_points = scores["high-signal-40"]
-        elif 60 < high_signal_score <= 80:
-            hs_points = scores["high-signal-60"]
-        elif high_signal_score > 80:
-            hs_points = scores["high-signal-80"]
-        else:
-            print("    High-signal score is below the minimum threshold (30). No additional points awarded.")
+            return 0
+    if high_signal_score < 0 or high_signal_score > 100:
+        print("    Invalid input for high-signal score. Defaulting to 0.")
+        return 0
+    elif 30 <= high_signal_score <= 40:
+        hs_points = scores["high-signal-30"]
+    elif 40 < high_signal_score <= 60:
+        hs_points = scores["high-signal-40"]
+    elif 60 < high_signal_score <= 80:
+        hs_points = scores["high-signal-60"]
+    elif high_signal_score > 80:
+        hs_points = scores["high-signal-80"]
+    else:
+        print("    High-signal score is below the minimum threshold (30). No additional points awarded.")
+        return 0
     return hs_points
 
 def main():
@@ -219,7 +245,7 @@ def main():
         "aragon-vote": aragon_vote(addresses),
         "galxe-score": galxe_scores(addresses),
         "git-poap": gitpoap(addresses),
-        "high-signal": high_signal()
+        "high-signal": high_signal(addresses)
     }
 
     total_score = 0

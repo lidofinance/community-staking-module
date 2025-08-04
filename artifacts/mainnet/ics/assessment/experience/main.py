@@ -1,10 +1,4 @@
 # Proof of experience
-# - eth-staker list https://github.com/ethstaker/solo-stakers/tree/main
-# - stake-cat list B https://github.com/Stake-Cat/Solo-Stakers/blob/main/Solo-Stakers/Solo-Stakers-B.csv
-# - Obol Techne Credentials
-# - SSV Verified operators
-# - CSM Testnet participation
-# - CSM Mainnet participation
 
 import sys
 import csv
@@ -89,25 +83,32 @@ def ssv_verified_score(addresses: Iterable[str]) -> int:
     return 0
 
 
-def sdvtm_testnet_score(addresses: Iterable[str]) -> int:
+def sdvtm_score(addresses: Iterable[str]) -> int:
     """
-    Returns the score for SDVTM testnet participation if any address is eligible, otherwise 0.
+    Returns the score for SDVTM participation if any address is eligible, otherwise 0.
     """
+    if is_addresses_in_csv(addresses, "sdvtm-mainnet.csv"):
+        return scores["sdvtm-mainnet"]
     if is_addresses_in_csv(addresses, "sdvtm-testnet.csv"):
         return scores["sdvtm-testnet"]
     return 0
 
 
-def sdvtm_mainnet_score(addresses: Iterable[str]) -> int:
+def csm_score(addresses: Iterable[str]) -> int:
     """
-    Returns the score for SDVTM mainnet participation if any address is eligible, otherwise 0.
+    Returns the score for CSM participation if any address is eligible, otherwise 0.
+    This function checks both testnet and mainnet CSM participation.
     """
-    if is_addresses_in_csv(addresses, "sdvtm-mainnet.csv"):
-        return scores["sdvtm-mainnet"]
+    testnet_score = _csm_testnet_score(addresses)
+    mainnet_score = _csm_mainnet_score(addresses)
+
+    if mainnet_score:
+        return mainnet_score
+    if testnet_score:
+        return testnet_score
     return 0
 
-
-def csm_testnet_score(addresses: Iterable[str]) -> int:
+def _csm_testnet_score(addresses: Iterable[str]) -> int:
     """
     Returns the score for CSM testnet participation if any address is eligible, otherwise 0.
     """
@@ -123,7 +124,7 @@ def csm_testnet_score(addresses: Iterable[str]) -> int:
         return scores["csm-testnet"]
     return 0
 
-def csm_mainnet_score(addresses: Iterable[str]) -> int:
+def _csm_mainnet_score(addresses: Iterable[str]) -> int:
     """
     Returns the score for CSM mainnet participation if any address is eligible, otherwise 0.
     """
@@ -217,10 +218,8 @@ def main():
         "stake-cat": stake_cat_score(addresses),
         "obol-techne": obol_techne_score(addresses),
         "ssv-verified": ssv_verified_score(addresses),
-        "sdvtm-testnet": sdvtm_testnet_score(addresses),
-        "sdvtm-mainnet": sdvtm_mainnet_score(addresses),
-        "csm-testnet": csm_testnet_score(addresses),
-        "csm-mainnet": csm_mainnet_score(addresses)
+        "sdvtm-testnet/mainnet": sdvtm_score(addresses),
+        "csm-testnet/mainnet": csm_score(addresses),
     }
 
     print("\nResults:")
