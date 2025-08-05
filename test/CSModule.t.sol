@@ -7,6 +7,7 @@ import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
 import { CSModule } from "../src/CSModule.sol";
+import { Curated } from "../src/Curated.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSBondLock } from "../src/abstract/CSBondLock.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
@@ -77,7 +78,9 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
-    CSModuleTestable public csm;
+    CSModule public csm;
+    CSModuleTestable public csmTestable;
+    Curated public curated;
     CSAccountingMock public accounting;
     Stub public feeDistributor;
     CSParametersRegistryMock public parametersRegistry;
@@ -417,6 +420,7 @@ contract CSMCommon is CSMFixtures {
             _accounting: address(accounting),
             exitPenalties: address(exitPenalties)
         });
+        csmTestable = CSModuleTestable(address(csm));
 
         accounting.setCSM(address(csm));
 
@@ -479,6 +483,7 @@ contract CSMCommonNoRoles is CSMFixtures {
             _accounting: address(accounting),
             exitPenalties: address(exitPenalties)
         });
+        csmTestable = CSModuleTestable(address(csm));
 
         accounting.setCSM(address(csm));
 
@@ -3066,7 +3071,7 @@ contract CsmQueueOps is CSMCommon {
         unvetKeys({ noId: noId, to: 2 });
 
         vm.expectRevert(IQueueLib.QueueLookupNoLimit.selector);
-        csm.cleanDepositQueueTestable(0);
+        csmTestable.cleanDepositQueueTestable(0);
     }
 
     function test_queueIsDirty_WhenHasBatchOfNonDepositableOperator()
@@ -3480,7 +3485,7 @@ contract CsmPriorityQueue is CSMCommon {
 
     function test_migrateToPriorityQueue_FromLegacyQueue() public {
         uint256 noId = createNodeOperator(0);
-        csm._enqueueToLegacyQueue(noId, 8);
+        csmTestable._enqueueToLegacyQueue(noId, 8);
         uploadMoreKeys(noId, 8);
 
         BatchInfo[] memory exp = new BatchInfo[](1);

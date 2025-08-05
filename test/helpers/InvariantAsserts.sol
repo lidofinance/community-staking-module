@@ -160,7 +160,7 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertCSMUnusedStorageSlots(CSModule csm) public {
+    function assertCSMUnusedStorageSlots(ICSModule csm) public {
         if (skipInvariants()) {
             return;
         }
