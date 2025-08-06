@@ -9,6 +9,10 @@ Lido Community Staking Module (CSM) is a permissionless module allowing communit
 
 More on CSM in the [docs](https://docs.lido.fi/staking-modules/csm/intro).
 
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md).
+
 ## Getting Started
 
 - Install [Foundry tools](https://book.getfoundry.sh/getting-started/installation) (version 1.2.3, see `.foundryref`)
