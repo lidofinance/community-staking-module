@@ -75,7 +75,7 @@ contract DeployHoodi is DeployBase {
         config.defaultAvgPerfLeewayBP = 300;
         config.defaultRewardShareBP = 5834; // 58.34% of 6% = 3.5% of the total
         config.defaultStrikesLifetimeFrames = 6;
-        config.defaultStrikesThreshold = 2;
+        config.defaultStrikesThreshold = 3;
         config.queueLowestPriority = 5;
         config.defaultQueuePriority = 5;
         config.defaultQueueMaxDeposits = type(uint32).max;
@@ -109,7 +109,7 @@ contract DeployHoodi is DeployBase {
         config.identifiedCommunityStakersGateRewardShareData.push([1, 10000]);
         config.identifiedCommunityStakersGateRewardShareData.push([17, 5834]);
         config.identifiedCommunityStakersGateStrikesLifetimeFrames = 6;
-        config.identifiedCommunityStakersGateStrikesThreshold = 2;
+        config.identifiedCommunityStakersGateStrikesThreshold = 4;
         config.identifiedCommunityStakersGateQueuePriority = 0;
         config.identifiedCommunityStakersGateQueueMaxDeposits = 10;
         config
