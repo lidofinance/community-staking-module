@@ -170,6 +170,7 @@ def gitpoap(addresses: Iterable[str]) -> int:
     a = requests.adapters.HTTPAdapter(max_retries=3)
     s.mount('https://', a)
 
+    final_score = 0
     for event_id, event_name in gitpoap_events.items():
         response = s.get(f"{url}/gitpoaps/{event_id}/addresses")
         response.raise_for_status()
@@ -177,9 +178,9 @@ def gitpoap(addresses: Iterable[str]) -> int:
         poap_holders = response.json().get("addresses", [])
         if any(address.lower() in poap_holders for address in addresses):
             print(f"    Found GitPoap for event '{event_name}'")
-            return scores["git-poap"]
+            final_score =  scores["git-poap"]
 
-    return 0
+    return final_score
 
 
 def high_signal(addresses: Iterable[str]) -> int:
