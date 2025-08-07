@@ -2,10 +2,12 @@
 import csv
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
 import requests
+from web3 import Web3
 
 scores = {
     # TODO print voted on X votes
@@ -30,6 +32,8 @@ REQUIRED_SNAPSHOT_VOTES = 3
 REQUIRED_SNAPSHOT_VP = 100  # 100 LDO
 REQUIRED_ARAGON_VOTES = 2
 
+HIGH_SIGNAL_START_DATE = datetime(2025, 7, 1)  # YYYY, MM, DD
+HIGH_SIGNAL_END_DATE = datetime(2025, 8, 1)  # YYYY, MM, DD
 
 current_dir = Path(__file__).parent.resolve()
 
@@ -185,28 +189,28 @@ def gitpoap(addresses: Iterable[str]) -> int:
 
 def high_signal(addresses: Iterable[str]) -> int:
     if api_key := os.getenv("HIGH_SIGNAL_API_KEY"):
-        high_signal_url = "https://app.highsignal.xyz/api/users/"
+        high_signal_url = "https://app.highsignal.xyz/api/data/v1/user"
         params = {
             "apiKey": api_key,
-            "project": "lido"
+            "project": "lido",
+            "searchType": "address",
+            "startDate": HIGH_SIGNAL_START_DATE.strftime("%Y-%m-%d"),
+            "endDate": HIGH_SIGNAL_END_DATE.strftime("%Y-%m-%d"),
         }
-        results = []
-        curr_page = 1
-        while True:
-            params["page"] = curr_page
-            response = requests.get(high_signal_url, params=params)
-            response.raise_for_status()
-            data = response.json()
-            results.extend(data.get("data", []))
-            if data["maxPage"] == curr_page:
-                break
-            curr_page += 1
+
         high_signal_score = 0
-        for result in results:
-            for address in addresses:
-                if address.lower() in map(lambda x: x.lower(), result.get("addresses", [])):
-                    high_signal_score = max(result.get("score", 0), high_signal_score)
-                    print(f"    Found High-signal score {high_signal_score} for address {address}")
+        for address in addresses:
+            params["searchValue"] = Web3.to_checksum_address(address)
+            response = requests.get(high_signal_url, params=params)
+            if response.status_code == 404:
+                continue
+            response.raise_for_status()
+            response = response.json()
+            address_score = response.get("totalScores", 0)[0]["totalScore"]
+
+            high_signal_score = max(address_score, high_signal_score)
+            print(f"    Found High-signal score {address_score} for address {address}")
+
         if high_signal_score == 0:
             print("    No High-signal score found for the given addresses.")
             return 0
@@ -242,10 +246,10 @@ def main():
     print("Checking addresses for Proof of Engagement...")
 
     results = {
-        "snapshot-vote": snapshot_vote(addresses),
-        "aragon-vote": aragon_vote(addresses),
-        "galxe-score": galxe_scores(addresses),
-        "git-poap": gitpoap(addresses),
+        # "snapshot-vote": snapshot_vote(addresses),
+        # "aragon-vote": aragon_vote(addresses),
+        # "galxe-score": galxe_scores(addresses),
+        # "git-poap": gitpoap(addresses),
         "high-signal": high_signal(addresses)
     }
 
