@@ -3,6 +3,7 @@ import sys
 # Import the scoring functions from the engagement and experience modules
 from engagement.main import main as engagement_main
 from experience.main import main as experience_main
+from humanity.main import main as humanity_main
 
 def main():
     if len(sys.argv) < 2:
@@ -10,9 +11,15 @@ def main():
         return
 
     print("==== Proof of Engagement ====")
-    engagement_main()
+    engagement_score = engagement_main()
     print("\n==== Proof of Experience ====")
-    experience_main()
+    experience_score = experience_main()
+    print("\n==== Proof of Humanity ====")
+    humanity_score = humanity_main()
+    print("\n==== Assessment Completed ====")
+    print(f"Total Engagement Score: {engagement_score}")
+    print(f"Total Experience Score: {experience_score}")
+    print(f"Total Humanity Score: {humanity_score}")
 
 if __name__ == "__main__":
     main()
