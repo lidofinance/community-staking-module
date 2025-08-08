@@ -4,7 +4,6 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
 
 import requests
 from web3 import Web3
@@ -38,7 +37,7 @@ HIGH_SIGNAL_END_DATE = datetime(2025, 8, 1)  # YYYY, MM, DD
 current_dir = Path(__file__).parent.resolve()
 
 
-def snapshot_vote(addresses: Iterable[str]) -> int:
+def snapshot_vote(addresses: set[str]) -> int:
     """
     Check if the address has participated in Snapshot votes.
     """
@@ -72,13 +71,13 @@ def snapshot_vote(addresses: Iterable[str]) -> int:
     )
     result = requests.get("https://hub.snapshot.org/graphql", json={"query": query}).json()
     votes_count = len(result["data"]["votes"])
-    if votes_count == REQUIRED_SNAPSHOT_VOTES:
+    if votes_count >= REQUIRED_SNAPSHOT_VOTES:
         print(f"    Found {votes_count} Snapshot votes (in sum) for given addresses")
         return scores["snapshot-vote"]
     return 0
 
 
-def aragon_vote(addresses: Iterable[str]) -> int:
+def aragon_vote(addresses: set[str]) -> int:
     """
     Check if the address has participated in Aragon votes.
     """
@@ -92,12 +91,12 @@ def aragon_vote(addresses: Iterable[str]) -> int:
             if address.strip().lower() in addresses:
                 total_votes_count += votes_count
                 print(f"    Found {votes_count} Aragon votes for address {address}")
-    if total_votes_count > REQUIRED_ARAGON_VOTES:
+    if total_votes_count >= REQUIRED_ARAGON_VOTES:
         return scores["aragon-vote"]
     return 0
 
 
-def galxe_scores(addresses: Iterable[str]) -> int:
+def galxe_scores(addresses: set[str]) -> int:
     api_url = "https://graphigo.prd.galaxy.eco/query"
     lido_space_id = 22849
     query = """
@@ -164,7 +163,7 @@ def galxe_scores(addresses: Iterable[str]) -> int:
     return score
 
 
-def gitpoap(addresses: Iterable[str]) -> int:
+def gitpoap(addresses: set[str]) -> int:
     url = "https://public-api.gitpoap.io/v1"
 
     with open(current_dir / "gitpoap_events.csv", "r") as f:
@@ -182,12 +181,12 @@ def gitpoap(addresses: Iterable[str]) -> int:
         poap_holders = response.json().get("addresses", [])
         if any(address.lower() in poap_holders for address in addresses):
             print(f"    Found GitPoap for event '{event_name}'")
-            final_score =  scores["git-poap"]
+            final_score = scores["git-poap"]
 
     return final_score
 
 
-def high_signal(addresses: Iterable[str]) -> int:
+def high_signal(addresses: set[str]) -> int:
     if api_key := os.getenv("HIGH_SIGNAL_API_KEY"):
         high_signal_url = "https://app.highsignal.xyz/api/data/v1/user"
         params = {
@@ -217,7 +216,7 @@ def high_signal(addresses: Iterable[str]) -> int:
     else:
         print("    ⚠️ For taking into account high-signal score, please visit the https://app.highsignal.xyz/ and enter the given score manually")
         try:
-            high_signal_score = int(input("    High-signal score (0-100): "))
+            high_signal_score = float(input("    High-signal score (0-100): "))
         except ValueError:
             print("    Invalid input for high-signal score. Defaulting to 0.")
             return 0
@@ -246,10 +245,10 @@ def main():
     print("Checking addresses for Proof of Engagement...")
 
     results = {
-        # "snapshot-vote": snapshot_vote(addresses),
-        # "aragon-vote": aragon_vote(addresses),
-        # "galxe-score": galxe_scores(addresses),
-        # "git-poap": gitpoap(addresses),
+        "snapshot-vote": snapshot_vote(addresses),
+        "aragon-vote": aragon_vote(addresses),
+        "galxe-score": galxe_scores(addresses),
+        "git-poap": gitpoap(addresses),
         "high-signal": high_signal(addresses)
     }
 
@@ -262,11 +261,13 @@ def main():
     print(f"Aggregate score from all sources: {total_score}")
     if total_score < MIN_SCORE:
         print(f"❌ The score is below the minimum required for this category ({MIN_SCORE}).")
+        final_score = 0
     else:
         final_score = min(total_score, MAX_SCORE)
         if total_score > MAX_SCORE:
             print(f"Score exceeds the maximum allowed for the category ({MAX_SCORE}). Final score capped at {MAX_SCORE}.")
         print(f"Final Proof of Engagement score: {final_score}")
+    return final_score
 
 if __name__ == '__main__':
     main()

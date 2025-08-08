@@ -5,7 +5,6 @@ import csv
 import json
 import time
 from pathlib import Path
-from typing import Iterable
 from datetime import datetime
 
 import requests
@@ -29,7 +28,7 @@ MAX_SCORE = 8
 
 current_dir = Path(__file__).parent.resolve()
 
-def is_addresses_in_csv(addresses: Iterable[str], csv_file: str) -> bool:
+def is_addresses_in_csv(addresses: set[str], csv_file: str) -> bool:
     """
     Returns True if any address in `addresses` is found in the first column of the given CSV file.
     The CSV file should contain a single column with addresses or a header with 'Address'.
@@ -43,7 +42,7 @@ def is_addresses_in_csv(addresses: Iterable[str], csv_file: str) -> bool:
     return False
 
 
-def eth_staker_score(addresses: Iterable[str]) -> int:
+def eth_staker_score(addresses: set[str]) -> int:
     """
     Returns the score for EthStaker solo-staker list if any address is present, otherwise 0.
     """
@@ -51,7 +50,7 @@ def eth_staker_score(addresses: Iterable[str]) -> int:
         return scores["eth-staker"]
     return 0
 
-def stake_cat_score(addresses: Iterable[str]) -> int:
+def stake_cat_score(addresses: set[str]) -> int:
     """
     Returns the score for StakeCat solo-staker list (mainnet or gnosis) if any address is present, otherwise 0.
     """
@@ -61,7 +60,7 @@ def stake_cat_score(addresses: Iterable[str]) -> int:
         return scores["stake-cat"]
     return 0
 
-def obol_techne_score(addresses: Iterable[str]) -> int:
+def obol_techne_score(addresses: set[str]) -> int:
     """
     Returns the highest Obol Techne credential score for the given addresses, or 0 if none found.
     """
@@ -74,7 +73,7 @@ def obol_techne_score(addresses: Iterable[str]) -> int:
         return scores["obol-techne-base"]
     return 0
 
-def ssv_verified_score(addresses: Iterable[str]) -> int:
+def ssv_verified_score(addresses: set[str]) -> int:
     """
     Returns the score for SSV Verified Operators if any address is present, otherwise 0.
     """
@@ -83,7 +82,7 @@ def ssv_verified_score(addresses: Iterable[str]) -> int:
     return 0
 
 
-def sdvtm_score(addresses: Iterable[str]) -> int:
+def sdvtm_score(addresses: set[str]) -> int:
     """
     Returns the score for SDVTM participation if any address is eligible, otherwise 0.
     """
@@ -94,7 +93,7 @@ def sdvtm_score(addresses: Iterable[str]) -> int:
     return 0
 
 
-def csm_score(addresses: Iterable[str]) -> int:
+def csm_score(addresses: set[str]) -> int:
     """
     Returns the score for CSM participation if any address is eligible, otherwise 0.
     This function checks both testnet and mainnet CSM participation.
@@ -108,7 +107,7 @@ def csm_score(addresses: Iterable[str]) -> int:
         return testnet_score
     return 0
 
-def _csm_testnet_score(addresses: Iterable[str]) -> int:
+def _csm_testnet_score(addresses: set[str]) -> int:
     """
     Returns the score for CSM testnet participation if any address is eligible, otherwise 0.
     """
@@ -124,7 +123,7 @@ def _csm_testnet_score(addresses: Iterable[str]) -> int:
         return scores["csm-testnet"]
     return 0
 
-def _csm_mainnet_score(addresses: Iterable[str]) -> int:
+def _csm_mainnet_score(addresses: set[str]) -> int:
     """
     Returns the score for CSM mainnet participation if any address is eligible, otherwise 0.
     """
@@ -156,7 +155,7 @@ def _request_performance_report(report_file, retries=3, delay=2):
     raise Exception(f"Failed to fetch report {report_file}")
 
 
-def _check_csm_performance_logs(addresses: Iterable[str], no_owners_file_name, perf_reports, network_name) -> bool:
+def _check_csm_performance_logs(addresses: set[str], no_owners_file_name, perf_reports, network_name) -> bool:
     """
     Returns True if any address is a node operator with all validators above the threshold in all logs.
     Used for both testnet and mainnet CSM checks.
@@ -168,7 +167,6 @@ def _check_csm_performance_logs(addresses: Iterable[str], no_owners_file_name, p
     for no_id, addr in node_operators.items():
         address_to_id[addr.lower()] = no_id
 
-    addresses = set(addresses)
     found_ids = set(address_to_id[a] for a in addresses if a in address_to_id)
     if not found_ids:
         return False
@@ -231,11 +229,13 @@ def main():
     print(f"Aggregate score from all sources: {total_score}")
     if total_score < MIN_SCORE:
         print(f"❌ The score is below the minimum required for this category ({MIN_SCORE}).")
+        final_score = 0
     else:
         final_score = min(total_score, MAX_SCORE)
         if total_score > MAX_SCORE:
             print(f"Score exceeds the maximum allowed for the category ({MAX_SCORE}). Final score capped at {MAX_SCORE}.")
         print(f"Final Proof of Experience score: {final_score}")
+    return final_score
 
 if __name__ == '__main__':
     main()
