@@ -36,6 +36,7 @@ interface INOAddresses {
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
     error MethodCallIsNotAllowed();
+    error ZeroManagerAddress();
     error ZeroRewardAddress();
 }
 
@@ -239,6 +240,53 @@ library NOAddresses {
             nodeOperatorId,
             oldAddress,
             newAddress
+        );
+    }
+
+    /// @notice Change both reward and manager addresses of a node operator.
+    /// @dev XXX: Use with caution! No check of the caller.
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param newManagerAddress New manager address
+    /// @param newRewardAddress New reward address
+    function changeNodeOperatorAddresses(
+        mapping(uint256 => NodeOperator) storage nodeOperators,
+        uint256 nodeOperatorId,
+        address newManagerAddress,
+        address newRewardAddress
+    ) external {
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.managerAddress == address(0)) {
+            revert ICSModule.NodeOperatorDoesNotExist();
+        }
+
+        if (
+            newManagerAddress == no.managerAddress &&
+            newRewardAddress == no.rewardAddress
+        ) {
+            revert INOAddresses.SameAddress();
+        }
+
+        if (newManagerAddress == address(0)) {
+            revert INOAddresses.ZeroManagerAddress();
+        }
+        if (newRewardAddress == address(0)) {
+            revert INOAddresses.ZeroRewardAddress();
+        }
+
+        address oldManagerAddress = no.managerAddress;
+        address oldRewardAddress = no.rewardAddress;
+        no.managerAddress = newManagerAddress;
+        no.rewardAddress = newRewardAddress;
+
+        emit INOAddresses.NodeOperatorManagerAddressChanged(
+            nodeOperatorId,
+            oldManagerAddress,
+            newManagerAddress
+        );
+        emit INOAddresses.NodeOperatorRewardAddressChanged(
+            nodeOperatorId,
+            oldRewardAddress,
+            newRewardAddress
         );
     }
 }
