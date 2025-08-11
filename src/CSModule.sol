@@ -92,7 +92,7 @@ contract CSModule is
     bool internal _publicRelease;
 
     uint256 private _nonce;
-    mapping(uint256 => NodeOperator) private _nodeOperators;
+    mapping(uint256 => NodeOperator) internal _nodeOperators;
     /// @dev see _keyPointer function for details of noKeyIndexPacked structure
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
     /// @dev DEPRECATED! No writes expected after CSM v2
