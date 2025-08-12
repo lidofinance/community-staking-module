@@ -374,12 +374,17 @@ interface ICSModule is
     /// @param nodeOperatorId ID of the Node Operator
     function updateDepositableValidatorsCount(uint256 nodeOperatorId) external;
 
-    /// Performs a one-time migration of allocated seats from the legacy queue to a priority queue
+    /// Performs a one-time migration of allocated seats from the legacy or default queue to a priority queue
     /// for an eligible node operator. This is possible, e.g., in the following scenario: A node
-    /// operator with EA curve added their keys before CSM v2 and has no deposits due to a very long
-    /// queue. The EA curve gives the node operator the ability to get some count of deposits through
+    /// operator keys before CSM v2 and have no deposits due to a long queue.
+    /// After the CSM v2 release, the node operator has claimed the ICS or other priority node operator type.
+    /// This node operator type gives the node operator the ability to get  several deposits through
     /// the priority queue. So, by calling the migration method, the node operator can obtain seats
-    /// in the priority queue even though they already have seats in the legacy queue.
+    /// in the priority queue, even though they already have seats in the legacy queue.
+    /// The method can also be used by the node operators who joined CSM v2 permissionlessly after the release
+    /// and had their node operator type upgraded to ICS or another priority type.
+    /// The method does not remove the old queue items. Hence, the node operator can upload additional keys that
+    /// will take the place of the migrated keys in the original queue.
     /// @param nodeOperatorId ID of the Node Operator
     function migrateToPriorityQueue(uint256 nodeOperatorId) external;
 
