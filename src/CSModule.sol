@@ -1334,7 +1334,7 @@ contract CSModule is
         bytes calldata publicKeys,
         bytes calldata signatures
     ) internal {
-        // Do not allow of multiple calls of addValidatorKeys* methods.
+        // Do not allow of multiple calls of addValidatorKeys* methods for the creator contract.
         _forgetOperatorCreator(nodeOperatorId);
 
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
