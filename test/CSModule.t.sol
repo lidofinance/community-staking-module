@@ -3010,7 +3010,7 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
 
         vm.expectRevert(INOAddresses.SenderIsNotManagerAddress.selector);
         vm.prank(stranger);
-        csm.changeNodeOperatorRewardAddress(0, nodeOperator);
+        csm.changeNodeOperatorRewardAddress(noId, nodeOperator);
     }
 
     function test_changeNodeOperatorRewardAddress_RevertWhen_NoExtendedPermissions()
