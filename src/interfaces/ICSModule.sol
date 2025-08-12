@@ -376,9 +376,9 @@ interface ICSModule is
 
     /// Performs a one-time migration of allocated seats from the legacy or default queue to a priority queue
     /// for an eligible node operator. This is possible, e.g., in the following scenario: A node
-    /// operator keys before CSM v2 and have no deposits due to a long queue.
+    /// operator uploaded keys before CSM v2 and have no deposits due to a long queue.
     /// After the CSM v2 release, the node operator has claimed the ICS or other priority node operator type.
-    /// This node operator type gives the node operator the ability to get  several deposits through
+    /// This node operator type gives the node operator the ability to get several deposits through
     /// the priority queue. So, by calling the migration method, the node operator can obtain seats
     /// in the priority queue, even though they already have seats in the legacy queue.
     /// The method can also be used by the node operators who joined CSM v2 permissionlessly after the release
