@@ -115,7 +115,10 @@ contract PenaltyIntegrationTest is
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = defaultNoId;
 
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        csm.settleELRewardsStealingPenalty(
+            idsToSettle,
+            UintArr(type(uint256).max)
+        );
 
         (uint256 bondAfter, ) = accounting.getBondSummaryShares(defaultNoId);
 
