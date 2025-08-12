@@ -1361,7 +1361,7 @@ contract CSModule is
 
             uint32 totalVettedKeys = no.totalVettedKeys;
             // Optimistic vetting takes place.
-            if (totalAddedKeys == no.totalVettedKeys) {
+            if (totalAddedKeys == totalVettedKeys) {
                 // @dev No need to safe cast due to internal logic
                 totalVettedKeys = totalVettedKeys + uint32(keysCount);
                 no.totalVettedKeys = totalVettedKeys;
