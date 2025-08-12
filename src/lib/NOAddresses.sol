@@ -227,6 +227,11 @@ library NOAddresses {
 
         NodeOperator storage no = nodeOperators[nodeOperatorId];
         address managerAddress = no.managerAddress;
+        address oldRewardAddress = no.rewardAddress;
+
+        if (oldRewardAddress == newAddress) {
+            revert INOAddresses.SameAddress();
+        }
 
         if (managerAddress == address(0)) {
             revert ICSModule.NodeOperatorDoesNotExist();
@@ -240,7 +245,6 @@ library NOAddresses {
             revert INOAddresses.SenderIsNotManagerAddress();
         }
 
-        address oldAddress = no.rewardAddress;
         no.rewardAddress = newAddress;
         // @dev Gas golfing
         if (no.proposedRewardAddress != address(0)) {
@@ -249,7 +253,7 @@ library NOAddresses {
 
         emit INOAddresses.NodeOperatorRewardAddressChanged(
             nodeOperatorId,
-            oldAddress,
+            oldRewardAddress,
             newAddress
         );
     }
