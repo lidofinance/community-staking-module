@@ -188,16 +188,16 @@ contract StakingRouterIntegrationTest is
 
         lidoDepositWithNoGasMetering(keysCount);
 
-        uint256 exited = 1;
+        uint256 newExited = exitedKeysBefore + 1;
         vm.prank(agent);
         stakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator(
             moduleId,
             bytes.concat(bytes8(uint64(noId))),
-            bytes.concat(bytes16(uint128(exited)))
+            bytes.concat(bytes16(uint128(newExited)))
         );
 
         NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(no.totalExitedKeys, exitedKeysBefore + exited);
+        assertEq(no.totalExitedKeys, newExited);
     }
 
     function test_getStakingModuleSummary() public assertInvariants {
@@ -212,19 +212,20 @@ contract StakingRouterIntegrationTest is
 
         lidoDepositWithNoGasMetering(keysCount);
 
-        uint256 exited = 1;
+        uint256 exitedKeysBefore = csm.getNodeOperator(noId).totalExitedKeys;
+        uint256 newExited = exitedKeysBefore + 1;
         vm.prank(agent);
         stakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator(
             moduleId,
             bytes.concat(bytes8(uint64(noId))),
-            bytes.concat(bytes16(uint128(exited)))
+            bytes.concat(bytes16(uint128(newExited)))
         );
 
         IStakingRouter.StakingModuleSummary memory summary = stakingRouter
             .getStakingModuleSummary(moduleId);
         assertEq(
             summary.totalExitedValidators,
-            summaryOld.totalExitedValidators + exited
+            summaryOld.totalExitedValidators + 1
         );
         assertEq(
             summary.totalDepositedValidators,

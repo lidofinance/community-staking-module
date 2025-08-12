@@ -2,6 +2,11 @@
 # Fork helper scripts
 ####
 
+# Gets bond curve info from CSAccounting
+get-curve-info id:
+    cast call --rpc-url=$RPC_URL $(jq -r '.CSAccounting' ./artifacts/{{chain}}/deploy-{{chain}}.json) \
+         'getCurveInfo' {{id}}
+
 vote-add-module:
     just _impersonate-script SimulateVote --sig="addModule"
 

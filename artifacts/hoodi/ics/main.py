@@ -1,7 +1,7 @@
 import json
 from web3 import Web3
 
-PROVIDER_URL_MAINNET = "http://localhost:8545"  # Replace with your actual Web3 provider URL
+PROVIDER_URL_HOODI = "http://localhost:8545"  # Replace with your actual Web3 provider URL
 CONTRACT_ADDRESS_HOODI = '0x79CEf36D84743222f37765204Bec41E92a93E59d'
 
 with open("abi/csm_abi.json", "r") as file:
@@ -21,7 +21,12 @@ def main():
 
     print(f"Total Associated Node Operators: {len(associated_operators)}")
 
-    w3 = Web3(Web3.HTTPProvider(PROVIDER_URL_MAINNET))
+    with open("sources/extra_addresses.json", "r") as f:
+        extra_addresses = json.load(f)
+
+    print(f"Total Extra Addresses: {len(extra_addresses)}")
+
+    w3 = Web3(Web3.HTTPProvider(PROVIDER_URL_HOODI))
     contract = w3.eth.contract(address=CONTRACT_ADDRESS_HOODI, abi=CSM_ABI, decode_tuples=True)
 
     final_addresses = []
@@ -43,6 +48,10 @@ def main():
         no_address = extract_address(first)
         final_addresses.append(no_address)
         print(f"Cluster Group {cluster_group}, First Operator ID: {first}, Address: {no_address}")
+
+    for extra_address in extra_addresses:
+        final_addresses.append(extra_address)
+        print(f"Extra Address: {extra_address}")
 
     sorted_addresses = sorted(set(final_addresses), key=lambda x: final_addresses.index(x))
 
