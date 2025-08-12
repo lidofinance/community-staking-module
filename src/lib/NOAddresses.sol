@@ -273,13 +273,17 @@ library NOAddresses {
         address newRewardAddress
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) {
+
+        address oldManagerAddress = no.managerAddress;
+        address oldRewardAddress = no.rewardAddress;
+
+        if (oldManagerAddress == address(0)) {
             revert ICSModule.NodeOperatorDoesNotExist();
         }
 
         if (
-            newManagerAddress == no.managerAddress &&
-            newRewardAddress == no.rewardAddress
+            newManagerAddress == oldManagerAddress &&
+            newRewardAddress == oldRewardAddress
         ) {
             revert INOAddresses.SameAddress();
         }
@@ -291,8 +295,6 @@ library NOAddresses {
             revert INOAddresses.ZeroRewardAddress();
         }
 
-        address oldManagerAddress = no.managerAddress;
-        address oldRewardAddress = no.rewardAddress;
         no.managerAddress = newManagerAddress;
         no.rewardAddress = newRewardAddress;
 
