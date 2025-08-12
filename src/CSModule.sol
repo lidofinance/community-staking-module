@@ -1358,10 +1358,12 @@ contract CSModule is
                 publicKeys,
                 signatures
             );
+
+            uint32 totalVettedKeys = no.totalVettedKeys;
             // Optimistic vetting takes place.
             if (totalAddedKeys == no.totalVettedKeys) {
                 // @dev No need to safe cast due to internal logic
-                uint32 totalVettedKeys = no.totalVettedKeys + uint32(keysCount);
+                totalVettedKeys = totalVettedKeys + uint32(keysCount);
                 no.totalVettedKeys = totalVettedKeys;
                 emit VettedSigningKeysCountChanged(
                     nodeOperatorId,
