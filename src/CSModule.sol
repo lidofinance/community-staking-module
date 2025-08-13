@@ -867,6 +867,7 @@ contract CSModule is
         bytes calldata /* depositCalldata */
     )
         external
+        virtual
         onlyRole(STAKING_ROUTER_ROLE)
         returns (bytes memory publicKeys, bytes memory signatures)
     {
