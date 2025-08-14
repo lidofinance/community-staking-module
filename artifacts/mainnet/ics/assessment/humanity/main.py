@@ -1,12 +1,13 @@
+import csv
 import os
 import sys
+from pathlib import Path
 
 import requests
 
 scores = {
     "human-passport-min": 3,
     "human-passport-max": 8,
-    # TODO circles
     "circles-verified": 4,
     "discord-account": 2,
     "x-account": 1
@@ -18,6 +19,7 @@ MAX_SCORE = 8
 HUMAN_PASSPORT_SCORER_ID = 11737
 HUMAN_PASSPORT_API_URL = "https://api.passport.xyz/v2/stamps/{scorer_id}/score/{address}"
 
+current_dir = Path(__file__).parent.resolve()
 
 def human_passport_score(addresses: set[str]) -> int:
     api_key = os.getenv("HUMAN_PASSPORT_API_KEY", None)
@@ -50,6 +52,15 @@ def human_passport_score(addresses: set[str]) -> int:
         print(f"    Human Passport score {final_score} exceeds the maximum allowed ({scores['human-passport-max']}). Capping to {scores['human-passport-max']}.")
         return scores["human-passport-max"]
     return final_score
+
+
+def circles_verified_score(addresses: set[str]) -> int:
+    with open(current_dir / "circle_group_members.csv", "r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if row and row[0].strip().lower() in addresses:
+                print(f"    Found address {row[0]} in Circles group members")
+                return scores["circles-verified"]
 
 
 def discord_account_score() -> int:
@@ -86,7 +97,7 @@ def main():
 
     results = {
         "human-passport": human_passport_score(addresses),
-        "circles-verified": 0,  # TODO: Implement Circles verification
+        "circles-verified": circles_verified_score(addresses),
         "discord-account": discord_account_score(),
         "x-account": x_account_score(),
     }
