@@ -256,6 +256,58 @@ contract CuratedModuleTest is Fixtures, Utilities {
         assertEq(no.rewardAddress, rewards);
     }
 
+    function test_changeNodeOperatorAddresses_ChangesOnlyGivenAddress() public {
+        address managerToChange = nextAddress();
+        address rewardsToChange = nextAddress();
+
+        uint256 noId = cm.createNodeOperator(
+            nodeOperator,
+            NodeOperatorManagementProperties({
+                managerAddress: managerToChange,
+                rewardAddress: rewardsToChange,
+                extendedManagerPermissions: false
+            }),
+            address(0)
+        );
+
+        vm.startPrank(admin);
+        cm.grantRole(cm.NODE_OWNER_ADMIN_ROLE(), address(this));
+        vm.stopPrank();
+
+        address manager = nextAddress();
+        address rewards = nextAddress();
+
+        uint256 snapshot = vm.snapshotState();
+
+        {
+            vm.expectEmit(true, true, true, true, address(cm));
+            emit INOAddresses.NodeOperatorRewardAddressChanged(
+                noId,
+                rewardsToChange,
+                rewards
+            );
+
+            vm.recordLogs();
+            cm.changeNodeOperatorAddresses(noId, managerToChange, rewards);
+            assertEq(vm.getRecordedLogs().length, 1);
+        }
+        vm.revertToState(snapshot);
+
+        {
+            vm.expectEmit(true, true, true, true, address(cm));
+            emit INOAddresses.NodeOperatorManagerAddressChanged(
+                noId,
+                managerToChange,
+                manager
+            );
+
+            vm.recordLogs();
+            cm.changeNodeOperatorAddresses(noId, manager, rewardsToChange);
+            assertEq(vm.getRecordedLogs().length, 1);
+        }
+        vm.revertToState(snapshot);
+    }
+
     function test_changeNodeOperatorAddresses_RevertsIfOperatorDoesNotExist()
         public
     {

@@ -281,13 +281,6 @@ library NOAddresses {
             revert ICSModule.NodeOperatorDoesNotExist();
         }
 
-        if (
-            newManagerAddress == oldManagerAddress &&
-            newRewardAddress == oldRewardAddress
-        ) {
-            revert INOAddresses.SameAddress();
-        }
-
         if (newManagerAddress == address(0)) {
             revert INOAddresses.ZeroManagerAddress();
         }
@@ -295,18 +288,30 @@ library NOAddresses {
             revert INOAddresses.ZeroRewardAddress();
         }
 
+        bool isSameManagerAddress = newManagerAddress == oldManagerAddress;
+        bool isSameRewardAddress = newRewardAddress == oldRewardAddress;
+
+        if (isSameManagerAddress && isSameRewardAddress) {
+            revert INOAddresses.SameAddress();
+        }
+
         no.managerAddress = newManagerAddress;
         no.rewardAddress = newRewardAddress;
 
-        emit INOAddresses.NodeOperatorManagerAddressChanged(
-            nodeOperatorId,
-            oldManagerAddress,
-            newManagerAddress
-        );
-        emit INOAddresses.NodeOperatorRewardAddressChanged(
-            nodeOperatorId,
-            oldRewardAddress,
-            newRewardAddress
-        );
+        if (!isSameManagerAddress) {
+            emit INOAddresses.NodeOperatorManagerAddressChanged(
+                nodeOperatorId,
+                oldManagerAddress,
+                newManagerAddress
+            );
+        }
+
+        if (!isSameRewardAddress) {
+            emit INOAddresses.NodeOperatorRewardAddressChanged(
+                nodeOperatorId,
+                oldRewardAddress,
+                newRewardAddress
+            );
+        }
     }
 }
