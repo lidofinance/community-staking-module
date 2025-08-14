@@ -17,7 +17,8 @@ scores = {
     "obol-techne-bronze": 5,
     "obol-techne-silver": 6,
     "ssv-verified": 7,
-    "csm-testnet": 4,  # TODO Circles verification should give 5 here
+    "csm-testnet": 4,
+    "csm-testnet-circles-verified": 5,
     "csm-mainnet": 6,
     "sdvtm-testnet": 5,
     "sdvtm-mainnet": 7
@@ -28,12 +29,12 @@ MAX_SCORE = 8
 
 current_dir = Path(__file__).parent.resolve()
 
-def is_addresses_in_csv(addresses: set[str], csv_file: str) -> bool:
+def is_addresses_in_csv(addresses: set[str], csv_file: str, base_dir=current_dir) -> bool:
     """
     Returns True if any address in `addresses` is found in the first column of the given CSV file.
     The CSV file should contain a single column with addresses or a header with 'Address'.
     """
-    with open(current_dir / csv_file, "r") as f:
+    with open(base_dir / csv_file, "r") as f:
         reader = csv.reader(f)
         for row in reader:
             if row and row[0].strip().lower() in addresses:
@@ -120,6 +121,10 @@ def _csm_testnet_score(addresses: set[str]) -> int:
             perf_reports,
             "Testnet"  # Network name for logging
     ):
+        is_circles_verified = is_addresses_in_csv(addresses, "circle_group_members.csv",
+                                                  base_dir=current_dir.parent / "humanity")
+        if is_circles_verified:
+            return scores["csm-testnet-circles-verified"]
         return scores["csm-testnet"]
     return 0
 
