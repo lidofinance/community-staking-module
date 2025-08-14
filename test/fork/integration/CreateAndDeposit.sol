@@ -1375,6 +1375,7 @@ contract ObtainDepositDataTest is IntegrationTestBase {
         public
         assertInvariants
     {
+        csm.cleanDepositQueue({ maxItems: 2 * csm.getNonce() });
         (uint128 legacyQueueHeadBefore, uint128 legacyQueueTailBefore) = csm
             .depositQueuePointers(csm.QUEUE_LEGACY_PRIORITY());
         Batch legacyQueueItemBefore = csm.depositQueueItem(
@@ -1392,6 +1393,11 @@ contract ObtainDepositDataTest is IntegrationTestBase {
         _addKeys(noId, keysWithPriority + keysWithNoPriority);
 
         (, uint128 priorityQueueTailAfterDeposit) = csm.depositQueuePointers(0);
+        assertNotEq(
+            priorityQueueTailAfterDeposit,
+            0,
+            "Priority queue should not be empty after deposit"
+        );
         Batch priorityQueueItemAfterDeposit = csm.depositQueueItem(
             0,
             priorityQueueTailAfterDeposit - 1

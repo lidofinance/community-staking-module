@@ -56,9 +56,8 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
         );
 
         uint256 initialBalance = 1 ether;
-        NodeOperatorManagementProperties memory noProperties = csm
-            .getNodeOperatorManagementProperties(nodeOperatorId);
-        vm.deal(noProperties.managerAddress, initialBalance);
+        address operatorOwner = csm.getNodeOperatorOwner(nodeOperatorId);
+        vm.deal(operatorOwner, initialBalance);
         uint256 expectedFee = IWithdrawalVault(locator.withdrawalVault())
             .getWithdrawalRequestFee();
 
@@ -86,18 +85,18 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
             );
         }
 
-        vm.prank(noProperties.managerAddress);
+        vm.prank(operatorOwner);
         vm.startSnapshotGas("Ejector.voluntaryEject");
         ejector.voluntaryEject{ value: initialBalance }(
             nodeOperatorId,
             startFrom,
             keysCount,
-            noProperties.managerAddress
+            operatorOwner
         );
         vm.stopSnapshotGas();
 
         vm.assertEq(
-            noProperties.managerAddress.balance,
+            operatorOwner.balance,
             initialBalance - expectedFee * keysCount
         );
     }
@@ -107,9 +106,8 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
         nodeOperatorId = getDepositedNodeOperator(nextAddress(), keysCount);
 
         uint256 initialBalance = 1 ether;
-        NodeOperatorManagementProperties memory noProperties = csm
-            .getNodeOperatorManagementProperties(nodeOperatorId);
-        vm.deal(noProperties.managerAddress, initialBalance);
+        address operatorOwner = csm.getNodeOperatorOwner(nodeOperatorId);
+        vm.deal(operatorOwner, initialBalance);
         uint256 expectedFee = IWithdrawalVault(locator.withdrawalVault())
             .getWithdrawalRequestFee();
 
@@ -149,17 +147,17 @@ contract EjectionTest is Test, Utilities, DeploymentFixtures {
                 )
             );
         }
-        vm.prank(noProperties.managerAddress);
+        vm.prank(operatorOwner);
         vm.startSnapshotGas("Ejector.voluntaryEjectByArray");
         ejector.voluntaryEjectByArray{ value: initialBalance }(
             nodeOperatorId,
             keyIds,
-            noProperties.managerAddress
+            operatorOwner
         );
         vm.stopSnapshotGas();
 
         vm.assertEq(
-            noProperties.managerAddress.balance,
+            operatorOwner.balance,
             initialBalance - expectedFee * keysCount
         );
     }
