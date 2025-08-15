@@ -11,8 +11,8 @@ import { CSModule } from "./CSModule.sol";
 import { NOAddresses } from "./lib/NOAddresses.sol";
 
 contract CuratedModule is ICuratedModule, CSModule {
-    bytes32 public constant NODE_OWNER_ADMIN_ROLE =
-        keccak256("NODE_OWNER_ADMIN_ROLE");
+    bytes32 public constant OPERATOR_ADDRESSES_ADMIN_ROLE =
+        keccak256("OPERATOR_ADDRESSES_ADMIN_ROLE");
 
     constructor(
         bytes32 moduleType,
@@ -48,7 +48,7 @@ contract CuratedModule is ICuratedModule, CSModule {
         uint256 nodeOperatorId,
         address newManagerAddress,
         address newRewardAddress
-    ) external onlyRole(NODE_OWNER_ADMIN_ROLE) {
+    ) external onlyRole(OPERATOR_ADDRESSES_ADMIN_ROLE) {
         NOAddresses.changeNodeOperatorAddresses(
             _nodeOperators,
             nodeOperatorId,
