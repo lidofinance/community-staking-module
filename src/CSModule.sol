@@ -1194,7 +1194,9 @@ contract CSModule is
                         totalUnbondedKeys
                 );
             }
-            // No force mode enabled but unbonded deposited keys
+            // No force mode enabled but unbonded deposited keys.
+            // In this case we override possible targetValidatorsCount set with targetLimitMode = 1
+            // since requesting exits for the unbonded keys has a higher priority compared to targetLimitMode = 1
         } else if (totalUnbondedKeys > totalNonDepositedKeys) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             unchecked {
