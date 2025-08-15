@@ -100,7 +100,7 @@ contract CuratedModuleTest is Fixtures, Utilities {
         );
 
         vm.startPrank(admin);
-        cm.grantRole(cm.NODE_OWNER_ADMIN_ROLE(), address(this));
+        cm.grantRole(cm.OPERATOR_ADDRESSES_ADMIN_ROLE(), address(this));
         vm.stopPrank();
 
         address manager = nextAddress();
@@ -144,7 +144,7 @@ contract CuratedModuleTest is Fixtures, Utilities {
         );
 
         vm.startPrank(admin);
-        cm.grantRole(cm.NODE_OWNER_ADMIN_ROLE(), address(this));
+        cm.grantRole(cm.OPERATOR_ADDRESSES_ADMIN_ROLE(), address(this));
         vm.stopPrank();
 
         address manager = nextAddress();
@@ -185,7 +185,7 @@ contract CuratedModuleTest is Fixtures, Utilities {
         );
 
         vm.startPrank(admin);
-        cm.grantRole(cm.NODE_OWNER_ADMIN_ROLE(), address(this));
+        cm.grantRole(cm.OPERATOR_ADDRESSES_ADMIN_ROLE(), address(this));
         vm.stopPrank();
 
         address manager = nextAddress();
@@ -229,7 +229,7 @@ contract CuratedModuleTest is Fixtures, Utilities {
         );
 
         vm.startPrank(admin);
-        cm.grantRole(cm.NODE_OWNER_ADMIN_ROLE(), address(this));
+        cm.grantRole(cm.OPERATOR_ADDRESSES_ADMIN_ROLE(), address(this));
         vm.stopPrank();
 
         address manager = nextAddress();
@@ -271,7 +271,7 @@ contract CuratedModuleTest is Fixtures, Utilities {
         );
 
         vm.startPrank(admin);
-        cm.grantRole(cm.NODE_OWNER_ADMIN_ROLE(), address(this));
+        cm.grantRole(cm.OPERATOR_ADDRESSES_ADMIN_ROLE(), address(this));
         vm.stopPrank();
 
         address manager = nextAddress();
@@ -312,7 +312,7 @@ contract CuratedModuleTest is Fixtures, Utilities {
         public
     {
         vm.startPrank(admin);
-        cm.grantRole(cm.NODE_OWNER_ADMIN_ROLE(), address(this));
+        cm.grantRole(cm.OPERATOR_ADDRESSES_ADMIN_ROLE(), address(this));
         vm.stopPrank();
 
         address manager = nextAddress();
@@ -323,12 +323,14 @@ contract CuratedModuleTest is Fixtures, Utilities {
     }
 
     function test_changeNodeOperatorAddresses_RevertsIfHasNoRole() public {
-        assertFalse(cm.hasRole(cm.NODE_OWNER_ADMIN_ROLE(), address(this)));
+        assertFalse(
+            cm.hasRole(cm.OPERATOR_ADDRESSES_ADMIN_ROLE(), address(this))
+        );
 
         address manager = nextAddress();
         address rewards = nextAddress();
 
-        expectRoleRevert(address(this), cm.NODE_OWNER_ADMIN_ROLE());
+        expectRoleRevert(address(this), cm.OPERATOR_ADDRESSES_ADMIN_ROLE());
         cm.changeNodeOperatorAddresses(0, manager, rewards);
     }
 
@@ -349,7 +351,7 @@ contract CuratedModuleTest is Fixtures, Utilities {
         );
 
         vm.startPrank(admin);
-        cm.grantRole(cm.NODE_OWNER_ADMIN_ROLE(), address(this));
+        cm.grantRole(cm.OPERATOR_ADDRESSES_ADMIN_ROLE(), address(this));
         vm.stopPrank();
 
         vm.expectRevert(INOAddresses.SameAddress.selector);
@@ -370,7 +372,7 @@ contract CuratedModuleTest is Fixtures, Utilities {
         );
 
         vm.startPrank(admin);
-        cm.grantRole(cm.NODE_OWNER_ADMIN_ROLE(), address(this));
+        cm.grantRole(cm.OPERATOR_ADDRESSES_ADMIN_ROLE(), address(this));
         vm.stopPrank();
 
         address manager = nextAddress();

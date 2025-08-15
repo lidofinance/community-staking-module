@@ -8,7 +8,7 @@ import { ICSModule } from "./ICSModule.sol";
 interface ICuratedModule is ICSModule {
     error NotImplemented();
 
-    function NODE_OWNER_ADMIN_ROLE() external view returns (bytes32);
+    function OPERATOR_ADDRESSES_ADMIN_ROLE() external view returns (bytes32);
 
     /// @notice Change both reward and manager addresses of a node operator.
     /// @param nodeOperatorId ID of the Node Operator
