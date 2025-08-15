@@ -465,6 +465,9 @@ interface ICSModule is
     ) external view returns (bool);
 
     /// @notice Remove keys for the Node Operator and confiscate removal charge for each deleted key
+    ///         This method is a part of the Optimistic Vetting scheme. After key deletion `totalVettedKeys`
+    ///         is set equal to `totalAddedKeys`. If invalid keys are not removed, the unvetting process will be repeated
+    ///         and `decreaseVettedSigningKeysCount` will be called by StakingRouter.
     /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key
     /// @param keysCount Keys count to delete
