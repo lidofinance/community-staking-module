@@ -46,14 +46,14 @@ contract CuratedModule is ICuratedModule, CSModule {
     /// @inheritdoc ICuratedModule
     function changeNodeOperatorAddresses(
         uint256 nodeOperatorId,
-        address managerAddress,
-        address rewardAddress
+        address newManagerAddress,
+        address newRewardAddress
     ) external onlyRole(NODE_OWNER_ADMIN_ROLE) {
         NOAddresses.changeNodeOperatorAddresses(
             _nodeOperators,
             nodeOperatorId,
-            managerAddress,
-            rewardAddress
+            newManagerAddress,
+            newRewardAddress
         );
     }
 }
