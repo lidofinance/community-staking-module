@@ -317,8 +317,8 @@ interface ICSParametersRegistry {
 
     /// @notice Sets the provided config to the given curve.
     /// @param curveId Curve Id to set the config.
-    /// @param priority Priority of the queue
-    /// @param maxDeposits Max deposits in prioritized queue
+    /// @param priority Queue priority.
+    /// @param maxDeposits Maximum number of deposits a Node Operator can get via the priority queue.
     function setQueueConfig(
         uint256 curveId,
         uint256 priority,
