@@ -369,8 +369,12 @@ interface ICSModule is
         uint256 maxItems
     ) external returns (uint256 removed, uint256 lastRemovedAtDepth);
 
-    /// @notice Update depositable validators data and enqueue all unqueued keys for the given Node Operator
-    /// @notice Unqueued stands for vetted but not enqueued keys
+    /// @notice Update depositable validators data and enqueue all unqueued keys for the given Node Operator.
+    ///         Unqueued stands for vetted but not enqueued keys.
+    /// @dev The following rules are applied:
+    ///         - Unbonded keys can not be depositable
+    ///         - Unvetted keys can not be depositable
+    ///         - Depositable keys count should respect targetLimit value
     /// @param nodeOperatorId ID of the Node Operator
     function updateDepositableValidatorsCount(uint256 nodeOperatorId) external;
 
