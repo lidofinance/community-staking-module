@@ -369,8 +369,12 @@ interface ICSModule is
         uint256 maxItems
     ) external returns (uint256 removed, uint256 lastRemovedAtDepth);
 
-    /// @notice Update depositable validators data and enqueue all unqueued keys for the given Node Operator
-    /// @notice Unqueued stands for vetted but not enqueued keys
+    /// @notice Update depositable validators data and enqueue all unqueued keys for the given Node Operator.
+    ///         Unqueued stands for vetted but not enqueued keys.
+    /// @dev The following rules are applied:
+    ///         - Unbonded keys can not be depositable
+    ///         - Unvetted keys can not be depositable
+    ///         - Depositable keys count should respect targetLimit value
     /// @param nodeOperatorId ID of the Node Operator
     function updateDepositableValidatorsCount(uint256 nodeOperatorId) external;
 
@@ -465,6 +469,9 @@ interface ICSModule is
     ) external view returns (bool);
 
     /// @notice Remove keys for the Node Operator and confiscate removal charge for each deleted key
+    ///         This method is a part of the Optimistic Vetting scheme. After key deletion `totalVettedKeys`
+    ///         is set equal to `totalAddedKeys`. If invalid keys are not removed, the unvetting process will be repeated
+    ///         and `decreaseVettedSigningKeysCount` will be called by StakingRouter.
     /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key
     /// @param keysCount Keys count to delete
