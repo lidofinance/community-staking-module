@@ -36,6 +36,7 @@ interface INOAddresses {
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
     error MethodCallIsNotAllowed();
+    error ZeroManagerAddress();
     error ZeroRewardAddress();
 }
 
@@ -240,5 +241,59 @@ library NOAddresses {
             oldAddress,
             newAddress
         );
+    }
+
+    /// @notice Change both reward and manager addresses of a node operator.
+    /// @dev XXX: Use with caution! No check of the caller.
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param newManagerAddress New manager address
+    /// @param newRewardAddress New reward address
+    function changeNodeOperatorAddresses(
+        mapping(uint256 => NodeOperator) storage nodeOperators,
+        uint256 nodeOperatorId,
+        address newManagerAddress,
+        address newRewardAddress
+    ) external {
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+
+        address oldManagerAddress = no.managerAddress;
+        address oldRewardAddress = no.rewardAddress;
+
+        if (oldManagerAddress == address(0)) {
+            revert ICSModule.NodeOperatorDoesNotExist();
+        }
+
+        if (newManagerAddress == address(0)) {
+            revert INOAddresses.ZeroManagerAddress();
+        }
+        if (newRewardAddress == address(0)) {
+            revert INOAddresses.ZeroRewardAddress();
+        }
+
+        bool isSameManagerAddress = newManagerAddress == oldManagerAddress;
+        bool isSameRewardAddress = newRewardAddress == oldRewardAddress;
+
+        if (isSameManagerAddress && isSameRewardAddress) {
+            revert INOAddresses.SameAddress();
+        }
+
+        no.managerAddress = newManagerAddress;
+        no.rewardAddress = newRewardAddress;
+
+        if (!isSameManagerAddress) {
+            emit INOAddresses.NodeOperatorManagerAddressChanged(
+                nodeOperatorId,
+                oldManagerAddress,
+                newManagerAddress
+            );
+        }
+
+        if (!isSameRewardAddress) {
+            emit INOAddresses.NodeOperatorRewardAddressChanged(
+                nodeOperatorId,
+                oldRewardAddress,
+                newRewardAddress
+            );
+        }
     }
 }

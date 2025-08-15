@@ -21,7 +21,7 @@ contract CSAccountingMock {
     mapping(uint256 nodeOperatorId => uint256 bondCurveId) operatorBondCurveId;
     uint256[] bondCurves;
 
-    ICSModule public csm;
+    ICSModule public module;
     address public feeDistributor;
     IWstETH public wstETH;
 
@@ -31,8 +31,8 @@ contract CSAccountingMock {
         LIDO = ILido(lido);
     }
 
-    function setCSM(address _csm) external {
-        csm = ICSModule(_csm);
+    function setModule(ICSModule _module) external {
+        module = _module;
     }
 
     function setFeeDistributor(address _feeDistributor) external {
@@ -153,7 +153,7 @@ contract CSAccountingMock {
         return (
             bond[nodeOperatorId],
             getBondAmountByKeysCount(
-                csm.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
+                module.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
                 operatorBondCurveId[nodeOperatorId]
             ) + getActualLockedBond(nodeOperatorId)
         );
@@ -165,7 +165,7 @@ contract CSAccountingMock {
     ) public view returns (uint256) {
         uint256 current = getBond(nodeOperatorId);
         uint256 requiredForNewTotalKeys = getBondAmountByKeysCount(
-            csm.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) +
+            module.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) +
                 additionalKeys,
             operatorBondCurveId[nodeOperatorId]
         );
