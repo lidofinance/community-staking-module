@@ -861,6 +861,10 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
+    /// @dev The method does not update depositable keys count for the Node Operators before the queue processing start.
+    ///      Hence, in the rare cases of negative stETH rebase the method might return unbonded keys. This is a trade-off
+    ///      between the gas cost and the correctness of the data. Due to module design, any unbonded keys will be requested
+    ///      to exit by VEBO.
     /// @dev Second param `depositCalldata` is not used
     function obtainDepositData(
         uint256 depositsCount,
