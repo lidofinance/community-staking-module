@@ -12,8 +12,8 @@ interface ICuratedModule is ICSModule {
 
     /// @notice Change both reward and manager addresses of a node operator.
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param newRewardAddress New reward address
     /// @param newManagerAddress New manager address
+    /// @param newRewardAddress New reward address
     function changeNodeOperatorAddresses(
         uint256 nodeOperatorId,
         address newManagerAddress,
