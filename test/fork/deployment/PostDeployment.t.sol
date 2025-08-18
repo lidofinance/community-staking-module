@@ -165,82 +165,14 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
     }
 
     function test_state_onlyFull() public view {
-        uint256 defaultCurveId = accounting.DEFAULT_BOND_CURVE_ID();
-        assertEq(
-            accounting.getCurveInfo(defaultCurveId).intervals[0].minKeysCount,
-            deployParams.defaultBondCurve[0][0]
-        );
-        assertEq(
-            accounting.getCurveInfo(defaultCurveId).intervals[0].trend,
-            deployParams.defaultBondCurve[0][1]
-        );
-        assertEq(
-            accounting.getCurveInfo(defaultCurveId).intervals[1].minKeysCount,
-            deployParams.defaultBondCurve[1][0]
-        );
-        assertEq(
-            accounting.getCurveInfo(defaultCurveId).intervals[1].trend,
-            deployParams.defaultBondCurve[1][1]
-        );
-
-        uint256 identifiedCommunityStakersGateBondCurveId = vettedGate
-            .curveId();
-        assertEq(
-            accounting
-                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
-                .intervals[0]
-                .minKeysCount,
-            deployParams.identifiedCommunityStakersGateBondCurve[0][0]
-        );
-        assertEq(
-            accounting
-                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
-                .intervals[0]
-                .trend,
-            deployParams.identifiedCommunityStakersGateBondCurve[0][1]
-        );
-        assertEq(
-            accounting
-                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
-                .intervals[1]
-                .minKeysCount,
-            deployParams.identifiedCommunityStakersGateBondCurve[1][0]
-        );
-        assertEq(
-            accounting
-                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
-                .intervals[1]
-                .trend,
-            deployParams.identifiedCommunityStakersGateBondCurve[1][1]
-        );
-
-        uint256 legacyEaBondCurveId = defaultCurveId + 1;
-
-        assertEq(
-            accounting
-                .getCurveInfo(legacyEaBondCurveId)
-                .intervals[0]
-                .minKeysCount,
-            deployParams.legacyEaBondCurve[0][0]
-        );
-        assertEq(
-            accounting.getCurveInfo(legacyEaBondCurveId).intervals[0].trend,
-            deployParams.legacyEaBondCurve[0][1]
-        );
-        assertEq(
-            accounting
-                .getCurveInfo(legacyEaBondCurveId)
-                .intervals[1]
-                .minKeysCount,
-            deployParams.legacyEaBondCurve[1][0]
-        );
-        assertEq(
-            accounting.getCurveInfo(legacyEaBondCurveId).intervals[1].trend,
-            deployParams.legacyEaBondCurve[1][1]
-        );
+        assertEq(accounting.DEFAULT_BOND_CURVE_ID(), 0);
 
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
         assertEq(accounting.getBondLockPeriod(), deployParams.bondLockPeriod);
+        assertEq(
+            accounting.getBondReserveMinPeriod(),
+            deployParams.bondReserveMinPeriod
+        );
 
         assertEq(
             accounting.chargePenaltyRecipient(),
@@ -259,7 +191,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             lido.allowance(address(accounting), locator.burner()),
             type(uint256).max
         );
-        assertEq(accounting.getInitializedVersion(), 2);
+        assertEq(accounting.getInitializedVersion(), 3);
     }
 
     function test_state() public view {
@@ -371,6 +303,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             bondCurve: defaultBondCurve,
             admin: address(deployParams.aragonAgent),
             bondLockPeriod: deployParams.bondLockPeriod,
+            bondReserveMinPeriod: deployParams.bondReserveMinPeriod,
             _chargePenaltyRecipient: address(0)
         });
 
@@ -388,6 +321,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             bondCurve: defaultBondCurve,
             admin: address(deployParams.aragonAgent),
             bondLockPeriod: deployParams.bondLockPeriod,
+            bondReserveMinPeriod: deployParams.bondReserveMinPeriod,
             _chargePenaltyRecipient: address(0)
         });
     }

@@ -9,12 +9,14 @@ import { ICSBondLock } from "./ICSBondLock.sol";
 import { ICSFeeDistributor } from "./ICSFeeDistributor.sol";
 import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 import { ICSModule } from "./ICSModule.sol";
+import { IBondReserve } from "./IBondReserve.sol";
 
 interface ICSAccounting is
     ICSBondCore,
     ICSBondCurve,
     ICSBondLock,
-    IAssetRecovererLib
+    IAssetRecovererLib,
+    IBondReserve
 {
     struct PermitInput {
         uint256 value;
@@ -29,6 +31,8 @@ interface ICSAccounting is
 
     error SenderIsNotModule();
     error SenderIsNotEligible();
+    error BondReserveFeatureDisabled();
+    error MinReserveTimeHasNotPassed();
     error ZeroModuleAddress();
     error ZeroAdminAddress();
     error ZeroFeeDistributorAddress();
@@ -76,6 +80,9 @@ interface ICSAccounting is
     /// @notice Set bond lock period
     /// @param period Period in seconds to retain bond lock
     function setBondLockPeriod(uint256 period) external;
+
+    /// @notice Set min cooldown for additional bond reserve removal
+    function setBondReserveMinPeriod(uint256 period) external;
 
     /// @notice Add a new bond curve
     /// @param bondCurve Bond curve definition to add
@@ -337,6 +344,18 @@ interface ICSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external;
+
+    /// @notice Increase bond reserve value (requires excess bond >= amount)
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param newAmount Amount to set as additional bond reserve
+    function increaseBondReserve(
+        uint256 nodeOperatorId,
+        uint256 newAmount
+    ) external;
+
+    /// @notice Remove additional bond reserve; allowed after cooldown or earlier if no active/depositable keys
+    /// @param nodeOperatorId ID of the Node Operator
+    function removeBondReserve(uint256 nodeOperatorId) external;
 
     /// @notice Service method to update allowance to Burner in case it has changed
     function renewBurnerAllowance() external;
