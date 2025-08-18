@@ -17,9 +17,9 @@ def main():
     print("\n==== Proof of Humanity ====")
     humanity_score = humanity_main()
     print("\n==== Assessment Completed ====")
-    print(f"Total Engagement Score: {engagement_score}")
-    print(f"Total Experience Score: {experience_score}")
-    print(f"Total Humanity Score: {humanity_score}")
+    print(f"Total Engagement Score: {engagement_score} " + ("✅" if engagement_score else "❌"))
+    print(f"Total Experience Score: {experience_score} " + ("✅" if experience_score else "❌"))
+    print(f"Total Humanity Score: {humanity_score} " + ("✅" if humanity_score else "❌"))
 
 if __name__ == "__main__":
     main()

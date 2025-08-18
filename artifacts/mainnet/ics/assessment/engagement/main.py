@@ -9,11 +9,8 @@ import requests
 from web3 import Web3
 
 scores = {
-    # TODO print voted on X votes
     "snapshot-vote": 1,
-    # TODO print voted on X votes
     "aragon-vote": 2,
-    # TODO print galxe score
     "galxe-score-4-10": 4,
     "galxe-score-above-10": 5,
     "git-poap": 2,
@@ -69,7 +66,11 @@ def snapshot_vote(addresses: set[str]) -> int:
         REQUIRED_SNAPSHOT_VP,
         SNAPSHOT_VOTE_TIMESTAMP
     )
-    result = requests.get("https://hub.snapshot.org/graphql", json={"query": query}).json()
+    response = requests.post("https://hub.snapshot.org/graphql", json={"query": query})
+    response.raise_for_status()
+    result = response.json()
+    if "errors" in result:
+        raise Exception(f"Error fetching Snapshot votes: {result['errors']}", query)
     votes_count = len(result["data"]["votes"])
     if votes_count >= REQUIRED_SNAPSHOT_VOTES:
         print(f"    Found {votes_count} Snapshot votes (in sum) for given addresses")
