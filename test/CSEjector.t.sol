@@ -251,6 +251,23 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         ejector.voluntaryEject(noId, keyIndex, 1, address(0));
     }
 
+    function test_voluntaryEject_revertWhen_NothingToEject() public {
+        uint256 keyIndex = 0;
+
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(
+                address(this),
+                address(this),
+                false
+            )
+        );
+
+        vm.expectRevert(ICSEjector.NothingToEject.selector);
+        ejector.voluntaryEject(noId, keyIndex, 0, refundRecipient);
+    }
+
     function test_voluntaryEject_revertWhen_senderIsNotEligible() public {
         uint256 keyIndex = 0;
 
@@ -491,6 +508,22 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
 
         vm.expectRevert(ICSEjector.SenderIsNotEligible.selector);
         ejector.voluntaryEjectByArray(noId, indices, address(0));
+    }
+
+    function test_voluntaryEjectByArray_revertWhen_NothingToEject() public {
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(
+                address(this),
+                address(this),
+                false
+            )
+        );
+
+        uint256[] memory indices = new uint256[](0);
+        vm.expectRevert(ICSEjector.NothingToEject.selector);
+        ejector.voluntaryEjectByArray(noId, indices, refundRecipient);
     }
 
     function test_voluntaryEjectByArray_revertWhen_NodeOperatorDoesNotExist()
