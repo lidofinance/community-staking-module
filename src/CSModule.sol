@@ -154,7 +154,8 @@ contract CSModule is
         _pauseFor(PausableUntil.PAUSE_INFINITELY);
     }
 
-    /// @dev should be called after update on the proxy
+    /// @dev This method is expected to be called only when the contract is upgraded from version 1 to version 2 for the existing version 1 deployment.
+    ///      If the version 2 contract is deployed from scratch, the `initialize` method should be used instead.
     function finalizeUpgradeV2() external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_queueByPriority.slot, 0x00)
@@ -861,6 +862,10 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
+    /// @dev The method does not update depositable keys count for the Node Operators before the queue processing start.
+    ///      Hence, in the rare cases of negative stETH rebase the method might return unbonded keys. This is a trade-off
+    ///      between the gas cost and the correctness of the data. Due to module design, any unbonded keys will be requested
+    ///      to exit by VEBO.
     /// @dev Second param `depositCalldata` is not used
     function obtainDepositData(
         uint256 depositsCount,
@@ -1190,7 +1195,9 @@ contract CSModule is
                         totalUnbondedKeys
                 );
             }
-            // No force mode enabled but unbonded deposited keys
+            // No force mode enabled but unbonded deposited keys.
+            // In this case we override possible targetValidatorsCount set with targetLimitMode = 1
+            // since requesting exits for the unbonded keys has a higher priority compared to targetLimitMode = 1
         } else if (totalUnbondedKeys > totalNonDepositedKeys) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             unchecked {
