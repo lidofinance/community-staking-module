@@ -7,14 +7,16 @@ import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgr
 import { CSBondCore } from "./abstract/CSBondCore.sol";
 import { CSBondCurve } from "./abstract/CSBondCurve.sol";
 import { CSBondLock } from "./abstract/CSBondLock.sol";
+import { BondReserve } from "./abstract/BondReserve.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
-import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperator, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
+import { IBondReserve } from "./interfaces/IBondReserve.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 
 /// @author vgorkavenko
@@ -25,6 +27,7 @@ contract CSAccounting is
     CSBondCore,
     CSBondCurve,
     CSBondLock,
+    BondReserve,
     PausableUntil,
     AccessControlEnumerableUpgradeable,
     AssetRecoverer
@@ -39,6 +42,7 @@ contract CSAccounting is
 
     ICSModule public immutable MODULE;
     ICSFeeDistributor public immutable FEE_DISTRIBUTOR;
+    bool public immutable BOND_RESERVE_IS_ENABLED;
     /// @dev DEPRECATED
     /// @custom:oz-renamed-from feeDistributor
     ICSFeeDistributor internal _feeDistributorOld;
@@ -56,12 +60,14 @@ contract CSAccounting is
     /// @param module Community Staking Module contract address
     /// @param minBondLockPeriod Min time in seconds for the bondLock period
     /// @param maxBondLockPeriod Max time in seconds for the bondLock period
+    /// @param enableBondReserve Whether to enable bond reserve feature
     constructor(
         address lidoLocator,
         address module,
         address _feeDistributor,
         uint256 minBondLockPeriod,
-        uint256 maxBondLockPeriod
+        uint256 maxBondLockPeriod,
+        bool enableBondReserve
     ) CSBondCore(lidoLocator) CSBondLock(minBondLockPeriod, maxBondLockPeriod) {
         if (module == address(0)) {
             revert ZeroModuleAddress();
@@ -72,6 +78,7 @@ contract CSAccounting is
 
         MODULE = ICSModule(module);
         FEE_DISTRIBUTOR = ICSFeeDistributor(_feeDistributor);
+        BOND_RESERVE_IS_ENABLED = enableBondReserve;
 
         _disableInitializers();
     }
@@ -79,16 +86,19 @@ contract CSAccounting is
     /// @param bondCurve Initial bond curve
     /// @param admin Admin role member address
     /// @param bondLockPeriod Bond lock period in seconds
+    /// @param bondReserveMinPeriod Bond reserve minimum period in seconds
     /// @param _chargePenaltyRecipient Recipient of the charge penalty type
     function initialize(
         BondCurveIntervalInput[] calldata bondCurve,
         address admin,
         uint256 bondLockPeriod,
+        uint256 bondReserveMinPeriod,
         address _chargePenaltyRecipient
-    ) external reinitializer(2) {
+    ) external reinitializer(3) {
         __AccessControlEnumerable_init();
         __CSBondCurve_init(bondCurve);
         __CSBondLock_init(bondLockPeriod);
+        __BondReserve_init(bondReserveMinPeriod);
 
         if (admin == address(0)) {
             revert ZeroAdminAddress();
@@ -103,23 +113,10 @@ contract CSAccounting is
         LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
     }
 
-    function finalizeUpgradeV2(
-        BondCurveIntervalInput[][] calldata bondCurvesInputs
-    ) external reinitializer(2) {
-        assembly ("memory-safe") {
-            sstore(_feeDistributorOld.slot, 0x00)
-        }
-
-        // NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
-        if (bondCurvesInputs.length != _getLegacyBondCurvesLength()) {
-            revert InvalidBondCurvesLength();
-        }
-
-        // NOTE: Re-init `CSBondCurve` due to the new format. Contains a check that the first added curve id is `DEFAULT_BOND_CURVE_ID`
-        __CSBondCurve_init(bondCurvesInputs[0]);
-        for (uint256 i = 1; i < bondCurvesInputs.length; ++i) {
-            _addBondCurve(bondCurvesInputs[i]);
-        }
+    function finalizeUpgradeV3(
+        uint256 bondReserveMinPeriod
+    ) external reinitializer(3) {
+        __BondReserve_init(bondReserveMinPeriod);
     }
 
     /// @inheritdoc ICSAccounting
@@ -144,6 +141,13 @@ contract CSAccounting is
         uint256 period
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         CSBondLock._setBondLockPeriod(period);
+    }
+
+    /// @inheritdoc ICSAccounting
+    function setBondReserveMinPeriod(
+        uint256 period
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        BondReserve._setBondReserveMinPeriod(period);
     }
 
     /// @inheritdoc ICSAccounting
@@ -299,6 +303,54 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
+    function increaseBondReserve(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external whenResumed {
+        if (!BOND_RESERVE_IS_ENABLED) {
+            revert BondReserveFeatureDisabled();
+        }
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(no);
+
+        if (amount == 0) {
+            revert InvalidBondReserveAmount();
+        }
+
+        uint256 current = CSBondCore.getBond(nodeOperatorId);
+        uint256 required = _getRequiredBond(nodeOperatorId, 0);
+        if (current <= required) {
+            revert InvalidBondReserveAmount();
+        }
+        uint256 claimable = current - required;
+        if (amount > claimable) {
+            revert InvalidBondReserveAmount();
+        }
+
+        BondReserve._increaseReserve(nodeOperatorId, amount);
+    }
+
+    /// @inheritdoc ICSAccounting
+    function removeBondReserve(uint256 nodeOperatorId) external whenResumed {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(no);
+
+        IBondReserve.BondReserveInfo memory r = BondReserve._getBondReserveInfo(
+            nodeOperatorId
+        );
+        if (r.amount == 0) {
+            return;
+        }
+
+        if (!_canRemoveBondReserve(nodeOperatorId, r)) {
+            revert CanNotRemoveBondReserve();
+        }
+        BondReserve._removeReserve(nodeOperatorId);
+    }
+
+    /// @inheritdoc ICSAccounting
     function lockBondETH(
         uint256 nodeOperatorId,
         uint256 amount
@@ -340,6 +392,7 @@ contract CSAccounting is
             CSBondCore._burn(nodeOperatorId, lockedAmount);
             // reduce all locked bond even if bond isn't covered lock fully
             CSBondLock._remove(nodeOperatorId);
+            _adjustBondReserve(nodeOperatorId);
             applied = true;
         }
     }
@@ -350,6 +403,7 @@ contract CSAccounting is
         uint256 amount
     ) external onlyModule {
         CSBondCore._burn(nodeOperatorId, amount);
+        _adjustBondReserve(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -358,6 +412,7 @@ contract CSAccounting is
         uint256 amount
     ) external onlyModule {
         CSBondCore._charge(nodeOperatorId, amount, chargePenaltyRecipient);
+        _adjustBondReserve(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -591,8 +646,17 @@ contract CSAccounting is
         uint256 actualLockedBond = CSBondLock.getActualLockedBond(
             nodeOperatorId
         );
+        uint256 reserved = BondReserve._getReservedBond(nodeOperatorId);
 
-        return requiredBondForKeys + actualLockedBond;
+        return requiredBondForKeys + actualLockedBond + reserved;
+    }
+
+    function _adjustBondReserve(uint256 nodeOperatorId) internal {
+        uint256 reserved = BondReserve._getReservedBond(nodeOperatorId);
+        if (reserved == 0) return;
+        uint256 current = CSBondCore.getBond(nodeOperatorId);
+        if (current >= reserved) return;
+        BondReserve._reduceReserveAmount(nodeOperatorId, reserved - current);
     }
 
     function _getRequiredBondShares(
@@ -610,8 +674,18 @@ contract CSAccounting is
         uint256 nonWithdrawnKeys = MODULE.getNodeOperatorNonWithdrawnKeys(
             nodeOperatorId
         );
-        unchecked {
+        {
             uint256 currentBond = CSBondCore.getBond(nodeOperatorId);
+            {
+                uint256 reservedBond = BondReserve._getReservedBond(
+                    nodeOperatorId
+                );
+                // NOTE: `reservedBond` cannot exceed `currentBond` because it can be created
+                // only from the excess bond portion (current - required > 0).
+                currentBond -= reservedBond;
+            }
+
+            // Optionally account for locked bond depending on the flag
             if (includeLockedBond) {
                 uint256 lockedBond = CSBondLock.getActualLockedBond(
                     nodeOperatorId
@@ -620,7 +694,6 @@ contract CSAccounting is
                 if (lockedBond > currentBond) {
                     return nonWithdrawnKeys;
                 }
-
                 currentBond -= lockedBond;
             }
             // 10 wei is added to account for possible stETH rounding errors
@@ -674,5 +747,21 @@ contract CSAccounting is
         }
         chargePenaltyRecipient = _chargePenaltyRecipient;
         emit ChargePenaltyRecipientSet(_chargePenaltyRecipient);
+    }
+
+    function _canRemoveBondReserve(
+        uint256 nodeOperatorId,
+        IBondReserve.BondReserveInfo memory r
+    ) internal view returns (bool) {
+        if (block.timestamp >= uint256(r.removableAt)) return true;
+        NodeOperator memory no = MODULE.getNodeOperator(nodeOperatorId);
+        if (
+            // TODO: Do we really need to check depositable?
+            no.depositableValidatorsCount == 0 &&
+            (no.totalAddedKeys - no.totalWithdrawnKeys) == 0
+        ) {
+            return true;
+        }
+        return false;
     }
 }

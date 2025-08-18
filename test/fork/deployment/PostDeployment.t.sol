@@ -371,6 +371,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             bondCurve: defaultBondCurve,
             admin: address(deployParams.aragonAgent),
             bondLockPeriod: deployParams.bondLockPeriod,
+            bondReserveMinPeriod: 4 weeks,
             _chargePenaltyRecipient: address(0)
         });
 
@@ -388,6 +389,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             bondCurve: defaultBondCurve,
             admin: address(deployParams.aragonAgent),
             bondLockPeriod: deployParams.bondLockPeriod,
+            bondReserveMinPeriod: 4 weeks,
             _chargePenaltyRecipient: address(0)
         });
     }

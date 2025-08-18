@@ -274,7 +274,8 @@ abstract contract DeployBase is Script {
                 module: address(csm),
                 _feeDistributor: address(feeDistributor),
                 minBondLockPeriod: config.minBondLockPeriod,
-                maxBondLockPeriod: config.maxBondLockPeriod
+                maxBondLockPeriod: config.maxBondLockPeriod,
+                enableBondReserve: true
             });
 
             {
@@ -292,6 +293,7 @@ abstract contract DeployBase is Script {
                 bondCurve: defaultBondCurve,
                 admin: deployer,
                 bondLockPeriod: config.bondLockPeriod,
+                bondReserveMinPeriod: 4 weeks,
                 _chargePenaltyRecipient: config.chargePenaltyRecipient
             });
 
