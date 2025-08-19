@@ -104,7 +104,7 @@ contract DeployLocalDevNet is DeployBase {
         config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
 
         // Parameters for Identified Community Staker type
-        // TODO: Set proper values bellow
+        // TODO: Set proper values below
         config.identifiedCommunityStakersGateKeyRemovalCharge = 0.01 ether;
         config
             .identifiedCommunityStakersGateELRewardsStealingAdditionalFine = 0.05 ether;
