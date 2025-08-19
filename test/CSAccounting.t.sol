@@ -5983,28 +5983,13 @@ contract CSAccountingRemoveBondReserveTest is CSAccountingBaseTest {
         _reserve(1 ether);
 
         vm.warp(block.timestamp + 1 hours);
-        NodeOperator memory no = NodeOperator({
-            totalAddedKeys: 1,
-            totalWithdrawnKeys: 0,
-            totalDepositedKeys: 0,
-            totalVettedKeys: 0,
-            stuckValidatorsCount: 0,
-            depositableValidatorsCount: 1,
-            targetLimit: 0,
-            targetLimitMode: 0,
-            totalExitedKeys: 0,
-            enqueuedCount: 0,
-            managerAddress: user,
-            proposedManagerAddress: address(0),
-            rewardAddress: user,
-            proposedRewardAddress: address(0),
-            extendedManagerPermissions: false,
-            usedPriorityQueue: false
-        });
         vm.mockCall(
             address(stakingModule),
-            abi.encodeWithSelector(ICSModule.getNodeOperator.selector, 0),
-            abi.encode(no)
+            abi.encodeWithSelector(
+                ICSModule.getNodeOperatorNonWithdrawnKeys.selector,
+                0
+            ),
+            abi.encode(1)
         );
 
         vm.expectRevert(ICSAccounting.CanNotRemoveBondReserve.selector);
@@ -6019,64 +6004,13 @@ contract CSAccountingRemoveBondReserveTest is CSAccountingBaseTest {
         _reserve(1 ether);
 
         vm.warp(block.timestamp + 1 hours);
-        NodeOperator memory no = NodeOperator({
-            totalAddedKeys: 1,
-            totalWithdrawnKeys: 0,
-            totalDepositedKeys: 0,
-            totalVettedKeys: 0,
-            stuckValidatorsCount: 0,
-            depositableValidatorsCount: 0,
-            targetLimit: 0,
-            targetLimitMode: 0,
-            totalExitedKeys: 0,
-            enqueuedCount: 0,
-            managerAddress: user,
-            proposedManagerAddress: address(0),
-            rewardAddress: user,
-            proposedRewardAddress: address(0),
-            extendedManagerPermissions: false,
-            usedPriorityQueue: false
-        });
         vm.mockCall(
             address(stakingModule),
-            abi.encodeWithSelector(ICSModule.getNodeOperator.selector, 0),
-            abi.encode(no)
-        );
-
-        vm.prank(user);
-        vm.expectRevert(ICSAccounting.CanNotRemoveBondReserve.selector);
-        accounting.removeBondReserve(0);
-    }
-
-    function test_removeBondReserve_revertWhen_AnyDepositable()
-        public
-        assertInvariants
-    {
-        _reserve(1 ether);
-
-        vm.warp(block.timestamp + 1 hours);
-        NodeOperator memory no = NodeOperator({
-            totalAddedKeys: 0,
-            totalWithdrawnKeys: 0,
-            totalDepositedKeys: 0,
-            totalVettedKeys: 0,
-            stuckValidatorsCount: 0,
-            depositableValidatorsCount: 1,
-            targetLimit: 0,
-            targetLimitMode: 0,
-            totalExitedKeys: 0,
-            enqueuedCount: 0,
-            managerAddress: user,
-            proposedManagerAddress: address(0),
-            rewardAddress: user,
-            proposedRewardAddress: address(0),
-            extendedManagerPermissions: false,
-            usedPriorityQueue: false
-        });
-        vm.mockCall(
-            address(stakingModule),
-            abi.encodeWithSelector(ICSModule.getNodeOperator.selector, 0),
-            abi.encode(no)
+            abi.encodeWithSelector(
+                ICSModule.getNodeOperatorNonWithdrawnKeys.selector,
+                0
+            ),
+            abi.encode(1)
         );
 
         vm.prank(user);

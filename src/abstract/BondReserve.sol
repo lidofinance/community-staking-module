@@ -32,27 +32,14 @@ abstract contract BondReserve is Initializable, IBondReserve {
     /// @notice Get additional reserve info for a Node Operator
     function getBondReserveInfo(
         uint256 nodeOperatorId
-    ) external view returns (IBondReserve.BondReserveInfo memory) {
-        IBondReserve.BondReserveInfo memory r = _getBondReserveStorage()
-            .reserve[nodeOperatorId];
-        return
-            IBondReserve.BondReserveInfo({
-                amount: r.amount,
-                removableAt: r.removableAt
-            });
-    }
-
-    /// @dev Get raw reserve info for internal usage
-    function _getBondReserveInfo(
-        uint256 nodeOperatorId
-    ) internal view returns (IBondReserve.BondReserveInfo memory) {
+    ) public view returns (IBondReserve.BondReserveInfo memory) {
         return _getBondReserveStorage().reserve[nodeOperatorId];
     }
 
-    /// @dev Get current reserved amount in ETH (stETH) for a Node Operator
-    function _getReservedBond(
+    /// @notice Get current reserved amount in ETH (stETH) for a Node Operator
+    function getReservedBond(
         uint256 nodeOperatorId
-    ) internal view returns (uint256) {
+    ) public view returns (uint256) {
         return _getBondReserveStorage().reserve[nodeOperatorId].amount;
     }
 
@@ -70,46 +57,26 @@ abstract contract BondReserve is Initializable, IBondReserve {
         emit BondReserveMinPeriodChanged(period);
     }
 
-    /// @dev Increase additional reserve for a Node Operator by `amount` and extend cooldown
-    function _increaseReserve(uint256 nodeOperatorId, uint256 amount) internal {
-        if (amount == 0) revert InvalidBondReserveAmount();
+    // @dev Set value for reserve. Can be used to set, update, remove the value
+    function _setBondReserve(uint256 nodeOperatorId, uint256 amount) internal {
         BondReserveStorage storage $ = _getBondReserveStorage();
         IBondReserve.BondReserveInfo storage r = $.reserve[nodeOperatorId];
-
-        uint256 newAmount = uint256(r.amount) + amount;
-        uint256 newUntil = block.timestamp + $.minBondReservePeriod;
-        r.removableAt = newUntil.toUint128();
-        r.amount = newAmount.toUint128();
-        emit BondReserveChanged(nodeOperatorId, newAmount, newUntil);
-    }
-
-    /// @dev Reduce reserve by `amount` (used when penalties/charges)
-    function _reduceReserveAmount(
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) internal {
-        if (amount == 0) return;
-        BondReserveStorage storage $ = _getBondReserveStorage();
-        IBondReserve.BondReserveInfo storage r = $.reserve[nodeOperatorId];
-        uint256 current = r.amount;
-        if (current == 0) return;
-
-        uint256 newAmount = current > amount ? current - amount : 0;
-        if (newAmount == 0) {
+        uint128 currentAmount = r.amount;
+        if (amount == 0) {
+            if (currentAmount == 0) {
+                return;
+            }
             delete $.reserve[nodeOperatorId];
             emit BondReserveRemoved(nodeOperatorId);
-        } else {
-            r.amount = uint128(newAmount);
-            emit BondReserveChanged(nodeOperatorId, newAmount, r.removableAt);
         }
-    }
-
-    /// @dev Remove the whole reserve for a Node Operator
-    function _removeReserve(uint256 nodeOperatorId) internal {
-        BondReserveStorage storage $ = _getBondReserveStorage();
-        if ($.reserve[nodeOperatorId].amount == 0) return;
-        delete $.reserve[nodeOperatorId];
-        emit BondReserveRemoved(nodeOperatorId);
+        uint128 currentRemovableAt = r.removableAt;
+        if (currentAmount < amount) {
+            currentRemovableAt = (block.timestamp + $.minBondReservePeriod)
+                .toUint128();
+            r.removableAt = currentRemovableAt;
+        }
+        r.amount = amount.toUint128();
+        emit BondReserveChanged(nodeOperatorId, amount, currentRemovableAt);
     }
 
     function _getBondReserveStorage()

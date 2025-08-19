@@ -14,7 +14,7 @@ import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
-import { ICSModule, NodeOperator, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { IBondReserve } from "./interfaces/IBondReserve.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
@@ -320,15 +320,11 @@ contract CSAccounting is
 
         uint256 current = CSBondCore.getBond(nodeOperatorId);
         uint256 required = _getRequiredBond(nodeOperatorId, 0);
-        if (current <= required) {
+        if (current < required + amount) {
             revert InvalidBondReserveAmount();
         }
-        uint256 claimable = current - required;
-        if (amount > claimable) {
-            revert InvalidBondReserveAmount();
-        }
-
-        BondReserve._increaseReserve(nodeOperatorId, amount);
+        uint256 currentReserve = BondReserve.getReservedBond(nodeOperatorId);
+        BondReserve._setBondReserve(nodeOperatorId, currentReserve + amount);
     }
 
     /// @inheritdoc ICSAccounting
@@ -337,7 +333,7 @@ contract CSAccounting is
             .getNodeOperatorManagementProperties(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(no);
 
-        IBondReserve.BondReserveInfo memory r = BondReserve._getBondReserveInfo(
+        IBondReserve.BondReserveInfo memory r = BondReserve.getBondReserveInfo(
             nodeOperatorId
         );
         if (r.amount == 0) {
@@ -347,7 +343,7 @@ contract CSAccounting is
         if (!_canRemoveBondReserve(nodeOperatorId, r)) {
             revert CanNotRemoveBondReserve();
         }
-        BondReserve._removeReserve(nodeOperatorId);
+        BondReserve._setBondReserve(nodeOperatorId, 0);
     }
 
     /// @inheritdoc ICSAccounting
@@ -646,17 +642,17 @@ contract CSAccounting is
         uint256 actualLockedBond = CSBondLock.getActualLockedBond(
             nodeOperatorId
         );
-        uint256 reserved = BondReserve._getReservedBond(nodeOperatorId);
+        uint256 reserved = BondReserve.getReservedBond(nodeOperatorId);
 
         return requiredBondForKeys + actualLockedBond + reserved;
     }
 
     function _adjustBondReserve(uint256 nodeOperatorId) internal {
-        uint256 reserved = BondReserve._getReservedBond(nodeOperatorId);
+        uint256 reserved = BondReserve.getReservedBond(nodeOperatorId);
         if (reserved == 0) return;
         uint256 current = CSBondCore.getBond(nodeOperatorId);
         if (current >= reserved) return;
-        BondReserve._reduceReserveAmount(nodeOperatorId, reserved - current);
+        BondReserve._setBondReserve(nodeOperatorId, current);
     }
 
     function _getRequiredBondShares(
@@ -677,7 +673,7 @@ contract CSAccounting is
         {
             uint256 currentBond = CSBondCore.getBond(nodeOperatorId);
             {
-                uint256 reservedBond = BondReserve._getReservedBond(
+                uint256 reservedBond = BondReserve.getReservedBond(
                     nodeOperatorId
                 );
                 // NOTE: `reservedBond` cannot exceed `currentBond` because it can be created
@@ -753,15 +749,8 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         IBondReserve.BondReserveInfo memory r
     ) internal view returns (bool) {
-        if (block.timestamp >= uint256(r.removableAt)) return true;
-        NodeOperator memory no = MODULE.getNodeOperator(nodeOperatorId);
-        if (
-            // TODO: Do we really need to check depositable?
-            no.depositableValidatorsCount == 0 &&
-            (no.totalAddedKeys - no.totalWithdrawnKeys) == 0
-        ) {
-            return true;
-        }
-        return false;
+        return
+            block.timestamp >= uint256(r.removableAt) ||
+            MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) == 0;
     }
 }

@@ -30,4 +30,9 @@ interface IBondReserve {
     function getBondReserveInfo(
         uint256 nodeOperatorId
     ) external view returns (BondReserveInfo memory);
+
+    /// @notice Get current reserved amount in ETH (stETH) for a Node Operator
+    function getReservedBond(
+        uint256 nodeOperatorId
+    ) external view returns (uint256);
 }

@@ -18,19 +18,8 @@ contract BondReserveTestable is BondReserve {
         _setBondReserveMinPeriod(period);
     }
 
-    function increaseReserve(uint256 nodeOperatorId, uint256 amount) external {
-        _increaseReserve(nodeOperatorId, amount);
-    }
-
-    function reduceReserveAmount(
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) external {
-        _reduceReserveAmount(nodeOperatorId, amount);
-    }
-
-    function removeReserve(uint256 nodeOperatorId) external {
-        _removeReserve(nodeOperatorId);
+    function setBondReserve(uint256 nodeOperatorId, uint256 amount) external {
+        _setBondReserve(nodeOperatorId, amount);
     }
 }
 
@@ -76,7 +65,7 @@ contract BondReserveTest is Test {
         vm.expectEmit(address(reserve));
         emit IBondReserve.BondReserveChanged(noId, amount, expectedRemovableAt);
 
-        reserve.increaseReserve(noId, amount);
+        reserve.setBondReserve(noId, reserve.getReservedBond(noId) + amount);
 
         IBondReserve.BondReserveInfo memory info = reserve.getBondReserveInfo(
             noId
@@ -87,12 +76,12 @@ contract BondReserveTest is Test {
 
     function test_increaseReserve_secondIncrease() public {
         uint256 noId = 0;
-        reserve.increaseReserve(noId, 1 ether);
+        reserve.setBondReserve(noId, 1 ether);
         IBondReserve.BondReserveInfo memory beforeInfo = reserve
             .getBondReserveInfo(noId);
 
         vm.warp(block.timestamp + 1 hours);
-        reserve.increaseReserve(noId, 1 ether);
+        reserve.setBondReserve(noId, reserve.getReservedBond(noId) + 1 ether);
 
         IBondReserve.BondReserveInfo memory info = reserve.getBondReserveInfo(
             noId
@@ -103,13 +92,13 @@ contract BondReserveTest is Test {
 
     function test_increaseReserve_WhenSecondIncreaseOnRemovableAt() public {
         uint256 noId = 0;
-        reserve.increaseReserve(noId, 1 ether);
+        reserve.setBondReserve(noId, 1 ether);
         IBondReserve.BondReserveInfo memory beforeInfo = reserve
             .getBondReserveInfo(noId);
 
         vm.warp(uint256(beforeInfo.removableAt));
         uint256 minPeriod = reserve.getBondReserveMinPeriod();
-        reserve.increaseReserve(noId, 1 ether);
+        reserve.setBondReserve(noId, reserve.getReservedBond(noId) + 1 ether);
 
         IBondReserve.BondReserveInfo memory info = reserve.getBondReserveInfo(
             noId
@@ -120,25 +109,20 @@ contract BondReserveTest is Test {
 
     function test_increaseReserve_WhenSecondIncreaseAfterExpired() public {
         uint256 noId = 0;
-        reserve.increaseReserve(noId, 1 ether);
+        reserve.setBondReserve(noId, 1 ether);
         IBondReserve.BondReserveInfo memory beforeInfo = reserve
             .getBondReserveInfo(noId);
 
         vm.warp(uint256(beforeInfo.removableAt) + 1);
         uint256 minPeriod = reserve.getBondReserveMinPeriod();
         uint256 expectedRemovableAt = block.timestamp + minPeriod;
-        reserve.increaseReserve(noId, 1 ether);
+        reserve.setBondReserve(noId, reserve.getReservedBond(noId) + 1 ether);
 
         IBondReserve.BondReserveInfo memory info = reserve.getBondReserveInfo(
             noId
         );
         assertEq(info.amount, 2 ether);
         assertEq(info.removableAt, expectedRemovableAt);
-    }
-
-    function test_increaseReserve_RevertWhen_ZeroAmount() public {
-        vm.expectRevert(IBondReserve.InvalidBondReserveAmount.selector);
-        reserve.increaseReserve(0, 0);
     }
 
     function test_increaseReserve_RevertWhen_AmountExceedsMax() public {
@@ -150,18 +134,18 @@ contract BondReserveTest is Test {
                 uint256(tooBig)
             )
         );
-        reserve.increaseReserve(0, tooBig);
+        reserve.setBondReserve(0, tooBig);
     }
 
     function test_reduceReserveAmount_WhenFull() public {
         uint256 noId = 0;
         uint256 amount = 100 ether;
-        reserve.increaseReserve(noId, amount);
+        reserve.setBondReserve(noId, amount);
 
         vm.expectEmit(address(reserve));
         emit IBondReserve.BondReserveRemoved(noId);
 
-        reserve.reduceReserveAmount(noId, amount);
+        reserve.setBondReserve(noId, 0);
 
         IBondReserve.BondReserveInfo memory info = reserve.getBondReserveInfo(
             noId
@@ -172,11 +156,10 @@ contract BondReserveTest is Test {
 
     function test_reduceReserveAmount_WhenPartial() public {
         uint256 noId = 0;
-        reserve.increaseReserve(noId, 100 ether);
+        reserve.setBondReserve(noId, 100 ether);
         IBondReserve.BondReserveInfo memory beforeInfo = reserve
             .getBondReserveInfo(noId);
 
-        uint256 toRelease = 10 ether;
         uint256 rest = 90 ether;
 
         vm.warp(block.timestamp + 1 seconds);
@@ -187,7 +170,7 @@ contract BondReserveTest is Test {
             beforeInfo.removableAt
         );
 
-        reserve.reduceReserveAmount(noId, toRelease);
+        reserve.setBondReserve(noId, rest);
 
         IBondReserve.BondReserveInfo memory info = reserve.getBondReserveInfo(
             noId
@@ -198,7 +181,7 @@ contract BondReserveTest is Test {
 
     function test_reduceReserveAmount_NoOpWhenZero() public {
         uint256 noId = 0;
-        reserve.reduceReserveAmount(noId, 0);
+        reserve.setBondReserve(noId, 0);
         IBondReserve.BondReserveInfo memory info = reserve.getBondReserveInfo(
             noId
         );
@@ -208,12 +191,12 @@ contract BondReserveTest is Test {
 
     function test_removeReserve() public {
         uint256 noId = 0;
-        reserve.increaseReserve(noId, 100 ether);
+        reserve.setBondReserve(noId, 100 ether);
 
         vm.expectEmit(address(reserve));
         emit IBondReserve.BondReserveRemoved(noId);
 
-        reserve.removeReserve(noId);
+        reserve.setBondReserve(noId, 0);
 
         IBondReserve.BondReserveInfo memory info = reserve.getBondReserveInfo(
             noId
