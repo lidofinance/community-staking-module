@@ -259,7 +259,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             lido.allowance(address(accounting), locator.burner()),
             type(uint256).max
         );
-        assertEq(accounting.getInitializedVersion(), 2);
+        assertEq(accounting.getInitializedVersion(), 3);
     }
 
     function test_state() public view {
