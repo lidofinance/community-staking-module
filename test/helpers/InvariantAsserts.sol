@@ -37,7 +37,7 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertCSMKeys(CSModule csm) public {
+    function assertModuleKeys(CSModule csm) public {
         if (skipInvariants()) {
             return;
         }
@@ -126,7 +126,7 @@ contract InvariantAsserts is Test {
 
     mapping(uint256 => uint256) batchKeys;
 
-    function assertCSMEnqueuedCount(CSModule csm) public {
+    function assertModuleEnqueuedCount(CSModule csm) public {
         if (skipInvariants()) {
             return;
         }
@@ -158,7 +158,7 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertCSMUnusedStorageSlots(CSModule csm) public {
+    function assertModuleUnusedStorageSlots(CSModule csm) public {
         if (skipInvariants()) {
             return;
         }
