@@ -5749,7 +5749,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(
             lock.amount,
-            1 ether +
+            amount +
                 csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
         assertEq(lock.until, accounting.getBondLockPeriod() + block.timestamp);
@@ -5789,6 +5789,49 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         );
         assertEq(lock.amount, 0 ether);
         assertEq(lock.until, 0);
+
+        lock = accounting.getLockedBondInfo(secondNoId);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.until, 0);
+    }
+
+    function test_settleELRewardsStealingPenalty_multipleNOs_oneWithLockedGreaterThanAllowedToSettle()
+        public
+        assertInvariants
+    {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](2);
+        idsToSettle[0] = firstNoId;
+        idsToSettle[1] = secondNoId;
+        uint256 amount = 1 ether;
+        csm.reportELRewardsStealingPenalty(
+            firstNoId,
+            blockhash(block.number),
+            amount
+        );
+        csm.reportELRewardsStealingPenalty(
+            secondNoId,
+            blockhash(block.number),
+            BOND_SIZE
+        );
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
+        csm.settleELRewardsStealingPenalty(
+            idsToSettle,
+            UintArr(amount, type(uint256).max)
+        );
+
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(
+            firstNoId
+        );
+        assertEq(
+            lock.amount,
+            amount +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
+        );
+        assertEq(lock.until, accounting.getBondLockPeriod() + block.timestamp);
 
         lock = accounting.getLockedBondInfo(secondNoId);
         assertEq(lock.amount, 0 ether);
