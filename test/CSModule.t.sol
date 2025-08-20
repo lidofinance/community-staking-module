@@ -439,7 +439,7 @@ contract CSMCommon is CSMFixtures {
             exitPenalties: address(exitPenalties)
         });
 
-        accounting.setCSM(address(csm));
+        accounting.setModule(csm);
 
         _enableInitializers(address(csm));
         csm.initialize({ admin: admin });
@@ -501,7 +501,7 @@ contract CSMCommonNoRoles is CSMFixtures {
             exitPenalties: address(exitPenalties)
         });
 
-        accounting.setCSM(address(csm));
+        accounting.setModule(csm);
 
         _enableInitializers(address(csm));
         csm.initialize({ admin: admin });
