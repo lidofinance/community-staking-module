@@ -128,7 +128,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         {
             accountingProxy.proxy__upgradeTo(deploymentConfig.accountingImpl);
             CSAccounting(deploymentConfig.accounting).finalizeUpgradeV3(
-                4 weeks
+                deployParams.bondReserveMinPeriod
             );
         }
         vm.stopBroadcast();

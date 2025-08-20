@@ -69,14 +69,14 @@ abstract contract BondReserve is Initializable, IBondReserve {
             delete $.reserve[nodeOperatorId];
             emit BondReserveRemoved(nodeOperatorId);
         }
-        uint128 currentRemovableAt = r.removableAt;
+        uint128 removableAt = r.removableAt;
         if (currentAmount < amount) {
-            currentRemovableAt = (block.timestamp + $.minBondReservePeriod)
+            removableAt = (block.timestamp + $.minBondReservePeriod)
                 .toUint128();
-            r.removableAt = currentRemovableAt;
+            r.removableAt = removableAt;
         }
         r.amount = amount.toUint128();
-        emit BondReserveChanged(nodeOperatorId, amount, currentRemovableAt);
+        emit BondReserveChanged(nodeOperatorId, amount, removableAt);
     }
 
     function _getBondReserveStorage()
