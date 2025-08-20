@@ -85,7 +85,7 @@ abstract contract DeployImplementationsBase is DeployBase {
                 _feeDistributor: address(feeDistributor),
                 minBondLockPeriod: config.minBondLockPeriod,
                 maxBondLockPeriod: config.maxBondLockPeriod,
-                enableBondReserve: true
+                enableBondReserve: false
             });
 
             permissionlessGate = new PermissionlessGate(address(csm), deployer);

@@ -276,7 +276,7 @@ abstract contract DeployBase is Script {
                 _feeDistributor: address(feeDistributor),
                 minBondLockPeriod: config.minBondLockPeriod,
                 maxBondLockPeriod: config.maxBondLockPeriod,
-                enableBondReserve: true
+                enableBondReserve: false
             });
 
             {
