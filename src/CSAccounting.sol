@@ -113,6 +113,8 @@ contract CSAccounting is
         LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
     }
 
+    /// @dev This method is expected to be called only when the contract is upgraded from version 2 to version 3 for the existing version 2 deployment.
+    ///      If the version 3 contract is deployed from scratch, the `initialize` method should be used instead.
     function finalizeUpgradeV3(
         uint256 bondReserveMinPeriod
     ) external reinitializer(3) {
