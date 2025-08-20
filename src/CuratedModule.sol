@@ -18,14 +18,14 @@ contract CuratedModule is ICuratedModule, CSModule {
         bytes32 moduleType,
         address lidoLocator,
         address parametersRegistry,
-        address accounting_,
+        address _accounting, // solhint-disable-line lido-csm/vars-with-underscore
         address exitPenalties
     )
         CSModule(
             moduleType,
             lidoLocator,
             parametersRegistry,
-            accounting_,
+            _accounting,
             exitPenalties
         )
     {}

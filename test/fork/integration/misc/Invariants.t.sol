@@ -34,15 +34,15 @@ using QueueLib for QueueLib.Queue;
 
 contract CSModuleInvariants is InvariantsBase {
     function test_keys() public noGasMetering {
-        assertCSMKeys(csm);
+        assertModuleKeys(csm);
     }
 
     function test_enqueuedCount() public noGasMetering {
-        assertCSMEnqueuedCount(csm);
+        assertModuleEnqueuedCount(csm);
     }
 
     function test_unusedStorageSlots() public noGasMetering {
-        assertCSMUnusedStorageSlots(csm);
+        assertModuleUnusedStorageSlots(csm);
     }
 
     function test_roles() public view {
