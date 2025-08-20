@@ -89,7 +89,9 @@ interface IVettedGate {
     function endCurrentReferralProgramSeason() external;
 
     /// @notice Add a new Node Operator using ETH as a bond.
-    ///         At least one deposit data and corresponding bond should be provided
+    ///         At least one deposit data and corresponding bond should be provided.
+    ///         msg.sender is marked as consumed and will not be able to create Node Operators or claim the beneficial curve
+    ///         via a particular instance of VettedGate.
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
@@ -112,7 +114,9 @@ interface IVettedGate {
     ) external payable returns (uint256 nodeOperatorId);
 
     /// @notice Add a new Node Operator using stETH as a bond.
-    ///         At least one deposit data and corresponding bond should be provided
+    ///         At least one deposit data and corresponding bond should be provided.
+    ///         msg.sender is marked as consumed and will not be able to create more Node Operators or claim the beneficial curve
+    ///         via a particular instance of VettedGate.
     /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -138,7 +142,9 @@ interface IVettedGate {
     ) external returns (uint256 nodeOperatorId);
 
     /// @notice Add a new Node Operator using wstETH as a bond.
-    ///         At least one deposit data and corresponding bond should be provided
+    ///         At least one deposit data and corresponding bond should be provided.
+    ///         msg.sender is marked as consumed and will not be able to create more Node Operators or claim the beneficial curve
+    ///         via a particular instance of VettedGate.
     /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -163,7 +169,9 @@ interface IVettedGate {
         address referrer
     ) external returns (uint256 nodeOperatorId);
 
-    /// @notice Claim the bond curve for the eligible Node Operator
+    /// @notice Claim the bond curve for the eligible Node Operator.
+    ///         msg.sender is marked as consumed and will not be able to create Node Operators or claim the beneficial curve
+    ///         via a particular instance of VettedGate.
     /// @param nodeOperatorId Id of the Node Operator
     /// @param proof Merkle proof of the sender being eligible to join via the gate
     /// @dev Should be called by the reward address of the Node Operator

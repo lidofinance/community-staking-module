@@ -166,6 +166,24 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
             );
     }
 
+    function createNodeOperator(
+        address managerAddress,
+        address rewardAddress,
+        bool extendedManagerPermissions
+    ) internal returns (uint256) {
+        vm.prank(csm.getRoleMember(csm.CREATE_NODE_OPERATOR_ROLE(), 0));
+        return
+            csm.createNodeOperator(
+                managerAddress,
+                NodeOperatorManagementProperties({
+                    managerAddress: managerAddress,
+                    rewardAddress: rewardAddress,
+                    extendedManagerPermissions: extendedManagerPermissions
+                }),
+                address(0)
+            );
+    }
+
     function uploadMoreKeys(
         uint256 noId,
         uint256 keysCount,
@@ -2961,6 +2979,15 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
         csm.changeNodeOperatorRewardAddress(0, stranger);
     }
 
+    function test_changeNodeOperatorRewardAddress_RevertWhen_SameAddress()
+        public
+    {
+        uint256 noId = createNodeOperator(true);
+        vm.expectRevert(INOAddresses.SameAddress.selector);
+        vm.prank(nodeOperator);
+        csm.changeNodeOperatorRewardAddress(noId, nodeOperator);
+    }
+
     function test_changeNodeOperatorRewardAddress_RevertWhen_ZeroRewardAddress()
         public
     {
@@ -2982,15 +3009,11 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
     function test_changeNodeOperatorRewardAddress_RevertWhen_SenderIsRewardAddress()
         public
     {
-        uint256 noId = createNodeOperator(true);
-        vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
-        vm.prank(stranger);
-        csm.confirmNodeOperatorRewardAddressChange(noId);
+        uint256 noId = createNodeOperator(nodeOperator, stranger, true);
 
         vm.expectRevert(INOAddresses.SenderIsNotManagerAddress.selector);
         vm.prank(stranger);
-        csm.changeNodeOperatorRewardAddress(0, stranger);
+        csm.changeNodeOperatorRewardAddress(noId, nodeOperator);
     }
 
     function test_changeNodeOperatorRewardAddress_RevertWhen_NoExtendedPermissions()

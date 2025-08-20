@@ -309,7 +309,9 @@ interface ICSParametersRegistry {
 
     /// @notice Set default value for QueueConfig. Default value is used if a specific value is not set for the curveId.
     /// @param priority Queue priority.
-    /// @param maxDeposits Maximum number of deposits a Node Operator can get via the priority queue.
+    /// @param maxDeposits Maximum number of the fist deposits a Node Operator can get via the priority queue.
+    ///                    Ex. with `maxDeposits = 10` the Node Operator сan get keys added to the priority queue
+    ///                    until the Node Operator has totalDepositedKeys + enqueued >= 10.
     function setDefaultQueueConfig(
         uint256 priority,
         uint256 maxDeposits
@@ -317,8 +319,10 @@ interface ICSParametersRegistry {
 
     /// @notice Sets the provided config to the given curve.
     /// @param curveId Curve Id to set the config.
-    /// @param priority Priority of the queue
-    /// @param maxDeposits Max deposits in prioritized queue
+    /// @param priority Queue priority.
+    /// @param maxDeposits Maximum number of the fist deposits a Node Operator can get via the priority queue.
+    ///                    Ex. with `maxDeposits = 10` the Node Operator сan get keys added to the priority queue
+    ///                    until the Node Operator has totalDepositedKeys + enqueued >= 10.
     function setQueueConfig(
         uint256 curveId,
         uint256 priority,
@@ -332,7 +336,9 @@ interface ICSParametersRegistry {
     /// @notice Get the queue config for the given curve.
     /// @param curveId Curve Id to get the queue config for.
     /// @return priority Queue priority.
-    /// @return maxDeposits Maximum number of deposits a Node Operator can get via the priority queue.
+    /// @param maxDeposits Maximum number of the fist deposits a Node Operator can get via the priority queue.
+    ///                    Ex. with `maxDeposits = 10` the Node Operator сan get keys added to the priority queue
+    ///                    until the Node Operator has totalDepositedKeys + enqueued >= 10.
     function getQueueConfig(
         uint256 curveId
     ) external view returns (uint32 priority, uint32 maxDeposits);
