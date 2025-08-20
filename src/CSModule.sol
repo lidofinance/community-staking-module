@@ -684,25 +684,30 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function settleELRewardsStealingPenalty(
-        uint256[] calldata nodeOperatorIds
+        uint256[] calldata nodeOperatorIds,
+        uint256[] calldata maxAmounts
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
+        if (nodeOperatorIds.length != maxAmounts.length) {
+            revert InvalidInput();
+        }
         ICSAccounting _accounting = accounting();
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
 
-            // Settled amount might be zero either if the lock expired, or the bond is zero so we
-            // need to check if the penalty was applied.
-            bool applied = _accounting.settleLockedBondETH(nodeOperatorId);
-            if (applied) {
-                emit ELRewardsStealingPenaltySettled(nodeOperatorId);
-
-                // Nonce should be updated if depositableValidators change
-                _updateDepositableValidatorsCount({
-                    nodeOperatorId: nodeOperatorId,
-                    incrementNonceIfUpdated: true
-                });
+            uint256 locked = _accounting.getActualLockedBond(nodeOperatorId);
+            if (locked == 0 || locked > maxAmounts[i]) {
+                continue; // skip this NO if the locked bond is greater than the max amount or there is no locked bond
             }
+
+            _accounting.settleLockedBondETH(nodeOperatorId);
+            emit ELRewardsStealingPenaltySettled(nodeOperatorId);
+
+            // Nonce should be updated if depositableValidators change
+            _updateDepositableValidatorsCount({
+                nodeOperatorId: nodeOperatorId,
+                incrementNonceIfUpdated: true
+            });
         }
     }
 
