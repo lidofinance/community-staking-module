@@ -18,6 +18,7 @@ interface ICSEjector is IExitTypes {
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error SenderIsNotStrikes();
+    error NothingToEject();
 
     function PAUSE_ROLE() external view returns (bytes32);
 

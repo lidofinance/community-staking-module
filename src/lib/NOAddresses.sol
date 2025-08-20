@@ -49,23 +49,26 @@ library NOAddresses {
         address proposedAddress
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) {
+        address managerAddress = no.managerAddress;
+
+        if (managerAddress == address(0)) {
             revert ICSModule.NodeOperatorDoesNotExist();
         }
 
-        if (no.managerAddress != msg.sender) {
+        if (managerAddress != msg.sender) {
             revert INOAddresses.SenderIsNotManagerAddress();
         }
 
-        if (no.managerAddress == proposedAddress) {
+        if (managerAddress == proposedAddress) {
             revert INOAddresses.SameAddress();
         }
 
-        if (no.proposedManagerAddress == proposedAddress) {
+        address oldProposedAddress = no.proposedManagerAddress;
+
+        if (oldProposedAddress == proposedAddress) {
             revert INOAddresses.AlreadyProposed();
         }
 
-        address oldProposedAddress = no.proposedManagerAddress;
         no.proposedManagerAddress = proposedAddress;
 
         emit INOAddresses.NodeOperatorManagerAddressChangeProposed(
@@ -83,7 +86,9 @@ library NOAddresses {
         uint256 nodeOperatorId
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) {
+        address oldManagerAddress = no.managerAddress;
+
+        if (oldManagerAddress == address(0)) {
             revert ICSModule.NodeOperatorDoesNotExist();
         }
 
@@ -91,13 +96,12 @@ library NOAddresses {
             revert INOAddresses.SenderIsNotProposedAddress();
         }
 
-        address oldAddress = no.managerAddress;
         no.managerAddress = msg.sender;
         delete no.proposedManagerAddress;
 
         emit INOAddresses.NodeOperatorManagerAddressChanged(
             nodeOperatorId,
-            oldAddress,
+            oldManagerAddress,
             msg.sender
         );
     }
@@ -111,23 +115,26 @@ library NOAddresses {
         address proposedAddress
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.rewardAddress == address(0)) {
+        address rewardAddress = no.rewardAddress;
+
+        if (rewardAddress == address(0)) {
             revert ICSModule.NodeOperatorDoesNotExist();
         }
 
-        if (no.rewardAddress != msg.sender) {
+        if (rewardAddress != msg.sender) {
             revert INOAddresses.SenderIsNotRewardAddress();
         }
 
-        if (no.rewardAddress == proposedAddress) {
+        if (rewardAddress == proposedAddress) {
             revert INOAddresses.SameAddress();
         }
 
-        if (no.proposedRewardAddress == proposedAddress) {
+        address oldProposedAddress = no.proposedRewardAddress;
+
+        if (oldProposedAddress == proposedAddress) {
             revert INOAddresses.AlreadyProposed();
         }
 
-        address oldProposedAddress = no.proposedRewardAddress;
         no.proposedRewardAddress = proposedAddress;
 
         emit INOAddresses.NodeOperatorRewardAddressChangeProposed(
@@ -145,7 +152,9 @@ library NOAddresses {
         uint256 nodeOperatorId
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.rewardAddress == address(0)) {
+        address oldRewardAddress = no.rewardAddress;
+
+        if (oldRewardAddress == address(0)) {
             revert ICSModule.NodeOperatorDoesNotExist();
         }
 
@@ -153,13 +162,12 @@ library NOAddresses {
             revert INOAddresses.SenderIsNotProposedAddress();
         }
 
-        address oldAddress = no.rewardAddress;
         no.rewardAddress = msg.sender;
         delete no.proposedRewardAddress;
 
         emit INOAddresses.NodeOperatorRewardAddressChanged(
             nodeOperatorId,
-            oldAddress,
+            oldRewardAddress,
             msg.sender
         );
     }
@@ -172,7 +180,9 @@ library NOAddresses {
         uint256 nodeOperatorId
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.rewardAddress == address(0)) {
+        address rewardAddress = no.rewardAddress;
+
+        if (rewardAddress == address(0)) {
             revert ICSModule.NodeOperatorDoesNotExist();
         }
 
@@ -180,17 +190,17 @@ library NOAddresses {
             revert INOAddresses.MethodCallIsNotAllowed();
         }
 
-        if (no.rewardAddress != msg.sender) {
+        if (rewardAddress != msg.sender) {
             revert INOAddresses.SenderIsNotRewardAddress();
-        }
-
-        if (no.managerAddress == no.rewardAddress) {
-            revert INOAddresses.SameAddress();
         }
 
         address previousManagerAddress = no.managerAddress;
 
-        no.managerAddress = no.rewardAddress;
+        if (previousManagerAddress == rewardAddress) {
+            revert INOAddresses.SameAddress();
+        }
+
+        no.managerAddress = rewardAddress;
         // @dev Gas golfing
         if (no.proposedManagerAddress != address(0)) {
             delete no.proposedManagerAddress;
@@ -199,7 +209,7 @@ library NOAddresses {
         emit INOAddresses.NodeOperatorManagerAddressChanged(
             nodeOperatorId,
             previousManagerAddress,
-            no.rewardAddress
+            rewardAddress
         );
     }
 
@@ -215,8 +225,17 @@ library NOAddresses {
         if (newAddress == address(0)) {
             revert INOAddresses.ZeroRewardAddress();
         }
+
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) {
+        address oldRewardAddress = no.rewardAddress;
+
+        if (oldRewardAddress == newAddress) {
+            revert INOAddresses.SameAddress();
+        }
+
+        address managerAddress = no.managerAddress;
+
+        if (managerAddress == address(0)) {
             revert ICSModule.NodeOperatorDoesNotExist();
         }
 
@@ -224,11 +243,10 @@ library NOAddresses {
             revert INOAddresses.MethodCallIsNotAllowed();
         }
 
-        if (no.managerAddress != msg.sender) {
+        if (managerAddress != msg.sender) {
             revert INOAddresses.SenderIsNotManagerAddress();
         }
 
-        address oldAddress = no.rewardAddress;
         no.rewardAddress = newAddress;
         // @dev Gas golfing
         if (no.proposedRewardAddress != address(0)) {
@@ -237,7 +255,7 @@ library NOAddresses {
 
         emit INOAddresses.NodeOperatorRewardAddressChanged(
             nodeOperatorId,
-            oldAddress,
+            oldRewardAddress,
             newAddress
         );
     }
