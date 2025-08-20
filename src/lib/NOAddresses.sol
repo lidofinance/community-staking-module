@@ -295,10 +295,9 @@ library NOAddresses {
             revert INOAddresses.SameAddress();
         }
 
-        no.managerAddress = newManagerAddress;
-        no.rewardAddress = newRewardAddress;
-
         if (!isSameManagerAddress) {
+            no.managerAddress = newManagerAddress;
+
             emit INOAddresses.NodeOperatorManagerAddressChanged(
                 nodeOperatorId,
                 oldManagerAddress,
@@ -307,6 +306,8 @@ library NOAddresses {
         }
 
         if (!isSameRewardAddress) {
+            no.rewardAddress = newRewardAddress;
+
             emit INOAddresses.NodeOperatorRewardAddressChanged(
                 nodeOperatorId,
                 oldRewardAddress,
