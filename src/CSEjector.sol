@@ -80,6 +80,10 @@ contract CSEjector is
     ) external payable whenResumed {
         _onlyNodeOperatorOwner(nodeOperatorId);
 
+        if (keysCount == 0) {
+            revert NothingToEject();
+        }
+
         {
             // A key must be deposited to prevent ejecting unvetted keys that can intersect with
             // other modules.
@@ -141,6 +145,10 @@ contract CSEjector is
         address refundRecipient
     ) external payable whenResumed {
         _onlyNodeOperatorOwner(nodeOperatorId);
+
+        if (keyIndices.length == 0) {
+            revert NothingToEject();
+        }
 
         uint256 totalDepositedKeys = MODULE.getNodeOperatorTotalDepositedKeys(
             nodeOperatorId

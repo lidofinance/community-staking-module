@@ -76,7 +76,8 @@ contract CSFeeOracle is
         _updateContractVersion(2);
     }
 
-    /// @dev should be called after update on the proxy
+    /// @dev This method is expected to be called only when the contract is upgraded from version 1 to version 2 for the existing version 1 deployment.
+    ///      If the version 2 contract is deployed from scratch, the `initialize` method should be used instead.
     function finalizeUpgradeV2(uint256 consensusVersion) external {
         _setConsensusVersion(consensusVersion);
 

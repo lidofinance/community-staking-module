@@ -154,7 +154,8 @@ contract CSModule is
         _pauseFor(PausableUntil.PAUSE_INFINITELY);
     }
 
-    /// @dev should be called after update on the proxy
+    /// @dev This method is expected to be called only when the contract is upgraded from version 1 to version 2 for the existing version 1 deployment.
+    ///      If the version 2 contract is deployed from scratch, the `initialize` method should be used instead.
     function finalizeUpgradeV2() external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_queueByPriority.slot, 0x00)
@@ -233,15 +234,17 @@ contract CSModule is
     ) external payable whenResumed {
         _checkCanAddKeys(nodeOperatorId, from);
 
+        ICSAccounting _accounting = accounting();
+
         if (
             msg.value <
-            accounting().getRequiredBondForNextKeys(nodeOperatorId, keysCount)
+            _accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount)
         ) {
             revert InvalidAmount();
         }
 
         if (msg.value != 0) {
-            accounting().depositETH{ value: msg.value }(from, nodeOperatorId);
+            _accounting.depositETH{ value: msg.value }(from, nodeOperatorId);
         }
 
         _addKeysAndUpdateDepositableValidatorsCount(
@@ -263,13 +266,15 @@ contract CSModule is
     ) external whenResumed {
         _checkCanAddKeys(nodeOperatorId, from);
 
-        uint256 amount = accounting().getRequiredBondForNextKeys(
+        ICSAccounting _accounting = accounting();
+
+        uint256 amount = _accounting.getRequiredBondForNextKeys(
             nodeOperatorId,
             keysCount
         );
 
         if (amount != 0) {
-            accounting().depositStETH(from, nodeOperatorId, amount, permit);
+            _accounting.depositStETH(from, nodeOperatorId, amount, permit);
         }
 
         _addKeysAndUpdateDepositableValidatorsCount(
@@ -291,13 +296,15 @@ contract CSModule is
     ) external whenResumed {
         _checkCanAddKeys(nodeOperatorId, from);
 
-        uint256 amount = accounting().getRequiredBondForNextKeysWstETH(
+        ICSAccounting _accounting = accounting();
+
+        uint256 amount = _accounting.getRequiredBondForNextKeysWstETH(
             nodeOperatorId,
             keysCount
         );
 
         if (amount != 0) {
-            accounting().depositWstETH(from, nodeOperatorId, amount, permit);
+            _accounting.depositWstETH(from, nodeOperatorId, amount, permit);
         }
 
         _addKeysAndUpdateDepositableValidatorsCount(
@@ -550,7 +557,7 @@ contract CSModule is
         // The Node Operator is charged for the every removed key. It's motivated by the fact that the DAO should cleanup
         // the queue from the empty batches related to the Node Operator. It's possible to have multiple batches with only one
         // key in it, so it means the DAO should be able to cover removal costs for as much batches as keys removed in this case.
-        uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
+        uint256 curveId = _getBondCurveId(nodeOperatorId);
         uint256 amountToCharge = PARAMETERS_REGISTRY.getKeyRemovalCharge(
             curveId
         ) * keysCount;
@@ -591,7 +598,7 @@ contract CSModule is
             revert PriorityQueueAlreadyUsed();
         }
 
-        uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
+        uint256 curveId = _getBondCurveId(nodeOperatorId);
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
             .getQueueConfig(curveId);
 
@@ -639,7 +646,8 @@ contract CSModule is
         if (amount == 0) {
             revert InvalidAmount();
         }
-        uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
+
+        uint256 curveId = _getBondCurveId(nodeOperatorId);
         uint256 additionalFine = PARAMETERS_REGISTRY
             .getElRewardsStealingAdditionalFine(curveId);
         accounting().lockBondETH(nodeOperatorId, amount + additionalFine);
@@ -678,13 +686,14 @@ contract CSModule is
     function settleELRewardsStealingPenalty(
         uint256[] calldata nodeOperatorIds
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
+        ICSAccounting _accounting = accounting();
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
 
             // Settled amount might be zero either if the lock expired, or the bond is zero so we
             // need to check if the penalty was applied.
-            bool applied = accounting().settleLockedBondETH(nodeOperatorId);
+            bool applied = _accounting.settleLockedBondETH(nodeOperatorId);
             if (applied) {
                 emit ELRewardsStealingPenaltySettled(nodeOperatorId);
 
@@ -778,6 +787,9 @@ contract CSModule is
                 }
                 chargeWithdrawalRequestFee = true;
             }
+
+            ICSAccounting _accounting = accounting();
+
             // The withdrawal request fee is taken only if the penalty is applied if no penalty, the
             // fee has been paid by the node operator on the withdrawal trigger, or it is the DAO
             // decision to withdraw the validator before that the withdrawal request becomes
@@ -786,7 +798,7 @@ contract CSModule is
                 chargeWithdrawalRequestFee &&
                 exitPenaltyInfo.withdrawalRequestFee.value != 0
             ) {
-                accounting().chargeFee(
+                _accounting.chargeFee(
                     withdrawalInfo.nodeOperatorId,
                     exitPenaltyInfo.withdrawalRequestFee.value
                 );
@@ -798,10 +810,7 @@ contract CSModule is
                 }
             }
             if (penaltySum > 0) {
-                accounting().penalize(
-                    withdrawalInfo.nodeOperatorId,
-                    penaltySum
-                );
+                _accounting.penalize(withdrawalInfo.nodeOperatorId, penaltySum);
             }
 
             // Nonce will be updated below even if depositable count was not changed
@@ -861,6 +870,10 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
+    /// @dev The method does not update depositable keys count for the Node Operators before the queue processing start.
+    ///      Hence, in the rare cases of negative stETH rebase the method might return unbonded keys. This is a trade-off
+    ///      between the gas cost and the correctness of the data. Due to module design, any unbonded keys will be requested
+    ///      to exit by VEBO.
     /// @dev Second param `depositCalldata` is not used
     function obtainDepositData(
         uint256 depositsCount,
@@ -1191,7 +1204,9 @@ contract CSModule is
                         totalUnbondedKeys
                 );
             }
-            // No force mode enabled but unbonded deposited keys
+            // No force mode enabled but unbonded deposited keys.
+            // In this case we override possible targetValidatorsCount set with targetLimitMode = 1
+            // since requesting exits for the unbonded keys has a higher priority compared to targetLimitMode = 1
         } else if (totalUnbondedKeys > totalNonDepositedKeys) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             unchecked {
@@ -1314,7 +1329,7 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         return
             PARAMETERS_REGISTRY.getAllowedExitDelay(
-                accounting().getBondCurveId(nodeOperatorId)
+                _getBondCurveId(nodeOperatorId)
             );
     }
 
@@ -1335,13 +1350,13 @@ contract CSModule is
         bytes calldata publicKeys,
         bytes calldata signatures
     ) internal {
-        // Do not allow of multiple calls of addValidatorKeys* methods.
+        // Do not allow of multiple calls of addValidatorKeys* methods for the creator contract.
         _forgetOperatorCreator(nodeOperatorId);
 
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 totalAddedKeys = no.totalAddedKeys;
 
-        uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
+        uint256 curveId = _getBondCurveId(nodeOperatorId);
         uint256 keysLimit = PARAMETERS_REGISTRY.getKeysLimit(curveId);
 
         unchecked {
@@ -1359,10 +1374,12 @@ contract CSModule is
                 publicKeys,
                 signatures
             );
+
+            uint32 totalVettedKeys = no.totalVettedKeys;
             // Optimistic vetting takes place.
-            if (totalAddedKeys == no.totalVettedKeys) {
+            if (totalAddedKeys == totalVettedKeys) {
                 // @dev No need to safe cast due to internal logic
-                uint32 totalVettedKeys = no.totalVettedKeys + uint32(keysCount);
+                totalVettedKeys = totalVettedKeys + uint32(keysCount);
                 no.totalVettedKeys = totalVettedKeys;
                 emit VettedSigningKeysCountChanged(
                     nodeOperatorId,
@@ -1476,7 +1493,7 @@ contract CSModule is
     }
 
     function _enqueueNodeOperatorKeys(uint256 nodeOperatorId) internal {
-        uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
+        uint256 curveId = _getBondCurveId(nodeOperatorId);
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
             .getQueueConfig(curveId);
 
@@ -1621,6 +1638,12 @@ contract CSModule is
         ) {
             revert SigningKeysInvalidOffset();
         }
+    }
+
+    function _getBondCurveId(
+        uint256 nodeOperatorId
+    ) internal view returns (uint256) {
+        return accounting().getBondCurveId(nodeOperatorId);
     }
 
     function _onlyRecoverer() internal view override {
