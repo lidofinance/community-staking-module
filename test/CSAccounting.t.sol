@@ -5992,7 +5992,7 @@ contract CSAccountingRemoveBondReserveTest is CSAccountingBaseTest {
             abi.encode(1)
         );
 
-        vm.expectRevert(ICSAccounting.CanNotRemoveBondReserve.selector);
+        vm.expectRevert(ICSAccounting.MinReserveTimeHasNotPassed.selector);
         vm.prank(user);
         accounting.removeBondReserve(0);
     }
@@ -6014,7 +6014,7 @@ contract CSAccountingRemoveBondReserveTest is CSAccountingBaseTest {
         );
 
         vm.prank(user);
-        vm.expectRevert(ICSAccounting.CanNotRemoveBondReserve.selector);
+        vm.expectRevert(ICSAccounting.MinReserveTimeHasNotPassed.selector);
         accounting.removeBondReserve(0);
     }
 }

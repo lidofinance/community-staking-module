@@ -32,7 +32,7 @@ interface ICSAccounting is
     error SenderIsNotModule();
     error SenderIsNotEligible();
     error BondReserveFeatureDisabled();
-    error CanNotRemoveBondReserve();
+    error MinReserveTimeHasNotPassed();
     error ZeroModuleAddress();
     error ZeroAdminAddress();
     error ZeroFeeDistributorAddress();

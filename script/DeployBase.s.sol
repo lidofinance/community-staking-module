@@ -64,6 +64,7 @@ struct DeployParams {
     uint256 minBondLockPeriod;
     uint256 maxBondLockPeriod;
     uint256 bondLockPeriod;
+    uint256 bondReserveMinPeriod;
     address setResetBondCurveAddress;
     address chargePenaltyRecipient;
     // Module
@@ -293,7 +294,7 @@ abstract contract DeployBase is Script {
                 bondCurve: defaultBondCurve,
                 admin: deployer,
                 bondLockPeriod: config.bondLockPeriod,
-                bondReserveMinPeriod: 4 weeks,
+                bondReserveMinPeriod: config.bondReserveMinPeriod,
                 _chargePenaltyRecipient: config.chargePenaltyRecipient
             });
 

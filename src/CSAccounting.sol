@@ -310,9 +310,7 @@ contract CSAccounting is
         if (!BOND_RESERVE_IS_ENABLED) {
             revert BondReserveFeatureDisabled();
         }
-        NodeOperatorManagementProperties memory no = MODULE
-            .getNodeOperatorManagementProperties(nodeOperatorId);
-        _onlyNodeOperatorManagerOrRewardAddresses(no);
+        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
         if (amount == 0) {
             revert InvalidBondReserveAmount();
@@ -329,9 +327,7 @@ contract CSAccounting is
 
     /// @inheritdoc ICSAccounting
     function removeBondReserve(uint256 nodeOperatorId) external whenResumed {
-        NodeOperatorManagementProperties memory no = MODULE
-            .getNodeOperatorManagementProperties(nodeOperatorId);
-        _onlyNodeOperatorManagerOrRewardAddresses(no);
+        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
         IBondReserve.BondReserveInfo memory r = BondReserve.getBondReserveInfo(
             nodeOperatorId
@@ -341,7 +337,7 @@ contract CSAccounting is
         }
 
         if (!_canRemoveBondReserve(nodeOperatorId, r)) {
-            revert CanNotRemoveBondReserve();
+            revert MinReserveTimeHasNotPassed();
         }
         BondReserve._setBondReserve(nodeOperatorId, 0);
     }
@@ -719,6 +715,22 @@ contract CSAccounting is
         }
 
         revert NodeOperatorDoesNotExist();
+    }
+
+    function _onlyNodeOperatorManagerOrRewardAddresses(
+        uint256 nodeOperatorId
+    ) internal view {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+
+        if (no.managerAddress == msg.sender || no.rewardAddress == msg.sender) {
+            return;
+        }
+
+        revert SenderIsNotEligible();
     }
 
     function _onlyNodeOperatorManagerOrRewardAddresses(
