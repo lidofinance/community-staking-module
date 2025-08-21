@@ -35,9 +35,9 @@ contract PenaltyIntegrationTest is
         _;
         vm.pauseGasMetering();
         uint256 noCount = csm.getNodeOperatorsCount();
-        assertCSMKeys(csm);
-        assertCSMEnqueuedCount(csm);
-        assertCSMUnusedStorageSlots(csm);
+        assertModuleKeys(csm);
+        assertModuleEnqueuedCount(csm);
+        assertModuleUnusedStorageSlots(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
@@ -115,7 +115,10 @@ contract PenaltyIntegrationTest is
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = defaultNoId;
 
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        csm.settleELRewardsStealingPenalty(
+            idsToSettle,
+            UintArr(type(uint256).max)
+        );
 
         (uint256 bondAfter, ) = accounting.getBondSummaryShares(defaultNoId);
 

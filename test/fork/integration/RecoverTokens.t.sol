@@ -32,9 +32,9 @@ contract RecoverIntegrationTest is
         _;
         vm.pauseGasMetering();
         uint256 noCount = csm.getNodeOperatorsCount();
-        assertCSMKeys(csm);
-        assertCSMEnqueuedCount(csm);
-        assertCSMUnusedStorageSlots(csm);
+        assertModuleKeys(csm);
+        assertModuleEnqueuedCount(csm);
+        assertModuleUnusedStorageSlots(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
