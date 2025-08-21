@@ -339,6 +339,8 @@ contract CSAccounting is
 
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
+            // There is no need to check the return value of `_burn` since target limit will already be set to 0 on the MODULE level
+            // no matter if the bond is fully burned or not
             CSBondCore._burn(nodeOperatorId, lockedAmount);
             // reduce all locked bond even if bond isn't covered lock fully
             CSBondLock._remove(nodeOperatorId);
@@ -351,7 +353,16 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 amount
     ) external onlyModule {
-        CSBondCore._burn(nodeOperatorId, amount);
+        bool fullyBurned = CSBondCore._burn(nodeOperatorId, amount);
+        // If the bond is not fully burned, it means that the bond is not enough to cover the penalty
+        // and the target limit for the Node Operator should be set to 0 to effectively disable Node Operator
+        if (!fullyBurned) {
+            MODULE.updateTargetValidatorsLimits(
+                nodeOperatorId,
+                MODULE.FORCED_TARGET_LIMIT_MODE_ID(),
+                0
+            );
+        }
     }
 
     /// @inheritdoc ICSAccounting
@@ -359,7 +370,20 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 amount
     ) external onlyModule {
-        CSBondCore._charge(nodeOperatorId, amount, chargePenaltyRecipient);
+        bool fullyCharged = CSBondCore._charge(
+            nodeOperatorId,
+            amount,
+            chargePenaltyRecipient
+        );
+        // If the bond is not fully charged, it means that the bond is not enough to cover the charge
+        // and the target limit for the Node Operator should be set to 0 to effectively disable Node Operator
+        if (!fullyCharged) {
+            MODULE.updateTargetValidatorsLimits(
+                nodeOperatorId,
+                MODULE.FORCED_TARGET_LIMIT_MODE_ID(),
+                0
+            );
+        }
     }
 
     /// @inheritdoc ICSAccounting

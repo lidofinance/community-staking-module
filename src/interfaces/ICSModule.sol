@@ -165,6 +165,8 @@ interface ICSModule is
 
     function DEPOSIT_SIZE() external view returns (uint256);
 
+    function FORCED_TARGET_LIMIT_MODE_ID() external view returns (uint8);
+
     function LIDO_LOCATOR() external view returns (ILidoLocator);
 
     function STETH() external view returns (IStETH);
@@ -293,7 +295,7 @@ interface ICSModule is
         uint256 amount
     ) external;
 
-    /// @notice Settle locked bond for the given Node Operators
+    /// @notice Settles locked bond and sets the target limit to 0 or the given Node Operators
     /// @dev SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE role is expected to be assigned to Easy Track
     /// @param nodeOperatorIds IDs of the Node Operators
     /// @param maxAmounts Maximum amounts to settle for each Node Operator

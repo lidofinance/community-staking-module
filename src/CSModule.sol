@@ -49,7 +49,7 @@ contract CSModule is
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
     // @dev see IStakingModule.sol
-    uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
+    uint8 public constant FORCED_TARGET_LIMIT_MODE_ID = 2;
     // keccak256(abi.encode(uint256(keccak256("OPERATORS_CREATED_IN_TX_MAP_TSLOT")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant OPERATORS_CREATED_IN_TX_MAP_TSLOT =
         0x1b07bc0838fdc4254cbabb5dd0c94d936f872c6758547168d513d8ad1dc3a500;
@@ -420,44 +420,14 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 targetLimitMode,
         uint256 targetLimit
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        if (targetLimitMode > FORCED_TARGET_LIMIT_MODE_ID) {
-            revert InvalidInput();
+    ) external {
+        if (
+            !hasRole(STAKING_ROUTER_ROLE, msg.sender) &&
+            msg.sender != address(accounting())
+        ) {
+            revert SenderIsNotEligible();
         }
-        if (targetLimit > type(uint32).max) {
-            revert InvalidInput();
-        }
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-
-        if (targetLimitMode == 0) {
-            targetLimit = 0;
-        }
-
-        // NOTE: Bytecode saving trick; increased gas cost in rare cases is fine.
-        // if (
-        //     no.targetLimitMode == targetLimitMode &&
-        //     no.targetLimit == targetLimit
-        // ) {
-        //     return;
-        // }
-
-        // @dev No need to safe cast due to conditions above
-        no.targetLimitMode = uint8(targetLimitMode);
-        no.targetLimit = uint32(targetLimit);
-
-        emit TargetValidatorsCountChanged(
-            nodeOperatorId,
-            targetLimitMode,
-            targetLimit
-        );
-
-        // Nonce will be updated below even if depositable count was not changed
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false
-        });
-        _incrementModuleNonce();
+        _setTargetLimit(nodeOperatorId, targetLimitMode, targetLimit);
     }
 
     /// @inheritdoc IStakingModule
@@ -703,11 +673,9 @@ contract CSModule is
             _accounting.settleLockedBondETH(nodeOperatorId);
             emit ELRewardsStealingPenaltySettled(nodeOperatorId);
 
-            // Nonce should be updated if depositableValidators change
-            _updateDepositableValidatorsCount({
-                nodeOperatorId: nodeOperatorId,
-                incrementNonceIfUpdated: true
-            });
+            _setTargetLimit(nodeOperatorId, FORCED_TARGET_LIMIT_MODE_ID, 0);
+
+            // @dev Nonce update and depositable validators count update are done in the _setTargetLimit method.
         }
     }
 
@@ -1569,6 +1537,51 @@ contract CSModule is
             OPERATORS_CREATED_IN_TX_MAP_TSLOT
         );
         map.set(nodeOperatorId, 0);
+    }
+
+    function _setTargetLimit(
+        uint256 nodeOperatorId,
+        uint256 targetLimitMode,
+        uint256 targetLimit
+    ) internal {
+        if (targetLimitMode > FORCED_TARGET_LIMIT_MODE_ID) {
+            revert InvalidInput();
+        }
+        if (targetLimit > type(uint32).max) {
+            revert InvalidInput();
+        }
+        _onlyExistingNodeOperator(nodeOperatorId);
+
+        if (targetLimitMode == 0) {
+            targetLimit = 0;
+        }
+
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        // NOTE: Bytecode saving trick; increased gas cost in rare cases is fine.
+        // if (
+        //     no.targetLimitMode == targetLimitMode &&
+        //     no.targetLimit == targetLimit
+        // ) {
+        //     return;
+        // }
+
+        // @dev No need to safe cast due to conditions above
+        no.targetLimitMode = uint8(targetLimitMode);
+        no.targetLimit = uint32(targetLimit);
+
+        emit TargetValidatorsCountChanged(
+            nodeOperatorId,
+            targetLimitMode,
+            targetLimit
+        );
+
+        // Nonce will be updated below even if depositable count was not changed
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: false
+        });
+        _incrementModuleNonce();
     }
 
     function _getOperatorCreator(

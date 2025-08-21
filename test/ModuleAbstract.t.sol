@@ -364,20 +364,10 @@ abstract contract ModuleFixtures is
             });
     }
 
-    // amount can not be lower than EL_REWARDS_STEALING_ADDITIONAL_FINE
     function penalize(uint256 noId, uint256 amount) public {
-        module.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            amount -
-                module.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(
-                    0
-                )
-        );
-        module.settleELRewardsStealingPenalty(
-            UintArr(noId),
-            UintArr(type(uint256).max)
-        );
+        vm.prank(address(module));
+        accounting.penalize(noId, amount);
+        module.updateDepositableValidatorsCount(noId);
     }
 }
 
@@ -5054,6 +5044,15 @@ abstract contract ModuleUpdateTargetValidatorsLimits is ModuleFixtures {
         module.updateTargetValidatorsLimits(0, 1, 1);
     }
 
+    function test_updateTargetValidatorsLimits_RevertWhen_SenderIsNotEligible()
+        public
+    {
+        createNodeOperator(1);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
+        vm.prank(stranger);
+        module.updateTargetValidatorsLimits(0, 1, 1);
+    }
+
     function test_updateTargetValidatorsLimits_RevertWhen_TargetLimitExceedsUint32()
         public
     {
@@ -5472,6 +5471,20 @@ abstract contract ModuleSettleELRewardsStealingPenaltyBasic is ModuleFixtures {
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.until, 0);
+
+        // If the penalty is settled the targetValidatorsCount should be 0
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            0,
+            "targetValidatorsCount mismatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            0,
+            "depositableValidatorsCount mismatch"
+        );
     }
 
     function test_settleELRewardsStealingPenalty_revertWhen_InvalidInput()
@@ -5496,7 +5509,7 @@ abstract contract ModuleSettleELRewardsStealingPenaltyBasic is ModuleFixtures {
         public
         assertInvariants
     {
-        uint256 noId = createNodeOperator();
+        uint256 noId = createNodeOperator(3);
         uint256 amount = 1 ether;
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
@@ -5505,6 +5518,9 @@ abstract contract ModuleSettleELRewardsStealingPenaltyBasic is ModuleFixtures {
             blockhash(block.number),
             amount
         );
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        uint256 depositableValidatorsCountBefore = summary
+            .depositableValidatorsCount;
 
         module.settleELRewardsStealingPenalty(idsToSettle, UintArr(amount));
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
@@ -5516,6 +5532,20 @@ abstract contract ModuleSettleELRewardsStealingPenaltyBasic is ModuleFixtures {
                 )
         );
         assertEq(lock.until, accounting.getBondLockPeriod() + block.timestamp);
+
+        // If the is nothing to settle, the targetLimitMode should be 0
+        summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            0,
+            "targetValidatorsCount mismatch"
+        );
+        assertEq(summary.targetLimitMode, 0, "targetLimitMode mismatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            depositableValidatorsCountBefore,
+            "depositableValidatorsCount should not change"
+        );
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs()
@@ -5605,6 +5635,9 @@ abstract contract ModuleSettleELRewardsStealingPenaltyBasic is ModuleFixtures {
         assertInvariants
     {
         uint256 noId = createNodeOperator();
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        uint256 depositableValidatorsCountBefore = summary
+            .depositableValidatorsCount;
         module.settleELRewardsStealingPenalty(
             UintArr(noId),
             UintArr(type(uint256).max)
@@ -5613,6 +5646,20 @@ abstract contract ModuleSettleELRewardsStealingPenaltyBasic is ModuleFixtures {
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.until, 0);
+
+        // If the is nothing to settle, the targetLimitMode should be 0
+        summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            0,
+            "targetValidatorsCount mismatch"
+        );
+        assertEq(summary.targetLimitMode, 0, "targetLimitMode mismatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            depositableValidatorsCountBefore,
+            "depositableValidatorsCount should not change"
+        );
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_NoLock()
@@ -5790,8 +5837,7 @@ abstract contract ModuleSettleELRewardsStealingPenaltyAdvanced is
         uint256 amount = accounting.getBond(noId) + 1 ether;
 
         // penalize all current bond to make an edge case when there is no bond but a new lock is applied
-        vm.prank(address(module));
-        accounting.penalize(noId, amount);
+        penalize(noId, amount);
 
         module.reportELRewardsStealingPenalty(
             noId,
@@ -6704,10 +6750,9 @@ abstract contract ModuleStakingRouterAccessControl is ModuleFixtures {
         public
     {
         uint256 noId = createNodeOperator();
-        bytes32 role = module.STAKING_ROUTER_ROLE();
 
         vm.prank(stranger);
-        expectRoleRevert(stranger, role);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
         module.updateTargetValidatorsLimits(noId, 0, 0);
     }
 
@@ -7100,7 +7145,7 @@ abstract contract ModuleNodeOperatorStateAfterUpdateCurve is ModuleFixtures {
         uint256 noId = createNodeOperator(7);
         module.obtainDepositData(7, "");
 
-        penalize(noId, 1 ether);
+        penalize(noId, BOND_SIZE / 2);
         assertEq(
             module.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -7143,7 +7188,8 @@ abstract contract ModuleNodeOperatorStateAfterUpdateCurve is ModuleFixtures {
         uint256 noId = createNodeOperator(7);
         module.obtainDepositData(7, "");
 
-        penalize(noId, 1 ether);
+        penalize(noId, BOND_SIZE / 2);
+
         assertEq(
             module.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -7188,7 +7234,8 @@ abstract contract ModuleNodeOperatorStateAfterUpdateCurve is ModuleFixtures {
             .getNodeOperator(noId)
             .depositableValidatorsCount;
 
-        penalize(noId, 1 ether);
+        penalize(noId, BOND_SIZE / 2);
+
         assertEq(
             module.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 1,
@@ -7237,7 +7284,8 @@ abstract contract ModuleNodeOperatorStateAfterUpdateCurve is ModuleFixtures {
             .getNodeOperator(noId)
             .depositableValidatorsCount;
 
-        penalize(noId, 1 ether);
+        penalize(noId, BOND_SIZE / 2);
+
         assertEq(
             module.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 1,
@@ -7287,7 +7335,8 @@ abstract contract ModuleNodeOperatorStateAfterUpdateCurve is ModuleFixtures {
             .getNodeOperator(noId)
             .depositableValidatorsCount;
 
-        penalize(noId, 1 ether);
+        penalize(noId, BOND_SIZE / 2);
+
         assertEq(
             module.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 1,
@@ -7337,7 +7386,8 @@ abstract contract ModuleNodeOperatorStateAfterUpdateCurve is ModuleFixtures {
             .getNodeOperator(noId)
             .depositableValidatorsCount;
 
-        penalize(noId, 1 ether);
+        penalize(noId, BOND_SIZE / 2);
+
         assertEq(
             module.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 1,
