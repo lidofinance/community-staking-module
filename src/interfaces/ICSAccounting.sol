@@ -345,13 +345,16 @@ interface ICSAccounting is
         bytes32[] calldata rewardsProof
     ) external;
 
-    /// @notice Increase additional bond reserve (requires excess bond >= amount)
+    /// @notice Increase bond reserve value (requires excess bond >= amount)
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param amount Amount to set as additional bond reserve
     function increaseBondReserve(
         uint256 nodeOperatorId,
         uint256 amount
     ) external;
 
     /// @notice Remove additional bond reserve; allowed after cooldown or earlier if no active/depositable keys
+    /// @param nodeOperatorId ID of the Node Operator
     function removeBondReserve(uint256 nodeOperatorId) external;
 
     /// @notice Service method to update allowance to Burner in case it has changed

@@ -6088,6 +6088,20 @@ contract CSAccountingIncreaseBondReserveNegativeTest is CSAccountingBaseTest {
         vm.prank(user);
         accounting.increaseBondReserve(0, 2 ether);
     }
+
+    function test_increaseBondReserve_RevertWhen_LessThanPrevReserve() public {
+        mock_getNodeOperatorNonWithdrawnKeys(1);
+        vm.deal(address(stakingModule), 4 ether);
+        vm.prank(address(stakingModule));
+        accounting.depositETH{ value: 4 ether }(user, 0);
+
+        vm.prank(user);
+        accounting.increaseBondReserve(0, 1 ether);
+
+        vm.expectRevert(IBondReserve.InvalidBondReserveAmount.selector);
+        vm.prank(user);
+        accounting.increaseBondReserve(0, 0.5 ether);
+    }
 }
 
 contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
@@ -6643,13 +6657,22 @@ contract CSAccountingScenarioTest is CSAccountingBaseTest {
         uint256 claimable = curr4 > req4 ? curr4 - req4 : 0;
         assertGt(claimable, 0);
         mock_getNodeOperatorManagementProperties(user, user, false);
+
+        uint256 claimablePortion = claimable / 3;
         vm.prank(user);
-        accounting.increaseBondReserve(0, claimable);
+        accounting.increaseBondReserve(0, claimablePortion);
 
         (uint256 curr5, uint256 req5) = accounting.getBondSummary(0);
         // current stays the same, required increases by reserve amount
         assertApproxEqAbs(curr5, curr4, 1);
+        assertEq(req5, req4 + claimablePortion);
+
+        vm.prank(user);
+        accounting.increaseBondReserve(0, claimable);
+        (curr5, req5) = accounting.getBondSummary(0);
+        assertApproxEqAbs(curr5, curr4, 1);
         assertEq(req5, req4 + claimable);
+        assertEq(accounting.getBondReserveInfo(0).amount, claimable);
 
         // 7) Check unbonded counts reflect reserve+lock when included
         uint256 unbondedAll = accounting.getUnbondedKeysCount(0); // include locked+reserve

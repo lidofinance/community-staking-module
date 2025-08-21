@@ -320,11 +320,12 @@ contract CSAccounting is
 
         uint256 current = CSBondCore.getBond(nodeOperatorId);
         uint256 required = _getRequiredBond(nodeOperatorId, 0);
-        if (current < required + amount) {
+        uint256 reserve = BondReserve.getReservedBond(nodeOperatorId);
+        // NOTE: `required` is always >= `reserve` due to fact that `reserve` is a part of `required`
+        if (reserve > amount || current < (required - reserve) + amount) {
             revert InvalidBondReserveAmount();
         }
-        uint256 currentReserve = BondReserve.getReservedBond(nodeOperatorId);
-        BondReserve._setBondReserve(nodeOperatorId, currentReserve + amount);
+        BondReserve._setBondReserve(nodeOperatorId, amount);
     }
 
     /// @inheritdoc ICSAccounting
