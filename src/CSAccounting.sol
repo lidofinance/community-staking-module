@@ -245,9 +245,10 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external whenResumed returns (uint256 claimedShares) {
-        NodeOperatorManagementProperties memory no = MODULE
-            .getNodeOperatorManagementProperties(nodeOperatorId);
-        _onlyNodeOperatorManagerOrRewardAddresses(no);
+        NodeOperatorManagementProperties
+            memory no = _checkAndGetEligibleNodeOperatorProperties(
+                nodeOperatorId
+            );
 
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
@@ -267,9 +268,10 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external whenResumed returns (uint256 claimedWstETH) {
-        NodeOperatorManagementProperties memory no = MODULE
-            .getNodeOperatorManagementProperties(nodeOperatorId);
-        _onlyNodeOperatorManagerOrRewardAddresses(no);
+        NodeOperatorManagementProperties
+            memory no = _checkAndGetEligibleNodeOperatorProperties(
+                nodeOperatorId
+            );
 
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
@@ -289,9 +291,10 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external whenResumed returns (uint256 requestId) {
-        NodeOperatorManagementProperties memory no = MODULE
-            .getNodeOperatorManagementProperties(nodeOperatorId);
-        _onlyNodeOperatorManagerOrRewardAddresses(no);
+        NodeOperatorManagementProperties
+            memory no = _checkAndGetEligibleNodeOperatorProperties(
+                nodeOperatorId
+            );
 
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
@@ -312,7 +315,7 @@ contract CSAccounting is
         if (!BOND_RESERVE_IS_ENABLED) {
             revert BondReserveFeatureDisabled();
         }
-        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
+        _checkAndGetEligibleNodeOperatorProperties(nodeOperatorId);
 
         if (amount == 0) {
             revert InvalidBondReserveAmount();
@@ -330,7 +333,7 @@ contract CSAccounting is
 
     /// @inheritdoc ICSAccounting
     function removeBondReserve(uint256 nodeOperatorId) external whenResumed {
-        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
+        _checkAndGetEligibleNodeOperatorProperties(nodeOperatorId);
 
         IBondReserve.BondReserveInfo memory r = BondReserve.getBondReserveInfo(
             nodeOperatorId
@@ -720,9 +723,9 @@ contract CSAccounting is
         revert NodeOperatorDoesNotExist();
     }
 
-    function _onlyNodeOperatorManagerOrRewardAddresses(
+    function _checkAndGetEligibleNodeOperatorProperties(
         uint256 nodeOperatorId
-    ) internal view {
+    ) internal view returns (NodeOperatorManagementProperties memory) {
         NodeOperatorManagementProperties memory no = MODULE
             .getNodeOperatorManagementProperties(nodeOperatorId);
         if (no.managerAddress == address(0)) {
@@ -730,21 +733,7 @@ contract CSAccounting is
         }
 
         if (no.managerAddress == msg.sender || no.rewardAddress == msg.sender) {
-            return;
-        }
-
-        revert SenderIsNotEligible();
-    }
-
-    function _onlyNodeOperatorManagerOrRewardAddresses(
-        NodeOperatorManagementProperties memory no
-    ) internal view {
-        if (no.managerAddress == address(0)) {
-            revert NodeOperatorDoesNotExist();
-        }
-
-        if (no.managerAddress == msg.sender || no.rewardAddress == msg.sender) {
-            return;
+            return no;
         }
 
         revert SenderIsNotEligible();
