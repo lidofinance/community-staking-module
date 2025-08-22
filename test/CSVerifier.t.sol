@@ -941,7 +941,7 @@ contract CSVerifierGIndexTest is Test, Utilities {
                 gIFirstHistoricalSummaryPrev: pack(0x76000000, 24),
                 gIFirstHistoricalSummaryCurr: pack(0xb6000000, 24),
                 gIFirstBlockRootInSummaryPrev: pack(0x4000, 13),
-                gIFirstBlockRootInSummaryCurr: pack(0x4001, 13)
+                gIFirstBlockRootInSummaryCurr: pack(0x7000, 13)
             }),
             firstSupportedSlot: Slot.wrap(8192),
             pivotSlot: Slot.wrap(100500),
@@ -1057,7 +1057,7 @@ contract CSVerifierGIndexTest is Test, Utilities {
     }
 
     function test_getHistoricalBlockRootGI_AfterPivot() public view {
-        Slot recentSlot = Slot.wrap(100502);
+        Slot recentSlot = Slot.wrap(100500 + 8192);
         Slot targetSlot;
 
         GIndex gI;
@@ -1077,15 +1077,48 @@ contract CSVerifierGIndexTest is Test, Utilities {
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
         assertEq(gI.unwrap(), pack(0x2d8000011f92, 13).unwrap());
 
+        // NOTE: targetSlot < PIVOT, but historicalSummary was built for slot > PIVOT.
+        targetSlot = Slot.wrap(100499);
+        // historicalSummaries[11].blockRoots[2195]
+        gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
+        assertEq(gI.unwrap(), pack(0x2d800002f893, 13).unwrap());
+
         targetSlot = Slot.wrap(100500);
         // historicalSummaries[11].blockRoots[2196]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
-        assertEq(gI.unwrap(), pack(0x2d800002c894 + 1, 13).unwrap());
+        assertEq(gI.unwrap(), pack(0x2d800002f894, 13).unwrap());
 
         targetSlot = Slot.wrap(100501);
         // historicalSummaries[11].blockRoots[2197]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
-        assertEq(gI.unwrap(), pack(0x2d800002c895 + 1, 13).unwrap());
+        assertEq(gI.unwrap(), pack(0x2d800002f895, 13).unwrap());
+    }
+
+    function test_getHistoricalBlockRootGI_RevertWhen_SummaryCannotExist()
+        public
+    {
+        Slot recentSlot;
+        Slot targetSlot;
+
+        targetSlot = Slot.wrap(8192);
+        recentSlot = Slot.wrap(8192);
+        vm.expectRevert(ICSVerifier.HistoricalSummaryDoesNotExist.selector);
+        verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
+
+        targetSlot = Slot.wrap(8192);
+        recentSlot = Slot.wrap(8193);
+        vm.expectRevert(ICSVerifier.HistoricalSummaryDoesNotExist.selector);
+        verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
+
+        targetSlot = Slot.wrap(8192);
+        recentSlot = Slot.wrap(8192 + 8191);
+        vm.expectRevert(ICSVerifier.HistoricalSummaryDoesNotExist.selector);
+        verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
+
+        targetSlot = Slot.wrap(8192);
+        recentSlot = Slot.wrap(8191);
+        vm.expectRevert(ICSVerifier.HistoricalSummaryDoesNotExist.selector);
+        verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
     }
 }
 
@@ -1111,7 +1144,7 @@ contract CSVerifierGIndexCapellaZeroTest is Test, Utilities {
                 gIFirstHistoricalSummaryPrev: pack(0x76000000, 24),
                 gIFirstHistoricalSummaryCurr: pack(0xb6000000, 24),
                 gIFirstBlockRootInSummaryPrev: pack(0x4000, 13),
-                gIFirstBlockRootInSummaryCurr: pack(0x4001, 13)
+                gIFirstBlockRootInSummaryCurr: pack(0x7000, 13)
             }),
             firstSupportedSlot: Slot.wrap(0),
             pivotSlot: Slot.wrap(100500),
@@ -1148,7 +1181,7 @@ contract CSVerifierGIndexCapellaZeroTest is Test, Utilities {
     }
 
     function test_getHistoricalBlockRootGI_AfterPivot() public view {
-        Slot recentSlot = Slot.wrap(100501);
+        Slot recentSlot = Slot.wrap(100500 + 8192);
         Slot targetSlot;
 
         GIndex gI;
@@ -1173,9 +1206,37 @@ contract CSVerifierGIndexCapellaZeroTest is Test, Utilities {
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
         assertEq(gI.unwrap(), pack(0x2d8000015f92, 13).unwrap());
 
+        // NOTE: targetSlot < PIVOT, but historicalSummary was built for slot > PIVOT.
+        targetSlot = Slot.wrap(100499);
+        // historicalSummaries[12].blockRoots[2195]
+        gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
+        assertEq(gI.unwrap(), pack(0x2d8000033893, 13).unwrap());
+
         targetSlot = Slot.wrap(100501);
         // historicalSummaries[12].blockRoots[2197]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
-        assertEq(gI.unwrap(), pack(0x2d8000030895 + 1, 13).unwrap());
+        assertEq(gI.unwrap(), pack(0x2d8000033895, 13).unwrap());
+    }
+
+    function test_getHistoricalBlockRootGI_RevertWhen_SummaryCannotExist()
+        public
+    {
+        Slot recentSlot;
+        Slot targetSlot;
+
+        targetSlot = Slot.wrap(0);
+        recentSlot = Slot.wrap(0);
+        vm.expectRevert(ICSVerifier.HistoricalSummaryDoesNotExist.selector);
+        verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
+
+        targetSlot = Slot.wrap(0);
+        recentSlot = Slot.wrap(8191);
+        vm.expectRevert(ICSVerifier.HistoricalSummaryDoesNotExist.selector);
+        verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
+
+        targetSlot = Slot.wrap(8191);
+        recentSlot = Slot.wrap(8191);
+        vm.expectRevert(ICSVerifier.HistoricalSummaryDoesNotExist.selector);
+        verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
     }
 }
