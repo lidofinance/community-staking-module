@@ -199,12 +199,18 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev Burn Node Operator's bond shares (stETH). Shares will be burned on the next stETH rebase
     /// @dev The contract that uses this implementation should be granted `Burner.REQUEST_BURN_SHARES_ROLE` and have stETH allowance for `Burner`
     /// @param amount Bond amount to burn in ETH (stETH)
-    function _burn(uint256 nodeOperatorId, uint256 amount) internal {
+    /// @return fullyBurned True if the amount to burn is equal to the amount burned
+    function _burn(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) internal returns (bool fullyBurned) {
         uint256 sharesToBurn = _sharesByEth(amount);
         uint256 burnedShares = _reduceBond(nodeOperatorId, sharesToBurn);
+        fullyBurned = burnedShares == sharesToBurn; // fully burned if the amount to burn is equal to the amount reduced
+
         // If no bond already or the amount to burn is zero
         if (burnedShares == 0) {
-            return;
+            return fullyBurned;
         }
 
         // TODO: Replace with `requestBurnMyShares` (https://github.com/lidofinance/core/pull/1142) in the next major release
@@ -212,6 +218,7 @@ abstract contract CSBondCore is ICSBondCore {
             address(this),
             burnedShares
         );
+
         emit BondBurned(
             nodeOperatorId,
             _ethByShares(sharesToBurn),
@@ -222,16 +229,19 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev Transfer Node Operator's bond shares (stETH) to charge recipient
     /// @param amount Bond amount to charge in ETH (stETH)
     /// @param recipient Address to send charged shares
+    /// @return fullyCharged True if the amount to charge is equal to the amount charged
     function _charge(
         uint256 nodeOperatorId,
         uint256 amount,
         address recipient
-    ) internal {
+    ) internal returns (bool fullyCharged) {
         uint256 toChargeShares = _sharesByEth(amount);
         uint256 chargedShares = _reduceBond(nodeOperatorId, toChargeShares);
+        fullyCharged = chargedShares == toChargeShares; // fully charged if the amount to charge is equal to the amount reduced
+
         // If no bond already or the amount to charge is zero
         if (chargedShares == 0) {
-            return;
+            return fullyCharged;
         }
 
         uint256 chargedEth = LIDO.transferShares(recipient, chargedShares);

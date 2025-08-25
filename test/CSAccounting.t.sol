@@ -99,6 +99,14 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
+    function mock_setZeroForcedTargetLimit() internal {
+        vm.mockCall(
+            address(stakingModule),
+            abi.encodeWithSelector(ICSModule.setZeroForcedTargetLimit.selector),
+            ""
+        );
+    }
+
     function mock_updateDepositableValidatorsCount() internal {
         vm.mockCall(
             address(stakingModule),
@@ -399,6 +407,7 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
 
         stakingModule = new Stub();
         mock_updateDepositableValidatorsCount();
+        mock_setZeroForcedTargetLimit();
 
         ICSBondCurve.BondCurveIntervalInput[]
             memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
@@ -4901,7 +4910,8 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     }
 
     function test_penalize() public assertInvariants {
-        uint256 amountToBurn = 1 ether;
+        uint256 bond = accounting.getBond(0);
+        uint256 amountToBurn = bond / 2; // burn half of the bond
         uint256 shares = stETH.getSharesByPooledEth(amountToBurn);
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
@@ -4911,6 +4921,14 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
                 IBurner.requestBurnShares.selector,
                 address(accounting),
                 shares
+            )
+        );
+
+        expectNoCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                ICSModule.setZeroForcedTargetLimit.selector,
+                0
             )
         );
 
@@ -4924,6 +4942,46 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
             "bond shares should be decreased by penalty"
         );
         assertEq(accounting.totalBondShares(), bondSharesAfter);
+    }
+
+    function test_penalize_setTargetLimitOnInsufficientBond()
+        public
+        assertInvariants
+    {
+        uint256 bond = accounting.getBond(0);
+        uint256 bondShares = accounting.getBondShares(0);
+        uint256 amountToBurn = bond + 1 ether; // burn more than bond
+
+        vm.expectCall(
+            locator.burner(),
+            abi.encodeWithSelector(
+                IBurner.requestBurnShares.selector,
+                address(accounting),
+                bondShares
+            )
+        );
+        vm.expectCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                ICSModule.setZeroForcedTargetLimit.selector,
+                0
+            )
+        );
+
+        vm.prank(address(stakingModule));
+        accounting.penalize(0, amountToBurn);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            bondSharesAfter,
+            0,
+            "bond shares should be zero after burning more than bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            0,
+            "total bond shares should be zero"
+        );
     }
 
     function test_penalize_RevertWhen_SenderIsNotModule() public {
@@ -4944,11 +5002,21 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
     }
 
     function test_chargeFee() public assertInvariants {
-        uint256 shares = stETH.getSharesByPooledEth(1 ether);
+        uint256 bond = accounting.getBond(0);
+        uint256 amountToCharge = bond / 2; // charge half of the bond
+        uint256 shares = stETH.getSharesByPooledEth(amountToCharge);
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
+        expectNoCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                ICSModule.setZeroForcedTargetLimit.selector,
+                0
+            )
+        );
+
         vm.prank(address(stakingModule));
-        accounting.chargeFee(0, 1 ether);
+        accounting.chargeFee(0, amountToCharge);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertEq(
@@ -4957,6 +5025,37 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
             "bond shares should be decreased by penalty"
         );
         assertEq(accounting.totalBondShares(), bondSharesAfter);
+    }
+
+    function test_chargeFee_setTargetLimitOnInsufficientBond()
+        public
+        assertInvariants
+    {
+        uint256 bond = accounting.getBond(0);
+        uint256 amountToCharge = bond + 1 ether; // charge more than bond
+
+        vm.expectCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                ICSModule.setZeroForcedTargetLimit.selector,
+                0
+            )
+        );
+
+        vm.prank(address(stakingModule));
+        accounting.chargeFee(0, amountToCharge);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            bondSharesAfter,
+            0,
+            "bond shares should be zero after charging more than bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            0,
+            "total bond shares should be zero"
+        );
     }
 
     function test_chargeFee_RevertWhen_SenderIsNotModule() public {
@@ -5091,6 +5190,37 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         vm.prank(address(stakingModule));
         bool applied = accounting.settleLockedBondETH(noId);
         assertEq(accounting.getActualLockedBond(noId), 0);
+        assertTrue(applied);
+    }
+
+    function test_settleLockedBondETH_setTargetLimitOnInsufficientBond()
+        public
+        assertInvariants
+    {
+        mock_getNodeOperatorsCount(1);
+        uint256 noId = 0;
+        uint256 bond = accounting.getBond(noId);
+        uint256 amount = bond + 1 ether;
+
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(noId, amount);
+        assertEq(accounting.getActualLockedBond(noId), amount);
+
+        // Expect no call to the module to update target validators limits even if the bond is insufficient
+        expectNoCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                IStakingModule.updateTargetValidatorsLimits.selector,
+                noId,
+                2,
+                0
+            )
+        );
+
+        vm.prank(address(stakingModule));
+        bool applied = accounting.settleLockedBondETH(noId);
+        assertEq(accounting.getActualLockedBond(noId), 0);
+        assertEq(accounting.getBond(noId), 0);
         assertTrue(applied);
     }
 

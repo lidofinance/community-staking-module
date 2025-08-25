@@ -103,6 +103,14 @@ contract CSModule is
     uint64 private _depositableValidatorsCount;
     uint64 private _nodeOperatorsCount;
 
+    modifier onlyAccounting() {
+        if (msg.sender != address(accounting())) {
+            revert SenderIsNotEligible();
+        }
+
+        _;
+    }
+
     constructor(
         bytes32 moduleType,
         address lidoLocator,
@@ -421,43 +429,14 @@ contract CSModule is
         uint256 targetLimitMode,
         uint256 targetLimit
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        if (targetLimitMode > FORCED_TARGET_LIMIT_MODE_ID) {
-            revert InvalidInput();
-        }
-        if (targetLimit > type(uint32).max) {
-            revert InvalidInput();
-        }
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        _setTargetLimit(nodeOperatorId, targetLimitMode, targetLimit);
+    }
 
-        if (targetLimitMode == 0) {
-            targetLimit = 0;
-        }
-
-        // NOTE: Bytecode saving trick; increased gas cost in rare cases is fine.
-        // if (
-        //     no.targetLimitMode == targetLimitMode &&
-        //     no.targetLimit == targetLimit
-        // ) {
-        //     return;
-        // }
-
-        // @dev No need to safe cast due to conditions above
-        no.targetLimitMode = uint8(targetLimitMode);
-        no.targetLimit = uint32(targetLimit);
-
-        emit TargetValidatorsCountChanged(
-            nodeOperatorId,
-            targetLimitMode,
-            targetLimit
-        );
-
-        // Nonce will be updated below even if depositable count was not changed
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false
-        });
-        _incrementModuleNonce();
+    /// @inheritdoc ICSModule
+    function setZeroForcedTargetLimit(
+        uint256 nodeOperatorId
+    ) external onlyAccounting {
+        _setTargetLimit(nodeOperatorId, FORCED_TARGET_LIMIT_MODE_ID, 0);
     }
 
     /// @inheritdoc IStakingModule
@@ -703,11 +682,9 @@ contract CSModule is
             _accounting.settleLockedBondETH(nodeOperatorId);
             emit ELRewardsStealingPenaltySettled(nodeOperatorId);
 
-            // Nonce should be updated if depositableValidators change
-            _updateDepositableValidatorsCount({
-                nodeOperatorId: nodeOperatorId,
-                incrementNonceIfUpdated: true
-            });
+            _setTargetLimit(nodeOperatorId, FORCED_TARGET_LIMIT_MODE_ID, 0);
+
+            // @dev Nonce update and depositable validators count update are done in the _setTargetLimit method.
         }
     }
 
@@ -1569,6 +1546,51 @@ contract CSModule is
             OPERATORS_CREATED_IN_TX_MAP_TSLOT
         );
         map.set(nodeOperatorId, 0);
+    }
+
+    function _setTargetLimit(
+        uint256 nodeOperatorId,
+        uint256 targetLimitMode,
+        uint256 targetLimit
+    ) internal {
+        if (targetLimitMode > FORCED_TARGET_LIMIT_MODE_ID) {
+            revert InvalidInput();
+        }
+        if (targetLimit > type(uint32).max) {
+            revert InvalidInput();
+        }
+        _onlyExistingNodeOperator(nodeOperatorId);
+
+        if (targetLimitMode == 0) {
+            targetLimit = 0;
+        }
+
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        // NOTE: Bytecode saving trick; increased gas cost in rare cases is fine.
+        // if (
+        //     no.targetLimitMode == targetLimitMode &&
+        //     no.targetLimit == targetLimit
+        // ) {
+        //     return;
+        // }
+
+        // @dev No need to safe cast due to conditions above
+        no.targetLimitMode = uint8(targetLimitMode);
+        no.targetLimit = uint32(targetLimit);
+
+        emit TargetValidatorsCountChanged(
+            nodeOperatorId,
+            targetLimitMode,
+            targetLimit
+        );
+
+        // Nonce will be updated below even if depositable count was not changed
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: false
+        });
+        _incrementModuleNonce();
     }
 
     function _getOperatorCreator(
