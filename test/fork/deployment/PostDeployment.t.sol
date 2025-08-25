@@ -259,7 +259,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             lido.allowance(address(accounting), locator.burner()),
             type(uint256).max
         );
-        assertEq(accounting.getInitializedVersion(), 2);
+        assertEq(accounting.getInitializedVersion(), 3);
     }
 
     function test_state() public view {
@@ -371,6 +371,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             bondCurve: defaultBondCurve,
             admin: address(deployParams.aragonAgent),
             bondLockPeriod: deployParams.bondLockPeriod,
+            bondReserveMinPeriod: deployParams.bondReserveMinPeriod,
             _chargePenaltyRecipient: address(0)
         });
 
@@ -388,6 +389,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             bondCurve: defaultBondCurve,
             admin: address(deployParams.aragonAgent),
             bondLockPeriod: deployParams.bondLockPeriod,
+            bondReserveMinPeriod: deployParams.bondReserveMinPeriod,
             _chargePenaltyRecipient: address(0)
         });
     }
