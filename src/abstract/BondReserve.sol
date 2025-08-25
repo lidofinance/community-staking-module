@@ -51,7 +51,7 @@ abstract contract BondReserve is Initializable, IBondReserve {
     /// @dev Set minimum cooldown for reserve removal
     function _setBondReserveMinPeriod(uint256 period) internal {
         if (period == 0) {
-            revert InvalidBondReservePeriod();
+            revert InvalidBondReserveMinPeriod();
         }
         _getBondReserveStorage().minBondReservePeriod = period;
         emit BondReserveMinPeriodChanged(period);
@@ -71,6 +71,7 @@ abstract contract BondReserve is Initializable, IBondReserve {
         }
         uint128 removableAt = r.removableAt;
         if (currentAmount < amount) {
+            // Extend reserve period if the new reserve is bigger than the current one
             removableAt = (block.timestamp + $.minBondReservePeriod)
                 .toUint128();
             r.removableAt = removableAt;

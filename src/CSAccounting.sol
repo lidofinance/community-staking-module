@@ -321,8 +321,7 @@ contract CSAccounting is
             revert InvalidBondReserveAmount();
         }
 
-        uint256 current = CSBondCore.getBond(nodeOperatorId);
-        uint256 required = _getRequiredBond(nodeOperatorId, 0);
+        (uint256 current, uint256 required) = getBondSummary(nodeOperatorId);
         uint256 reserve = BondReserve.getReservedBond(nodeOperatorId);
         // NOTE: `required` is always >= `reserve` due to fact that `reserve` is a part of `required`
         if (reserve > amount || current < (required - reserve) + amount) {
@@ -333,6 +332,9 @@ contract CSAccounting is
 
     /// @inheritdoc ICSAccounting
     function removeBondReserve(uint256 nodeOperatorId) external whenResumed {
+        if (!BOND_RESERVE_IS_ENABLED) {
+            revert BondReserveFeatureDisabled();
+        }
         _checkAndGetEligibleNodeOperatorProperties(nodeOperatorId);
 
         IBondReserve.BondReserveInfo memory r = BondReserve.getBondReserveInfo(
@@ -452,14 +454,6 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
-    function getBondSummary(
-        uint256 nodeOperatorId
-    ) external view returns (uint256 current, uint256 required) {
-        current = CSBondCore.getBond(nodeOperatorId);
-        required = _getRequiredBond(nodeOperatorId, 0);
-    }
-
-    /// @inheritdoc ICSAccounting
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
@@ -534,6 +528,14 @@ contract CSAccounting is
     /// @inheritdoc ICSAccounting
     function feeDistributor() external view returns (ICSFeeDistributor) {
         return FEE_DISTRIBUTOR;
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getBondSummary(
+        uint256 nodeOperatorId
+    ) public view returns (uint256 current, uint256 required) {
+        current = CSBondCore.getBond(nodeOperatorId);
+        required = _getRequiredBond(nodeOperatorId, 0);
     }
 
     /// @inheritdoc ICSAccounting
@@ -613,6 +615,15 @@ contract CSAccounting is
         }
     }
 
+    function _adjustBondReserve(uint256 nodeOperatorId) internal {
+        uint256 reserved = BondReserve.getReservedBond(nodeOperatorId);
+        if (reserved == 0) return;
+        uint256 current = CSBondCore.getBond(nodeOperatorId);
+        if (current < reserved) {
+            BondReserve._setBondReserve(nodeOperatorId, current);
+        }
+    }
+
     /// @dev Overrides the original implementation to account for a locked bond and withdrawn validators
     function _getClaimableBondShares(
         uint256 nodeOperatorId
@@ -647,14 +658,6 @@ contract CSAccounting is
         uint256 reserved = BondReserve.getReservedBond(nodeOperatorId);
 
         return requiredBondForKeys + actualLockedBond + reserved;
-    }
-
-    function _adjustBondReserve(uint256 nodeOperatorId) internal {
-        uint256 reserved = BondReserve.getReservedBond(nodeOperatorId);
-        if (reserved == 0) return;
-        uint256 current = CSBondCore.getBond(nodeOperatorId);
-        if (current >= reserved) return;
-        BondReserve._setBondReserve(nodeOperatorId, current);
     }
 
     function _getRequiredBondShares(
@@ -739,6 +742,16 @@ contract CSAccounting is
         revert SenderIsNotEligible();
     }
 
+    /// @dev Bond reserve can be removed if a sufficient time has passed or if the Node Operator has no active or depositable keys
+    function _canRemoveBondReserve(
+        uint256 nodeOperatorId,
+        IBondReserve.BondReserveInfo memory r
+    ) internal view returns (bool) {
+        return
+            block.timestamp >= uint256(r.removableAt) ||
+            MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) == 0;
+    }
+
     function _setChargePenaltyRecipient(
         address _chargePenaltyRecipient
     ) private {
@@ -747,14 +760,5 @@ contract CSAccounting is
         }
         chargePenaltyRecipient = _chargePenaltyRecipient;
         emit ChargePenaltyRecipientSet(_chargePenaltyRecipient);
-    }
-
-    function _canRemoveBondReserve(
-        uint256 nodeOperatorId,
-        IBondReserve.BondReserveInfo memory r
-    ) internal view returns (bool) {
-        return
-            block.timestamp >= uint256(r.removableAt) ||
-            MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) == 0;
     }
 }

@@ -5976,7 +5976,7 @@ contract CSAccountingRemoveBondReserveTest is CSAccountingBaseTest {
         assertEq(uint256(info.amount), 0, "removed after cooldown");
     }
 
-    function test_removeBondReserve_revertWhen_TooEarly()
+    function test_removeBondReserve_RevertWhen_TooEarly()
         public
         assertInvariants
     {
@@ -5997,7 +5997,7 @@ contract CSAccountingRemoveBondReserveTest is CSAccountingBaseTest {
         accounting.removeBondReserve(0);
     }
 
-    function test_removeBondReserve_revertWhen_AnyActive()
+    function test_removeBondReserve_RevertWhen_AnyActive()
         public
         assertInvariants
     {
@@ -6052,11 +6052,105 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
     }
 }
 
-contract CSAccountingIncreaseBondReserveNegativeTest is CSAccountingBaseTest {
+contract CSAccountingBondReserveDisabledTest is Test, Fixtures, Utilities {
+    LidoLocatorMock internal locator;
+    WstETHMock internal wstETH;
+    LidoMock internal stETH;
+
+    CSAccounting public accounting;
+    Stub public stakingModule;
+    DistributorMock public feeDistributor;
+
+    address internal admin;
+    address internal testChargePenaltyRecipient;
+
+    function setUp() public {
+        admin = nextAddress("ADMIN");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
+
+        (locator, wstETH, stETH, , ) = initLido();
+
+        stakingModule = new Stub();
+        feeDistributor = new DistributorMock(address(stETH));
+
+        // Deploy with bond reserve feature disabled
+        accounting = new CSAccounting(
+            address(locator),
+            address(stakingModule),
+            address(feeDistributor),
+            4 weeks,
+            365 days,
+            false
+        );
+
+        feeDistributor.setAccounting(address(accounting));
+
+        // Initialize implementation for tests
+        _enableInitializers(address(accounting));
+
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+
+        accounting.initialize(
+            curve,
+            admin,
+            8 weeks,
+            4 weeks,
+            testChargePenaltyRecipient
+        );
+    }
+
+    function test_increaseBondReserve_RevertWhen_FeatureDisabled() public {
+        vm.expectRevert(ICSAccounting.BondReserveFeatureDisabled.selector);
+        accounting.increaseBondReserve(0, 1 ether);
+    }
+
+    function test_removeBondReserve_RevertWhen_FeatureDisabled() public {
+        vm.expectRevert(ICSAccounting.BondReserveFeatureDisabled.selector);
+        accounting.removeBondReserve(0);
+    }
+}
+
+contract CSAccountingIncreaseBondReserve is CSAccountingBaseTest {
     function setUp() public override {
         super.setUp();
         mock_getNodeOperatorsCount(1);
         mock_getNodeOperatorManagementProperties(user, user, false);
+    }
+
+    function test_increaseBondReserve_SetExactClaimable() public {
+        mock_getNodeOperatorNonWithdrawnKeys(1);
+        vm.deal(address(stakingModule), 3 ether);
+        vm.prank(address(stakingModule));
+        accounting.depositETH{ value: 3 ether }(user, 0);
+
+        vm.prank(user);
+        accounting.increaseBondReserve(0, 1 ether - 1 wei);
+
+        IBondReserve.BondReserveInfo memory info = accounting
+            .getBondReserveInfo(0);
+        assertApproxEqAbs(uint256(info.amount), 1 ether, 1 wei);
+    }
+
+    function test_increaseBondReserve_IncreaseAmount() public {
+        mock_getNodeOperatorNonWithdrawnKeys(1);
+        vm.deal(address(stakingModule), 4 ether);
+        vm.prank(address(stakingModule));
+        accounting.depositETH{ value: 4 ether }(user, 0);
+
+        vm.prank(user);
+        accounting.increaseBondReserve(0, 1 ether - 1 wei);
+
+        vm.prank(user);
+        accounting.increaseBondReserve(0, 2 ether - 1 wei);
+
+        IBondReserve.BondReserveInfo memory info = accounting
+            .getBondReserveInfo(0);
+        assertApproxEqAbs(uint256(info.amount), 2 ether, 1 wei);
     }
 
     function test_increaseBondReserve_RevertWhen_ZeroAmount() public {

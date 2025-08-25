@@ -44,7 +44,7 @@ contract BondReserveTest is Test {
     }
 
     function test_setBondReserveMinPeriod_RevertWhen_Zero() public {
-        vm.expectRevert(IBondReserve.InvalidBondReservePeriod.selector);
+        vm.expectRevert(IBondReserve.InvalidBondReserveMinPeriod.selector);
         reserve.setBondReserveMinPeriod(0);
     }
 
@@ -65,7 +65,7 @@ contract BondReserveTest is Test {
         vm.expectEmit(address(reserve));
         emit IBondReserve.BondReserveChanged(noId, amount, expectedRemovableAt);
 
-        reserve.setBondReserve(noId, reserve.getReservedBond(noId) + amount);
+        reserve.setBondReserve(noId, amount);
 
         IBondReserve.BondReserveInfo memory info = reserve.getBondReserveInfo(
             noId

@@ -20,7 +20,7 @@ interface IBondReserve {
     event BondReserveRemoved(uint256 indexed nodeOperatorId);
 
     // Errors
-    error InvalidBondReservePeriod();
+    error InvalidBondReserveMinPeriod();
     error InvalidBondReserveAmount();
 
     /// @notice Get min reserve cooldown
