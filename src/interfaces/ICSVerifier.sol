@@ -73,6 +73,7 @@ interface ICSVerifier {
     error ZeroAdminAddress();
     error InvalidPivotSlot();
     error InvalidCapellaSlot();
+    error HistoricalSummaryDoesNotExist();
 
     function PAUSE_ROLE() external view returns (bytes32);
 
