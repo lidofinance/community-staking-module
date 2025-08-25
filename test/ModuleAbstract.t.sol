@@ -5533,7 +5533,7 @@ abstract contract ModuleSettleELRewardsStealingPenaltyBasic is ModuleFixtures {
         );
         assertEq(lock.until, accounting.getBondLockPeriod() + block.timestamp);
 
-        // If the is nothing to settle, the targetLimitMode should be 0
+        // If there is nothing to settle, the targetLimitMode should be 0
         summary = getNodeOperatorSummary(noId);
         assertEq(
             summary.targetValidatorsCount,
@@ -5647,7 +5647,7 @@ abstract contract ModuleSettleELRewardsStealingPenaltyBasic is ModuleFixtures {
         assertEq(lock.amount, 0 ether);
         assertEq(lock.until, 0);
 
-        // If the is nothing to settle, the targetLimitMode should be 0
+        // If there is nothing to settle, the targetLimitMode should be 0
         summary = getNodeOperatorSummary(noId);
         assertEq(
             summary.targetValidatorsCount,
