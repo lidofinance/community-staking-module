@@ -173,7 +173,6 @@ interface IStakingModule {
     ) external;
 
     /// @notice Updates the limit of the validators that can be used for deposit
-    /// @dev Can be called by StakingRouter or accounting contract
     /// @param nodeOperatorId ID of the Node Operator
     /// @param targetLimitMode Target limit mode for the Node Operator (see https://hackmd.io/@lido/BJXRTxMRp)
     ///                        0 - disabled

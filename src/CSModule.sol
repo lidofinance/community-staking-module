@@ -49,7 +49,7 @@ contract CSModule is
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
     // @dev see IStakingModule.sol
-    uint8 public constant FORCED_TARGET_LIMIT_MODE_ID = 2;
+    uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
     // keccak256(abi.encode(uint256(keccak256("OPERATORS_CREATED_IN_TX_MAP_TSLOT")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant OPERATORS_CREATED_IN_TX_MAP_TSLOT =
         0x1b07bc0838fdc4254cbabb5dd0c94d936f872c6758547168d513d8ad1dc3a500;
@@ -102,6 +102,14 @@ contract CSModule is
     uint64 private _totalExitedValidators;
     uint64 private _depositableValidatorsCount;
     uint64 private _nodeOperatorsCount;
+
+    modifier onlyAccounting() {
+        if (msg.sender != address(accounting())) {
+            revert SenderIsNotEligible();
+        }
+
+        _;
+    }
 
     constructor(
         bytes32 moduleType,
@@ -420,14 +428,15 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 targetLimitMode,
         uint256 targetLimit
-    ) external {
-        if (
-            !hasRole(STAKING_ROUTER_ROLE, msg.sender) &&
-            msg.sender != address(accounting())
-        ) {
-            revert SenderIsNotEligible();
-        }
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
         _setTargetLimit(nodeOperatorId, targetLimitMode, targetLimit);
+    }
+
+    /// @inheritdoc ICSModule
+    function setZeroForcedTargetLimit(
+        uint256 nodeOperatorId
+    ) external onlyAccounting {
+        _setTargetLimit(nodeOperatorId, FORCED_TARGET_LIMIT_MODE_ID, 0);
     }
 
     /// @inheritdoc IStakingModule

@@ -99,23 +99,11 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
-    function mock_updateTargetValidatorsLimits() internal {
+    function mock_setZeroForcedTargetLimit() internal {
         vm.mockCall(
             address(stakingModule),
-            abi.encodeWithSelector(
-                IStakingModule.updateTargetValidatorsLimits.selector
-            ),
+            abi.encodeWithSelector(ICSModule.setZeroForcedTargetLimit.selector),
             ""
-        );
-    }
-
-    function mock_forced_target_limit_mode_id() internal {
-        vm.mockCall(
-            address(stakingModule),
-            abi.encodeWithSelector(
-                ICSModule.FORCED_TARGET_LIMIT_MODE_ID.selector
-            ),
-            abi.encode(2)
         );
     }
 
@@ -419,8 +407,7 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
 
         stakingModule = new Stub();
         mock_updateDepositableValidatorsCount();
-        mock_updateTargetValidatorsLimits();
-        mock_forced_target_limit_mode_id();
+        mock_setZeroForcedTargetLimit();
 
         ICSBondCurve.BondCurveIntervalInput[]
             memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
@@ -4940,9 +4927,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         expectNoCall(
             address(stakingModule),
             abi.encodeWithSelector(
-                IStakingModule.updateTargetValidatorsLimits.selector,
-                0,
-                2,
+                ICSModule.setZeroForcedTargetLimit.selector,
                 0
             )
         );
@@ -4978,9 +4963,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         vm.expectCall(
             address(stakingModule),
             abi.encodeWithSelector(
-                IStakingModule.updateTargetValidatorsLimits.selector,
-                0,
-                2,
+                ICSModule.setZeroForcedTargetLimit.selector,
                 0
             )
         );
@@ -5027,9 +5010,7 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
         expectNoCall(
             address(stakingModule),
             abi.encodeWithSelector(
-                IStakingModule.updateTargetValidatorsLimits.selector,
-                0,
-                2,
+                ICSModule.setZeroForcedTargetLimit.selector,
                 0
             )
         );
@@ -5056,9 +5037,7 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
         vm.expectCall(
             address(stakingModule),
             abi.encodeWithSelector(
-                IStakingModule.updateTargetValidatorsLimits.selector,
-                0,
-                2,
+                ICSModule.setZeroForcedTargetLimit.selector,
                 0
             )
         );

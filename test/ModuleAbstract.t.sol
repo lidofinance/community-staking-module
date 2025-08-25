@@ -5044,15 +5044,6 @@ abstract contract ModuleUpdateTargetValidatorsLimits is ModuleFixtures {
         module.updateTargetValidatorsLimits(0, 1, 1);
     }
 
-    function test_updateTargetValidatorsLimits_RevertWhen_SenderIsNotEligible()
-        public
-    {
-        createNodeOperator(1);
-        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
-        vm.prank(stranger);
-        module.updateTargetValidatorsLimits(0, 1, 1);
-    }
-
     function test_updateTargetValidatorsLimits_RevertWhen_TargetLimitExceedsUint32()
         public
     {
@@ -6750,9 +6741,10 @@ abstract contract ModuleStakingRouterAccessControl is ModuleFixtures {
         public
     {
         uint256 noId = createNodeOperator();
+        bytes32 role = module.STAKING_ROUTER_ROLE();
 
         vm.prank(stranger);
-        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
+        expectRoleRevert(stranger, role);
         module.updateTargetValidatorsLimits(noId, 0, 0);
     }
 
@@ -7710,6 +7702,56 @@ abstract contract ModuleMisc is ModuleFixtures {
         );
 
         assertEq(module.getNodeOperatorOwner(noId), manager);
+    }
+
+    function test_setZeroForcedTargetLimits() public assertInvariants {
+        uint256 noId = createNodeOperator(5);
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
+
+        vm.prank(address(accounting));
+        module.setZeroForcedTargetLimit(noId);
+
+        no = module.getNodeOperator(noId);
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
+    }
+
+    function test_setZeroForcedTargetLimits_overrideExistingLimit()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator(5);
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
+
+        vm.prank(stakingRouter);
+        module.updateTargetValidatorsLimits(noId, 1, 10);
+
+        no = module.getNodeOperator(noId);
+        assertEq(no.targetLimit, 10);
+        assertEq(no.targetLimitMode, 1);
+
+        vm.prank(address(accounting));
+        module.setZeroForcedTargetLimit(noId);
+
+        no = module.getNodeOperator(noId);
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
+    }
+
+    function test_setZeroForcedTargetLimits_revertWhen_SenderIsNotEligible()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(ICSModule.SenderIsNotEligible.selector)
+        );
+        vm.prank(stranger);
+        module.setZeroForcedTargetLimit(noId);
     }
 }
 

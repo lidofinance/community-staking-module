@@ -165,8 +165,6 @@ interface ICSModule is
 
     function DEPOSIT_SIZE() external view returns (uint256);
 
-    function FORCED_TARGET_LIMIT_MODE_ID() external view returns (uint8);
-
     function LIDO_LOCATOR() external view returns (ILidoLocator);
 
     function STETH() external view returns (IStETH);
@@ -484,4 +482,11 @@ interface ICSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external;
+
+    /// @notice Set zero forced target limit for the given Node Operator.
+    /// @dev This method is used by the accounting contract when Node Operator's bond is not enough to cover penalties.
+    ///      Explicit setting of zero forced target limit is required to prevent further deposits even if the Node Operator
+    ///      increases its bond later.
+    /// @param nodeOperatorId ID of the Node Operator
+    function setZeroForcedTargetLimit(uint256 nodeOperatorId) external;
 }

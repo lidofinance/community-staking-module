@@ -357,11 +357,7 @@ contract CSAccounting is
         // If the bond is not fully burned, it means that the bond is not enough to cover the penalty
         // and the target limit for the Node Operator should be set to 0 to effectively disable Node Operator
         if (!fullyBurned) {
-            MODULE.updateTargetValidatorsLimits(
-                nodeOperatorId,
-                MODULE.FORCED_TARGET_LIMIT_MODE_ID(),
-                0
-            );
+            MODULE.setZeroForcedTargetLimit(nodeOperatorId);
         }
     }
 
@@ -378,11 +374,7 @@ contract CSAccounting is
         // If the bond is not fully charged, it means that the bond is not enough to cover the charge
         // and the target limit for the Node Operator should be set to 0 to effectively disable Node Operator
         if (!fullyCharged) {
-            MODULE.updateTargetValidatorsLimits(
-                nodeOperatorId,
-                MODULE.FORCED_TARGET_LIMIT_MODE_ID(),
-                0
-            );
+            MODULE.setZeroForcedTargetLimit(nodeOperatorId);
         }
     }
 
