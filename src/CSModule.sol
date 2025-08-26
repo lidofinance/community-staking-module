@@ -429,14 +429,7 @@ contract CSModule is
         uint256 targetLimitMode,
         uint256 targetLimit
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        _setTargetLimit(nodeOperatorId, targetLimitMode, targetLimit);
-    }
-
-    /// @inheritdoc ICSModule
-    function setZeroForcedTargetLimit(
-        uint256 nodeOperatorId
-    ) external onlyAccounting {
-        _setTargetLimit(nodeOperatorId, FORCED_TARGET_LIMIT_MODE_ID, 0);
+        _setTargetLimit(nodeOperatorId, targetLimitMode, targetLimit, true);
     }
 
     /// @inheritdoc IStakingModule
@@ -540,8 +533,13 @@ contract CSModule is
         uint256 amountToCharge = PARAMETERS_REGISTRY.getKeyRemovalCharge(
             curveId
         ) * keysCount;
+        bool isFullyCharged = true;
+
         if (amountToCharge != 0) {
-            accounting().chargeFee(nodeOperatorId, amountToCharge);
+            isFullyCharged = accounting().chargeFee(
+                nodeOperatorId,
+                amountToCharge
+            );
             emit KeyRemovalChargeApplied(nodeOperatorId);
         }
 
@@ -552,6 +550,10 @@ contract CSModule is
         // @dev No need to safe cast due to checks in the func above
         no.totalVettedKeys = uint32(newTotalSigningKeys);
         emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
+
+        if (!isFullyCharged) {
+            _onUncompensatedPenalty(nodeOperatorId, false);
+        }
 
         // Nonce is updated below due to keys state change
         _updateDepositableValidatorsCount({
@@ -682,9 +684,9 @@ contract CSModule is
             _accounting.settleLockedBondETH(nodeOperatorId);
             emit ELRewardsStealingPenaltySettled(nodeOperatorId);
 
-            _setTargetLimit(nodeOperatorId, FORCED_TARGET_LIMIT_MODE_ID, 0);
+            _onUncompensatedPenalty(nodeOperatorId, true);
 
-            // @dev Nonce update and depositable validators count update are done in the _setTargetLimit method.
+            // @dev Nonce update and depositable validators count update are done in the _onUncompensatedPenalty method.
         }
     }
 
@@ -771,6 +773,8 @@ contract CSModule is
             }
 
             ICSAccounting _accounting = accounting();
+            bool isFullyBurned = true;
+            bool isFullyCharged = true;
 
             // The withdrawal request fee is taken only if the penalty is applied if no penalty, the
             // fee has been paid by the node operator on the withdrawal trigger, or it is the DAO
@@ -780,7 +784,7 @@ contract CSModule is
                 chargeWithdrawalRequestFee &&
                 exitPenaltyInfo.withdrawalRequestFee.value != 0
             ) {
-                _accounting.chargeFee(
+                isFullyCharged = _accounting.chargeFee(
                     withdrawalInfo.nodeOperatorId,
                     exitPenaltyInfo.withdrawalRequestFee.value
                 );
@@ -792,7 +796,14 @@ contract CSModule is
                 }
             }
             if (penaltySum > 0) {
-                _accounting.penalize(withdrawalInfo.nodeOperatorId, penaltySum);
+                isFullyBurned = _accounting.penalize(
+                    withdrawalInfo.nodeOperatorId,
+                    penaltySum
+                );
+            }
+
+            if (!isFullyCharged || !isFullyBurned) {
+                _onUncompensatedPenalty(withdrawalInfo.nodeOperatorId, false);
             }
 
             // Nonce will be updated below even if depositable count was not changed
@@ -1326,6 +1337,18 @@ contract CSModule is
         }
     }
 
+    function _onUncompensatedPenalty(
+        uint256 nodeOperatorId,
+        bool doUpdateDepositableValidatorsCount
+    ) internal {
+        _setTargetLimit(
+            nodeOperatorId,
+            FORCED_TARGET_LIMIT_MODE_ID,
+            0,
+            doUpdateDepositableValidatorsCount
+        );
+    }
+
     function _addKeysAndUpdateDepositableValidatorsCount(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -1551,7 +1574,8 @@ contract CSModule is
     function _setTargetLimit(
         uint256 nodeOperatorId,
         uint256 targetLimitMode,
-        uint256 targetLimit
+        uint256 targetLimit,
+        bool doUpdateDepositableValidatorsCount
     ) internal {
         if (targetLimitMode > FORCED_TARGET_LIMIT_MODE_ID) {
             revert InvalidInput();
@@ -1585,12 +1609,14 @@ contract CSModule is
             targetLimit
         );
 
-        // Nonce will be updated below even if depositable count was not changed
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false
-        });
-        _incrementModuleNonce();
+        if (doUpdateDepositableValidatorsCount) {
+            // Nonce will be updated below even if depositable count was not changed
+            _updateDepositableValidatorsCount({
+                nodeOperatorId: nodeOperatorId,
+                incrementNonceIfUpdated: false
+            });
+            _incrementModuleNonce();
+        }
     }
 
     function _getOperatorCreator(

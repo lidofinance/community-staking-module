@@ -4095,6 +4095,31 @@ abstract contract ModuleRemoveKeysChargeFee is ModuleFixtures {
 
         vm.prank(nodeOperator);
         module.removeKeys(noId, 1, 2);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalAddedKeys, 1);
+        // There should be no target limit if the charge is fully paid.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
+    }
+
+    function test_removeKeys_chargeFeeMoreThanBond() public assertInvariants {
+        uint256 noId = createNodeOperator(1);
+
+        vm.prank(admin);
+        module.PARAMETERS_REGISTRY().setKeyRemovalCharge(
+            0,
+            BOND_SIZE + 1 ether
+        );
+
+        vm.prank(nodeOperator);
+        module.removeKeys(noId, 0, 1);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalAddedKeys, 0);
+        // Target limit should be set to 0 and mode to 2 if the charge is more than bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
     }
 
     function test_removeKeys_withNoFee() public assertInvariants {
@@ -4115,6 +4140,12 @@ abstract contract ModuleRemoveKeysChargeFee is ModuleFixtures {
                 ICSModule.KeyRemovalChargeApplied.selector
             );
         }
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalAddedKeys, 1);
+        // There should be no target limit if the is no charge.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
     }
 }
 
@@ -5989,6 +6020,9 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
 
         NodeOperator memory no = module.getNodeOperator(noId);
         assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the were no penalties.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
         bool withdrawn = module.isValidatorWithdrawn(noId, keyIndex);
         assertTrue(withdrawn);
 
@@ -6002,26 +6036,31 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
 
         uint256 nonce = module.getNonce();
 
+        uint256 balanceShortage = BOND_SIZE - 1 ether;
+
         ValidatorWithdrawalInfo[]
             memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
 
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            module.DEPOSIT_SIZE() - BOND_SIZE - 1 ether
+            module.DEPOSIT_SIZE() - balanceShortage
         );
 
         vm.expectEmit(address(module));
         emit ICSModule.WithdrawalSubmitted(
             noId,
             keyIndex,
-            module.DEPOSIT_SIZE() - BOND_SIZE - 1 ether,
+            module.DEPOSIT_SIZE() - balanceShortage,
             pubkey
         );
         module.submitWithdrawals(withdrawalInfo);
 
         NodeOperator memory no = module.getNodeOperator(noId);
         assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the penalty is covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
         // depositable decrease should
         assertEq(module.getNonce(), nonce + 1);
     }
@@ -6031,20 +6070,68 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
         uint256 noId = createNodeOperator();
         module.obtainDepositData(1, "");
 
+        uint256 balanceShortage = BOND_SIZE - 1 ether;
+
         ValidatorWithdrawalInfo[]
             memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
 
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            module.DEPOSIT_SIZE() - 1 ether
+            module.DEPOSIT_SIZE() - balanceShortage
         );
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                balanceShortage
+            )
         );
         module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the penalty is covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
+    }
+
+    function test_submitWithdrawals_superLowExitBalance()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        module.obtainDepositData(1, "");
+
+        uint256 balanceShortage = BOND_SIZE + 1 ether;
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            module.DEPOSIT_SIZE() - balanceShortage
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                balanceShortage
+            )
+        );
+        module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be target limit if the penalty is not covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
     }
 
     function test_submitWithdrawals_exitDelayPenalty() public assertInvariants {
@@ -6052,9 +6139,14 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
         uint256 noId = createNodeOperator();
         module.obtainDepositData(1, "");
 
+        uint256 exitDelayPenaltyAmount = BOND_SIZE - 1 ether;
+
         exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
-                delayPenalty: MarkedUint248(1 ether, true),
+                delayPenalty: MarkedUint248(
+                    uint248(exitDelayPenaltyAmount),
+                    true
+                ),
                 strikesPenalty: MarkedUint248(0, false),
                 withdrawalRequestFee: MarkedUint248(0, false)
             })
@@ -6071,20 +6163,38 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                exitDelayPenaltyAmount
+            )
         );
         module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the penalty is covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
     }
 
-    function test_submitWithdrawals_strikesPenalty() public assertInvariants {
+    function test_submitWithdrawals_hugeExitDelayPenalty()
+        public
+        assertInvariants
+    {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         module.obtainDepositData(1, "");
 
+        uint256 exitDelayPenaltyAmount = BOND_SIZE + 1 ether;
+
         exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
-                delayPenalty: MarkedUint248(0, false),
-                strikesPenalty: MarkedUint248(1 ether, true),
+                delayPenalty: MarkedUint248(
+                    uint248(exitDelayPenaltyAmount),
+                    true
+                ),
+                strikesPenalty: MarkedUint248(0, false),
                 withdrawalRequestFee: MarkedUint248(0, false)
             })
         );
@@ -6100,20 +6210,35 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                exitDelayPenaltyAmount
+            )
         );
         module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be target limit if the penalty is not covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
     }
 
-    function test_submitWithdrawals_allPenalties() public assertInvariants {
+    function test_submitWithdrawals_strikesPenalty() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         module.obtainDepositData(1, "");
 
+        uint256 strikesPenaltyAmount = BOND_SIZE - 1 ether;
+
         exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
-                delayPenalty: MarkedUint248(1 ether, true),
-                strikesPenalty: MarkedUint248(1 ether, true),
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(
+                    uint248(strikesPenaltyAmount),
+                    true
+                ),
                 withdrawalRequestFee: MarkedUint248(0, false)
             })
         );
@@ -6124,14 +6249,172 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            module.DEPOSIT_SIZE() - 1 ether
+            module.DEPOSIT_SIZE()
         );
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(accounting.penalize.selector, noId, 3 ether)
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                strikesPenaltyAmount
+            )
         );
         module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the penalty is covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
+    }
+
+    function test_submitWithdrawals_hugeStrikesPenalty()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        module.obtainDepositData(1, "");
+
+        uint256 strikesPenaltyAmount = BOND_SIZE + 1 ether;
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(
+                    uint248(strikesPenaltyAmount),
+                    true
+                ),
+                withdrawalRequestFee: MarkedUint248(0, false)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            module.DEPOSIT_SIZE()
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                strikesPenaltyAmount
+            )
+        );
+        module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be target limit if the penalty is not covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
+    }
+
+    function test_submitWithdrawals_allPenalties() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        module.obtainDepositData(1, "");
+
+        uint256 balanceShortage = (BOND_SIZE - 1 ether) / 3;
+        uint256 exitDelayPenaltyAmount = (BOND_SIZE - 1 ether) / 3;
+        uint256 strikesPenaltyAmount = (BOND_SIZE - 1 ether) / 3;
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(
+                    uint248(exitDelayPenaltyAmount),
+                    true
+                ),
+                strikesPenalty: MarkedUint248(
+                    uint248(strikesPenaltyAmount),
+                    true
+                ),
+                withdrawalRequestFee: MarkedUint248(0, false)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            module.DEPOSIT_SIZE() - balanceShortage
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                balanceShortage + exitDelayPenaltyAmount + strikesPenaltyAmount
+            )
+        );
+        module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the penalty is covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
+    }
+
+    function test_submitWithdrawals_allPenaltiesHugeSum()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        module.obtainDepositData(1, "");
+
+        uint256 balanceShortage = (BOND_SIZE + 1 ether) / 3;
+        uint256 exitDelayPenaltyAmount = (BOND_SIZE + 1 ether) / 3;
+        uint256 strikesPenaltyAmount = (BOND_SIZE + 1 ether) / 3;
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(
+                    uint248(exitDelayPenaltyAmount),
+                    true
+                ),
+                strikesPenalty: MarkedUint248(
+                    uint248(strikesPenaltyAmount),
+                    true
+                ),
+                withdrawalRequestFee: MarkedUint248(0, false)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            module.DEPOSIT_SIZE() - balanceShortage
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                balanceShortage + exitDelayPenaltyAmount + strikesPenaltyAmount
+            )
+        );
+        module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be target limit if the penalty is not covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
     }
 
     function test_submitWithdrawals_chargeWithdrawalFee_DelayPenalty()
@@ -6142,11 +6425,22 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
         uint256 noId = createNodeOperator();
         module.obtainDepositData(1, "");
 
+        uint256 exitDelayPenaltyAmount = BOND_SIZE - 1 ether;
+        uint256 withdrawalRequestFeeAmount = BOND_SIZE -
+            exitDelayPenaltyAmount -
+            0.1 ether;
+
         exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
-                delayPenalty: MarkedUint248(1 ether, true),
+                delayPenalty: MarkedUint248(
+                    uint248(exitDelayPenaltyAmount),
+                    true
+                ),
                 strikesPenalty: MarkedUint248(0, false),
-                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
             })
         );
 
@@ -6161,17 +6455,145 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                exitDelayPenaltyAmount
+            )
         );
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
                 accounting.chargeFee.selector,
                 noId,
-                0.1 ether
+                withdrawalRequestFeeAmount
             )
         );
         module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the penalties and charges are covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
+    }
+
+    function test_submitWithdrawals_chargeWithdrawalFee_hugeDelayPenalty()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        module.obtainDepositData(1, "");
+
+        uint256 exitDelayPenaltyAmount = BOND_SIZE + 1 ether;
+        uint256 withdrawalRequestFeeAmount = 0.1 ether;
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(
+                    uint248(exitDelayPenaltyAmount),
+                    true
+                ),
+                strikesPenalty: MarkedUint248(0, false),
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            module.DEPOSIT_SIZE()
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                exitDelayPenaltyAmount
+            )
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                withdrawalRequestFeeAmount
+            )
+        );
+        module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be target limit if the charges are covered by the bond but the penalties are not.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
+    }
+
+    function test_submitWithdrawals_chargeHugeWithdrawalFee_DelayPenalty()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        module.obtainDepositData(1, "");
+
+        uint256 exitDelayPenaltyAmount = BOND_SIZE - 1 ether;
+        uint256 withdrawalRequestFeeAmount = BOND_SIZE + 1 ether;
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(
+                    uint248(exitDelayPenaltyAmount),
+                    true
+                ),
+                strikesPenalty: MarkedUint248(0, false),
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            module.DEPOSIT_SIZE()
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                exitDelayPenaltyAmount
+            )
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                withdrawalRequestFeeAmount
+            )
+        );
+        module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be target limit if the charges or penalties are not covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
     }
 
     function test_submitWithdrawals_chargeWithdrawalFee_StrikesPenalty()
@@ -6182,11 +6604,22 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
         uint256 noId = createNodeOperator();
         module.obtainDepositData(1, "");
 
+        uint256 strikesPenaltyAmount = BOND_SIZE - 1 ether;
+        uint256 withdrawalRequestFeeAmount = BOND_SIZE -
+            strikesPenaltyAmount -
+            0.1 ether;
+
         exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
-                strikesPenalty: MarkedUint248(1 ether, true),
-                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+                strikesPenalty: MarkedUint248(
+                    uint248(strikesPenaltyAmount),
+                    true
+                ),
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
             })
         );
 
@@ -6201,17 +6634,145 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                strikesPenaltyAmount
+            )
         );
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
                 accounting.chargeFee.selector,
                 noId,
-                0.1 ether
+                withdrawalRequestFeeAmount
             )
         );
         module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the penalties and charges are covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
+    }
+
+    function test_submitWithdrawals_chargeWithdrawalFee_HugeStrikesPenalty()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        module.obtainDepositData(1, "");
+
+        uint256 strikesPenaltyAmount = BOND_SIZE + 1 ether;
+        uint256 withdrawalRequestFeeAmount = 0.1 ether;
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(
+                    uint248(strikesPenaltyAmount),
+                    true
+                ),
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            module.DEPOSIT_SIZE()
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                strikesPenaltyAmount
+            )
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                withdrawalRequestFeeAmount
+            )
+        );
+        module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be target limit if the charges are covered by the bond but the penalties are not.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
+    }
+
+    function test_submitWithdrawals_chargeHugeWithdrawalFee_StrikesPenalty()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        module.obtainDepositData(1, "");
+
+        uint256 strikesPenaltyAmount = BOND_SIZE - 1 ether;
+        uint256 withdrawalRequestFeeAmount = BOND_SIZE + 1 ether;
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(
+                    uint248(strikesPenaltyAmount),
+                    true
+                ),
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            module.DEPOSIT_SIZE()
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                strikesPenaltyAmount
+            )
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                withdrawalRequestFeeAmount
+            )
+        );
+        module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be target limit if the charges or penalties are not covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
     }
 
     function test_submitWithdrawals_chargeWithdrawalFee_DelayAndStrikesPenalties()
@@ -6222,11 +6783,24 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
         uint256 noId = createNodeOperator();
         module.obtainDepositData(1, "");
 
+        uint256 exitDelayPenaltyAmount = (BOND_SIZE - 1 ether) / 2;
+        uint256 strikesPenaltyAmount = (BOND_SIZE - 1 ether) / 2;
+        uint256 withdrawalRequestFeeAmount = strikesPenaltyAmount - 0.1 ether;
+
         exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
-                delayPenalty: MarkedUint248(1 ether, true),
-                strikesPenalty: MarkedUint248(1 ether, true),
-                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+                delayPenalty: MarkedUint248(
+                    uint248(exitDelayPenaltyAmount),
+                    true
+                ),
+                strikesPenalty: MarkedUint248(
+                    uint248(strikesPenaltyAmount),
+                    true
+                ),
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
             })
         );
 
@@ -6241,17 +6815,90 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(accounting.penalize.selector, noId, 2 ether)
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                exitDelayPenaltyAmount + strikesPenaltyAmount
+            )
         );
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
                 accounting.chargeFee.selector,
                 noId,
-                0.1 ether
+                withdrawalRequestFeeAmount
             )
         );
         module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the penalties and charges are covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
+    }
+
+    function test_submitWithdrawals_chargeWithdrawalFee_DelayAndStrikesPenalties_AllHuge()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        module.obtainDepositData(1, "");
+
+        uint256 exitDelayPenaltyAmount = BOND_SIZE + 1 ether;
+        uint256 strikesPenaltyAmount = BOND_SIZE + 1 ether;
+        uint256 withdrawalRequestFeeAmount = BOND_SIZE + 1 ether;
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(
+                    uint248(exitDelayPenaltyAmount),
+                    true
+                ),
+                strikesPenalty: MarkedUint248(
+                    uint248(strikesPenaltyAmount),
+                    true
+                ),
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            module.DEPOSIT_SIZE()
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                exitDelayPenaltyAmount + strikesPenaltyAmount
+            )
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                withdrawalRequestFeeAmount
+            )
+        );
+        module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be target limit if the charges or penalties are not covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
     }
 
     function test_submitWithdrawals_chargeWithdrawalFee_zeroPenaltyValue()
@@ -6262,11 +6909,16 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
         uint256 noId = createNodeOperator();
         module.obtainDepositData(1, "");
 
+        uint256 withdrawalRequestFeeAmount = BOND_SIZE - 1 ether;
+
         exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, true),
                 strikesPenalty: MarkedUint248(0, true),
-                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
             })
         );
 
@@ -6284,10 +6936,63 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
             abi.encodeWithSelector(
                 accounting.chargeFee.selector,
                 noId,
-                0.1 ether
+                withdrawalRequestFeeAmount
             )
         );
         module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the penalties and charges are covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
+    }
+
+    function test_submitWithdrawals_chargeHugeWithdrawalFee_zeroPenaltyValue()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        module.obtainDepositData(1, "");
+
+        uint256 withdrawalRequestFeeAmount = BOND_SIZE + 1 ether;
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, true),
+                strikesPenalty: MarkedUint248(0, true),
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            module.DEPOSIT_SIZE()
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                withdrawalRequestFeeAmount
+            )
+        );
+        module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be target limit if the charges are not covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 2);
     }
 
     function test_submitWithdrawals_dontChargeWithdrawalFee_noPenalties()
@@ -6298,11 +7003,16 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
         uint256 noId = createNodeOperator();
         module.obtainDepositData(1, "");
 
+        uint256 withdrawalRequestFeeAmount = BOND_SIZE - 1 ether;
+
         exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
                 strikesPenalty: MarkedUint248(0, false),
-                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
             })
         );
 
@@ -6320,10 +7030,16 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
             abi.encodeWithSelector(
                 accounting.chargeFee.selector,
                 noId,
-                0.1 ether
+                withdrawalRequestFeeAmount
             )
         );
         module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if there were no penalties.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
     }
 
     function test_submitWithdrawals_dontChargeWithdrawalFee_exitBalancePenalty()
@@ -6334,11 +7050,17 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
         uint256 noId = createNodeOperator();
         module.obtainDepositData(1, "");
 
+        uint256 withdrawalRequestFeeAmount = BOND_SIZE - 1 ether;
+        uint256 balanceShortage = BOND_SIZE - 1 ether;
+
         exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
                 strikesPenalty: MarkedUint248(0, false),
-                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+                withdrawalRequestFee: MarkedUint248(
+                    uint248(withdrawalRequestFeeAmount),
+                    true
+                )
             })
         );
 
@@ -6348,7 +7070,7 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            module.DEPOSIT_SIZE() - 1 ether
+            module.DEPOSIT_SIZE() - balanceShortage
         );
 
         expectNoCall(
@@ -6356,10 +7078,16 @@ abstract contract ModuleSubmitWithdrawals is ModuleFixtures {
             abi.encodeWithSelector(
                 accounting.chargeFee.selector,
                 noId,
-                0.1 ether
+                withdrawalRequestFeeAmount
             )
         );
         module.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = module.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        // There should be no target limit if the penalty is covered by the bond.
+        assertEq(no.targetLimit, 0);
+        assertEq(no.targetLimitMode, 0);
     }
 
     function test_submitWithdrawals_unbondedKeys() public assertInvariants {
@@ -7702,56 +8430,6 @@ abstract contract ModuleMisc is ModuleFixtures {
         );
 
         assertEq(module.getNodeOperatorOwner(noId), manager);
-    }
-
-    function test_setZeroForcedTargetLimits() public assertInvariants {
-        uint256 noId = createNodeOperator(5);
-        NodeOperator memory no = module.getNodeOperator(noId);
-        assertEq(no.targetLimit, 0);
-        assertEq(no.targetLimitMode, 0);
-
-        vm.prank(address(accounting));
-        module.setZeroForcedTargetLimit(noId);
-
-        no = module.getNodeOperator(noId);
-        assertEq(no.targetLimit, 0);
-        assertEq(no.targetLimitMode, 2);
-    }
-
-    function test_setZeroForcedTargetLimits_overrideExistingLimit()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator(5);
-        NodeOperator memory no = module.getNodeOperator(noId);
-        assertEq(no.targetLimit, 0);
-        assertEq(no.targetLimitMode, 0);
-
-        vm.prank(stakingRouter);
-        module.updateTargetValidatorsLimits(noId, 1, 10);
-
-        no = module.getNodeOperator(noId);
-        assertEq(no.targetLimit, 10);
-        assertEq(no.targetLimitMode, 1);
-
-        vm.prank(address(accounting));
-        module.setZeroForcedTargetLimit(noId);
-
-        no = module.getNodeOperator(noId);
-        assertEq(no.targetLimit, 0);
-        assertEq(no.targetLimitMode, 2);
-    }
-
-    function test_setZeroForcedTargetLimits_revertWhen_SenderIsNotEligible()
-        public
-    {
-        uint256 noId = createNodeOperator(5);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(ICSModule.SenderIsNotEligible.selector)
-        );
-        vm.prank(stranger);
-        module.setZeroForcedTargetLimit(noId);
     }
 }
 

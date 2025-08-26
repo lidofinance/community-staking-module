@@ -352,30 +352,20 @@ contract CSAccounting is
     function penalize(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyModule {
-        bool fullyBurned = CSBondCore._burn(nodeOperatorId, amount);
-        // If the bond is not fully burned, it means that the bond is not enough to cover the penalty
-        // and the target limit for the Node Operator should be set to 0 to effectively disable Node Operator
-        if (!fullyBurned) {
-            MODULE.setZeroForcedTargetLimit(nodeOperatorId);
-        }
+    ) external onlyModule returns (bool fullyBurned) {
+        fullyBurned = CSBondCore._burn(nodeOperatorId, amount);
     }
 
     /// @inheritdoc ICSAccounting
     function chargeFee(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyModule {
-        bool fullyCharged = CSBondCore._charge(
+    ) external onlyModule returns (bool fullyCharged) {
+        fullyCharged = CSBondCore._charge(
             nodeOperatorId,
             amount,
             chargePenaltyRecipient
         );
-        // If the bond is not fully charged, it means that the bond is not enough to cover the charge
-        // and the target limit for the Node Operator should be set to 0 to effectively disable Node Operator
-        if (!fullyCharged) {
-            MODULE.setZeroForcedTargetLimit(nodeOperatorId);
-        }
     }
 
     /// @inheritdoc ICSAccounting
