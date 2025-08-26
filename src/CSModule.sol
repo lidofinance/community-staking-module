@@ -103,14 +103,6 @@ contract CSModule is
     uint64 private _depositableValidatorsCount;
     uint64 private _nodeOperatorsCount;
 
-    modifier onlyAccounting() {
-        if (msg.sender != address(accounting())) {
-            revert SenderIsNotEligible();
-        }
-
-        _;
-    }
-
     constructor(
         bytes32 moduleType,
         address lidoLocator,

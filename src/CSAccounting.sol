@@ -339,8 +339,6 @@ contract CSAccounting is
 
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
-            // There is no need to check the return value of `_burn` since target limit will already be set to 0 on the MODULE level
-            // no matter if the bond is fully burned or not
             CSBondCore._burn(nodeOperatorId, lockedAmount);
             // reduce all locked bond even if bond isn't covered lock fully
             CSBondLock._remove(nodeOperatorId);

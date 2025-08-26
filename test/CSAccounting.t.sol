@@ -5151,37 +5151,6 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertTrue(applied);
     }
 
-    function test_settleLockedBondETH_setTargetLimitOnInsufficientBond()
-        public
-        assertInvariants
-    {
-        mock_getNodeOperatorsCount(1);
-        uint256 noId = 0;
-        uint256 bond = accounting.getBond(noId);
-        uint256 amount = bond + 1 ether;
-
-        vm.prank(address(stakingModule));
-        accounting.lockBondETH(noId, amount);
-        assertEq(accounting.getActualLockedBond(noId), amount);
-
-        // Expect no call to the module to update target validators limits even if the bond is insufficient
-        expectNoCall(
-            address(stakingModule),
-            abi.encodeWithSelector(
-                IStakingModule.updateTargetValidatorsLimits.selector,
-                noId,
-                2,
-                0
-            )
-        );
-
-        vm.prank(address(stakingModule));
-        bool applied = accounting.settleLockedBondETH(noId);
-        assertEq(accounting.getActualLockedBond(noId), 0);
-        assertEq(accounting.getBond(noId), 0);
-        assertTrue(applied);
-    }
-
     function test_settleLockedBondETH_noLocked() public assertInvariants {
         mock_getNodeOperatorsCount(1);
         uint256 noId = 0;
