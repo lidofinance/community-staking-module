@@ -628,6 +628,15 @@ contract CSAccounting is
         if (reserved == 0) return;
         uint256 current = CSBondCore.getBond(nodeOperatorId);
         if (current < reserved) {
+            /*
+            CURRENT = EXCESS + REQUIRED_FOR_KEYS + RESERVE
+            TOTAL_REQUIRED = REQUIRED_FOR_KEYS + RESERVE + LOCK
+            EXCESS = max(CURRENT - TOTAL_REQUIRED, 0)
+            Shrinking flow: EXCESS -> REQUIRED_FOR_KEYS -> RESERVE
+            ---
+            There is an invariant that RESERVE can't be greater than CURRENT; RESERVE is part of CURRENT.
+            We need to follow this invariant and must shrink RESERVE last.
+        */
             BondReserve._setBondReserve(nodeOperatorId, current);
         }
     }
@@ -742,19 +751,17 @@ contract CSAccounting is
             revert NodeOperatorDoesNotExist();
         }
 
-        if (no.managerAddress == msg.sender || no.rewardAddress == msg.sender) {
-            return no;
+        if (no.managerAddress != msg.sender && no.rewardAddress != msg.sender) {
+            revert SenderIsNotEligible();
         }
-
-        revert SenderIsNotEligible();
     }
 
     /// @dev Bond reserve can be removed if a sufficient time has passed or if the Node Operator has no active or depositable keys
     function _canRemoveBondReserve(
         uint256 nodeOperatorId,
         IBondReserve.BondReserveInfo memory r
-    ) internal view returns (bool) {
-        return
+    ) internal view returns (bool isRemovable) {
+        isRemovable =
             block.timestamp >= uint256(r.removableAt) ||
             MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) == 0;
     }
