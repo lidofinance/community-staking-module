@@ -405,8 +405,8 @@ contract CSAccounting is
     function penalize(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyModule {
-        CSBondCore._burn(nodeOperatorId, amount);
+    ) external onlyModule returns (bool fullyBurned) {
+        fullyBurned = CSBondCore._burn(nodeOperatorId, amount);
         _adjustBondReserve(nodeOperatorId);
     }
 
@@ -414,8 +414,12 @@ contract CSAccounting is
     function chargeFee(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyModule {
-        CSBondCore._charge(nodeOperatorId, amount, chargePenaltyRecipient);
+    ) external onlyModule returns (bool fullyCharged) {
+        fullyCharged = CSBondCore._charge(
+            nodeOperatorId,
+            amount,
+            chargePenaltyRecipient
+        );
         _adjustBondReserve(nodeOperatorId);
     }
 

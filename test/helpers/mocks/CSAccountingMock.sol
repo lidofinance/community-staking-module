@@ -127,19 +127,29 @@ contract CSAccountingMock {
         bondCurves[curveId] = _bond;
     }
 
-    function penalize(uint256 nodeOperatorId, uint256 amount) external {
+    function penalize(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external returns (bool fullyBurned) {
         if (bond[nodeOperatorId] < amount) {
             bond[nodeOperatorId] = 0;
+            fullyBurned = false;
         } else {
             bond[nodeOperatorId] -= amount;
+            fullyBurned = true;
         }
     }
 
-    function chargeFee(uint256 nodeOperatorId, uint256 amount) external {
+    function chargeFee(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external returns (bool fullyCharged) {
         if (bond[nodeOperatorId] < amount) {
             bond[nodeOperatorId] = 0;
+            fullyCharged = false;
         } else {
             bond[nodeOperatorId] -= amount;
+            fullyCharged = true;
         }
     }
 
