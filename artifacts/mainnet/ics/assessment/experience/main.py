@@ -99,30 +99,43 @@ def csm_score(addresses: set[str]) -> int:
     Returns the score for CSM participation if any address is eligible, otherwise 0.
     This function checks both testnet and mainnet CSM participation.
     """
-    testnet_score = _csm_testnet_score(addresses)
     mainnet_score = _csm_mainnet_score(addresses)
-
     if mainnet_score:
         return mainnet_score
+
+    testnet_score = _csm_testnet_score(addresses)
     if testnet_score:
         return testnet_score
     return 0
 
 def _csm_testnet_score(addresses: set[str]) -> int:
     """
-    Returns the score for CSM testnet participation if any address is eligible, otherwise 0.
+    Returns the score for CSM testnet participation using a precomputed file
+    produced by _collect_testnet_eligible.py. If any of the addresses belongs to
+    an eligible node operator, returns the corresponding testnet score, with an
+    extra point for Circles-verified addresses.
     """
-    perf_reports = [
-        "QmTpTekd8qV9mn46pYzT9fkHtYHyQguZrbGdF233YYibvY"
-    ]
-    if _check_csm_performance_logs(
-            addresses,
-            "node_operator_owners_hoodi.json",
-            perf_reports,
-            "Testnet"  # Network name for logging
-    ):
+    eligible_file = current_dir / "eligible_node_operators_hoodi.json"
+    with open(eligible_file, "r") as f:
+        data = json.load(f)
+        eligible_ids = set(data)
+
+    owners_file = current_dir / "node_operator_owners_hoodi.json"
+    with open(owners_file, "r") as f:
+        node_operators = json.load(f)  # {no_id: owner}
+
+    # Map owner address -> node operator id
+    addr_to_id: dict[str, str] = {v.lower(): k for k, v in node_operators.items()}
+    found_ids = {addr_to_id[a] for a in addresses if a in addr_to_id}
+    if not found_ids:
+        return 0
+
+    if any(no_id in eligible_ids for no_id in found_ids):
+        print("    Found node operator IDs for given addresses on Testnet:", ", ".join(found_ids & eligible_ids))
+        # Optional Circles bonus
+        circles_file = current_dir.parent / "humanity" / "circle_group_members.csv"
         is_circles_verified = is_addresses_in_csv(addresses, "circle_group_members.csv",
-                                                  base_dir=current_dir.parent / "humanity")
+                                                  base_dir=current_dir.parent / "humanity") if circles_file.exists() else False
         if is_circles_verified:
             return scores["csm-testnet-circles-verified"]
         return scores["csm-testnet"]

@@ -163,33 +163,33 @@ def test_check_csm_performance_logs_false_when_threshold_not_met(monkeypatch, mo
     assert ok is False
 
 
-def test_csm_score_prefers_mainnet_and_circles_bonus(monkeypatch, mod):
+def test_csm_score_prefers_mainnet(monkeypatch, mod):
     # owners files
     (mod.current_dir / "node_operator_owners_hoodi.json").write_text('{"42": "0xabc"}')
     (mod.current_dir / "node_operator_owners_mainnet.json").write_text('{"42": "0xabc"}')
 
-    # make both reports eligible
+    # make mainnet report eligible
     validators = {"v1": {"perf": {"assigned": 10, "included": 10}}}
     data_ok = make_perf_data(threshold=0.9, validators=validators)
     monkeypatch.setattr(mod, "_request_performance_report", lambda _: data_ok)
 
-    # circles verified CSV lives in humanity dir relative to current_dir parent
-    humanity_dir = mod.current_dir.parent / "humanity"
-    humanity_dir.mkdir(parents=True, exist_ok=True)
-    (humanity_dir / "circle_group_members.csv").write_text("0xabc\n")
-
-    # When both eligible, csm_score returns mainnet score
+    # With testnet logic delegated and pending, overall score should use mainnet
     score = mod.csm_score({"0xabc"})
     assert score == mod.scores["csm-mainnet"]
 
 
-def test_csm_testnet_circles_bonus(monkeypatch, mod):
-    # Only testnet eligible
+def test_csm_testnet_reads_eligible_file_and_scores(mod):
+    # prepare owners mapping
     (mod.current_dir / "node_operator_owners_hoodi.json").write_text('{"42": "0xabc"}')
-    validators = {"v1": {"perf": {"assigned": 10, "included": 10}}}
-    data_ok = make_perf_data(threshold=0.9, validators=validators)
-    monkeypatch.setattr(mod, "_request_performance_report", lambda _: data_ok)
-    # humanity circles
+    # eligible operators file
+    (mod.current_dir / "eligible_node_operators_hoodi.json").write_text('["42"]')
+    score = mod._csm_testnet_score({"0xabc"})
+    assert score == mod.scores["csm-testnet"]
+
+
+def test_csm_testnet_reads_eligible_file_with_circles_bonus(mod):
+    (mod.current_dir / "node_operator_owners_hoodi.json").write_text('{"42": "0xabc"}')
+    (mod.current_dir / "eligible_node_operators_hoodi.json").write_text('["42"]')
     humanity_dir = mod.current_dir.parent / "humanity"
     humanity_dir.mkdir(parents=True, exist_ok=True)
     (humanity_dir / "circle_group_members.csv").write_text("0xabc\n")
