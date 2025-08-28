@@ -63,7 +63,6 @@ def collect_circles():
     circle_addresses = set()
     for event in events:
         trustee = event.args.trustee
-        circle_addresses.add(trustee)
         safe_contract = w3.eth.contract(address=trustee, abi=SAFE_ABI)
         trustee_owners = safe_contract.functions.getOwners().call()
         trustee_owners = filter(lambda x: x.lower() != DEFAULT_SAFE_OWNER.lower(), trustee_owners)
