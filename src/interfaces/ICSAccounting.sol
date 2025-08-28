@@ -183,6 +183,15 @@ interface ICSAccounting is
         bytes32[] calldata rewardsProof
     ) external view returns (uint256);
 
+    /// @notice Check if the bond reserve can be removed for the given Node Operator
+    /// @dev Bond reserve can be removed if a sufficient time has passed or if
+    ///      the Node Operator has no active or depositable keys
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Can the bond reserve be removed
+    function canRemoveBondReserve(
+        uint256 nodeOperatorId
+    ) external view returns (bool);
+
     /// @notice Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
     /// @dev Called by CSM exclusively. CSM should check node operator existence and update depositable validators count
     /// @param from Address to unwrap wstETH from

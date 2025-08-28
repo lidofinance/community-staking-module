@@ -539,6 +539,16 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
+    function canRemoveBondReserve(
+        uint256 nodeOperatorId
+    ) external view whenBondReserveIsEnabled returns (bool) {
+        IBondReserve.BondReserveInfo memory r = BondReserve.getBondReserveInfo(
+            nodeOperatorId
+        );
+        return _canRemoveBondReserve(nodeOperatorId, r);
+    }
+
+    /// @inheritdoc ICSAccounting
     function getBondSummary(
         uint256 nodeOperatorId
     ) public view returns (uint256 current, uint256 required) {
@@ -624,8 +634,13 @@ contract CSAccounting is
     }
 
     function _adjustBondReserve(uint256 nodeOperatorId) internal {
+        if (!BOND_RESERVE_IS_ENABLED) {
+            return;
+        }
         uint256 reserved = BondReserve.getReservedBond(nodeOperatorId);
-        if (reserved == 0) return;
+        if (reserved == 0) {
+            return;
+        }
         uint256 current = CSBondCore.getBond(nodeOperatorId);
         if (current < reserved) {
             /*
