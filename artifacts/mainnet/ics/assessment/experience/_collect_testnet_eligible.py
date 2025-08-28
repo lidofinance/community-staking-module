@@ -125,23 +125,24 @@ def evaluate_eligibility_window(
     min_days: int = 60,
 ) -> Set[str]:
     """
-    Determine operators that accumulate at least min_days of GOOD performance,
-    summing only durations of frames where the operator is present and GOOD.
+    Determine operators that accumulate at least min_days of GOOD performance
+    in total (cumulative), summing durations of frames where the operator is
+    present and GOOD. BAD frames do not break or reset the accumulation — they
+    simply contribute 0. EMPTY frames (operator absent or zero validators)
+    are tolerated and also contribute 0.
+
     Rules:
-    - GOOD frame: operator present and all relevant validators pass (v1/v2 rules).
-    - BAD frame: any validator fails -> reset the accumulated sum to 0.
-    - EMPTY frame: operator absent or has zero validators -> tolerated, but does
-      not contribute time; accumulation pauses and resumes when operator appears
-      again with GOOD performance. No reset on EMPTY.
-    Eligibility is achieved when the accumulated GOOD duration since the last
-    BAD frame reaches min_days.
+    - GOOD frame: operator present and all relevant validators pass (v1/v2 rules)
+      -> add frame duration to the cumulative sum.
+    - BAD frame: any validator fails -> add 0, do not reset.
+    - EMPTY frame: operator absent or has zero validators -> add 0, do not reset.
+
+    Eligibility is achieved when the cumulative sum of GOOD frame durations
+    reaches at least min_days.
     """
     if not reports:
         return set()
 
-    # Operators will be discovered via evaluator calls; tests mock evaluators
-    # so we iterate a synthetic set built from rep.get('status') when present,
-    # otherwise fallback to scanning 'operators' dicts.
     operator_ids: Set[str] = set()
     for _, rep in reports:
         status = rep.get("status") if isinstance(rep, dict) else None
@@ -163,20 +164,15 @@ def evaluate_eligibility_window(
                 status = operator_passes_in_report_v1(rep, op_id)
             else:
                 raise ValueError(f"Unknown report version: {meta.version}")
-            if status is False:
-                # Reset accumulation on BAD
-                good_sum_secs = 0
-                continue
 
-            if status is None:
-                # EMPTY: pause accumulation, do not add and do not reset
-                continue
-
-            # GOOD: accumulate this frame's duration
-            good_sum_secs += (meta.end_epoch - meta.start_epoch) * EPOCH_SECONDS
-            if good_sum_secs >= min_span_secs:
-                eligible.add(op_id)
-                break
+            if status:
+                # GOOD: accumulate this frame's duration
+                good_sum_secs += (meta.end_epoch - meta.start_epoch) * EPOCH_SECONDS
+                if good_sum_secs >= min_span_secs:
+                    eligible.add(op_id)
+                    break
+            # status is False (BAD) or None (EMPTY): contribute 0 and continue
+            continue
         else:
             # End of reports; check accumulated sum
             if good_sum_secs >= min_span_secs:

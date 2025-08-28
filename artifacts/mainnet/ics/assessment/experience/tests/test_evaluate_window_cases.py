@@ -49,31 +49,19 @@ def test_good_with_empties_meets_threshold(monkeypatch):
     assert "1" in eligible
 
 
-def test_bad_resets_then_meets(monkeypatch):
+def test_bad_does_not_reset_and_meets(monkeypatch):
     patch_status_monkey(monkeypatch)
     day_epochs = mod.SECONDS_PER_DAY // mod.EPOCH_SECONDS
-    # GOOD, GOOD, BAD, GOOD, GOOD, GOOD => meets on last three only
+    # With new cumulative policy: GOOD, GOOD, BAD, GOOD => 3 GOOD days total
     statuses = [
         {"1": True},
         {"1": True},
         {"1": False},
         {"1": True},
-        {"1": True},
-        {"1": True},
     ]
     reports = make_reports(day_epochs, statuses, version="v1")
     eligible = mod.evaluate_eligibility_window(reports, min_days=3)
     assert "1" in eligible
-
-
-def test_bad_resets_and_not_meet(monkeypatch):
-    patch_status_monkey(monkeypatch)
-    day_epochs = mod.SECONDS_PER_DAY // mod.EPOCH_SECONDS
-    # GOOD, BAD, GOOD => only 1 day after reset, not enough
-    statuses = [{"1": True}, {"1": False}, {"1": True}]
-    reports = make_reports(day_epochs, statuses, version="v1")
-    eligible = mod.evaluate_eligibility_window(reports, min_days=3)
-    assert "1" not in eligible
 
 
 def test_only_empty_never_meets(monkeypatch):
