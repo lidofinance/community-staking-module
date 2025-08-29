@@ -43,7 +43,8 @@ struct NodeOperatorManagementProperties {
 struct ValidatorWithdrawalInfo {
     uint256 nodeOperatorId; // @dev ID of the Node Operator
     uint256 keyIndex; // @dev Index of the withdrawn key in the Node Operator's keys storage
-    uint256 amount; // @dev Amount of withdrawn ETH in wei
+    uint256 exitBalance; // @dev FIXME: write a good explainer
+    uint256 slashingPenalty; // @dev Amount of ETH/stETH to penalise Node Operator due to slashing.
 }
 
 /// @title Lido's Community Staking Module interface
@@ -115,7 +116,8 @@ interface ICSModule is
     event WithdrawalSubmitted(
         uint256 indexed nodeOperatorId,
         uint256 keyIndex,
-        uint256 amount,
+        uint256 exitBalance,
+        uint256 slashingPenalty,
         bytes pubkey
     );
 
@@ -163,7 +165,9 @@ interface ICSModule is
 
     function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
 
-    function DEPOSIT_SIZE() external view returns (uint256);
+    function MIN_ACTIVATION_BALANCE() external view returns (uint256);
+
+    function PENALTY_QUOTIENT() external view returns (uint256);
 
     function LIDO_LOCATOR() external view returns (ILidoLocator);
 

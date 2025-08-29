@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.24;
 
-import { BeaconBlockHeader, Slot } from "../lib/Types.sol";
+import { BeaconBlockHeader, Slot, PendingConsolidation } from "../lib/Types.sol";
 import { GIndex } from "../lib/GIndex.sol";
 import { ICSModule } from "./ICSModule.sol";
 
@@ -17,9 +17,19 @@ interface ICSVerifier {
         GIndex gIFirstHistoricalSummaryCurr;
         GIndex gIFirstBlockRootInSummaryPrev;
         GIndex gIFirstBlockRootInSummaryCurr;
+        GIndex gIFirstBalancesNodePrev;
+        GIndex gIFirstBalancesNodeCurr;
+        GIndex gIFirstPendingConsolidationPrev;
+        GIndex gIFirstPendingConsolidationCurr;
     }
 
     struct ProvableBeaconBlockHeader {
+        BeaconBlockHeader header; // Header of a block which root is a root at rootsTimestamp.
+        uint64 rootsTimestamp; // To be passed to the EIP-4788 block roots contract.
+    }
+
+    // Want to rename from ProvableBeaconBlockHeader
+    struct RecentHeaderWitness {
         BeaconBlockHeader header; // Header of a block which root is a root at rootsTimestamp.
         uint64 rootsTimestamp; // To be passed to the EIP-4788 block roots contract.
     }
@@ -61,12 +71,38 @@ interface ICSVerifier {
         bytes32[] proof;
     }
 
+    struct ValidatorWitness {
+        uint64 index;
+        bytes32 withdrawalCredentials;
+        uint64 effectiveBalance;
+        // bool slashed;
+        uint64 activationEligibilityEpoch;
+        uint64 activationEpoch;
+        uint64 exitEpoch;
+        uint64 withdrawableEpoch;
+        bytes32[] proof;
+    }
+
+    struct BalanceWitness {
+        uint64 validatorIndex;
+        bytes32 node;
+        bytes32[] proof;
+    }
+
+    struct PendingConsolidationWitness {
+        PendingConsolidation consolidation;
+        uint64 offset; // in the list of pending consolidations
+        bytes32[] proof;
+    }
+
     error RootNotFound();
     error InvalidBlockHeader();
     error InvalidChainConfig();
     error PartialWithdrawal();
+    error ValidatorIsSlashed();
     error ValidatorNotWithdrawn();
     error InvalidWithdrawalAddress();
+    error InvalidConsolidationSource();
     error UnsupportedSlot(Slot slot);
     error ZeroModuleAddress();
     error ZeroWithdrawalAddress();

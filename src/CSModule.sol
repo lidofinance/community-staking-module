@@ -47,7 +47,8 @@ contract CSModule is
     bytes32 public constant CREATE_NODE_OPERATOR_ROLE =
         keccak256("CREATE_NODE_OPERATOR_ROLE");
 
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
+    uint256 public constant MIN_ACTIVATION_BALANCE = 32 ether;
+    uint256 public constant PENALTY_QUOTIENT = 32 ether;
     // @dev see IStakingModule.sol
     uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
     // keccak256(abi.encode(uint256(keccak256("OPERATORS_CREATED_IN_TX_MAP_TSLOT")) - 1)) & ~bytes32(uint256(0xff))
@@ -761,29 +762,40 @@ contract CSModule is
                 1
             );
 
+            // solhint-disable-next-line func-named-parameters
             emit WithdrawalSubmitted(
                 withdrawalInfo.nodeOperatorId,
                 withdrawalInfo.keyIndex,
-                withdrawalInfo.amount,
+                withdrawalInfo.exitBalance,
+                withdrawalInfo.slashingPenalty,
                 pubkey
             );
             anySubmission = true;
 
             // It is safe to use unchecked for penalty sum because it's limited to uint248 in the structure.
             uint256 penaltySum;
+            uint256 penaltyMultiplier = Math.ceilDiv(
+                withdrawalInfo.exitBalance,
+                PENALTY_QUOTIENT
+            ); // XXX: 0 if exitBalance is 0
+            // XXX: Limit to 64 to because of MAX_EFFECTIVE_BALANCE?
             bool chargeWithdrawalRequestFee;
 
             ExitPenaltyInfo memory exitPenaltyInfo = EXIT_PENALTIES
                 .getExitPenaltyInfo(withdrawalInfo.nodeOperatorId, pubkey);
             if (exitPenaltyInfo.delayPenalty.isValue) {
                 unchecked {
-                    penaltySum += exitPenaltyInfo.delayPenalty.value;
+                    penaltySum +=
+                        exitPenaltyInfo.delayPenalty.value *
+                        penaltyMultiplier;
                 }
                 chargeWithdrawalRequestFee = true;
             }
             if (exitPenaltyInfo.strikesPenalty.isValue) {
                 unchecked {
-                    penaltySum += exitPenaltyInfo.strikesPenalty.value;
+                    penaltySum +=
+                        exitPenaltyInfo.strikesPenalty.value *
+                        penaltyMultiplier;
                 }
                 chargeWithdrawalRequestFee = true;
             }
@@ -800,15 +812,21 @@ contract CSModule is
             ) {
                 _accounting.chargeFee(
                     withdrawalInfo.nodeOperatorId,
-                    exitPenaltyInfo.withdrawalRequestFee.value
+                    exitPenaltyInfo.withdrawalRequestFee.value *
+                        penaltyMultiplier
                 );
             }
 
-            if (DEPOSIT_SIZE > withdrawalInfo.amount) {
+            if (withdrawalInfo.slashingPenalty > 0) {
+                penaltySum += withdrawalInfo.slashingPenalty;
+            } else if (MIN_ACTIVATION_BALANCE > withdrawalInfo.exitBalance) {
                 unchecked {
-                    penaltySum += DEPOSIT_SIZE - withdrawalInfo.amount;
+                    penaltySum +=
+                        MIN_ACTIVATION_BALANCE -
+                        withdrawalInfo.exitBalance;
                 }
             }
+
             if (penaltySum > 0) {
                 _accounting.penalize(withdrawalInfo.nodeOperatorId, penaltySum);
             }

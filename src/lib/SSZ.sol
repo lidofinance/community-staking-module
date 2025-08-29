@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.24;
 
-import { BeaconBlockHeader, Withdrawal, Validator } from "./Types.sol";
+import { BeaconBlockHeader, Withdrawal, Validator, PendingConsolidation } from "./Types.sol";
 import { GIndex } from "./GIndex.sol";
 
 library SSZ {
@@ -267,6 +267,18 @@ library SSZ {
                             toLittleEndian(withdrawal.amount)
                         )
                     )
+                )
+            );
+    }
+
+    function hashTreeRoot(
+        PendingConsolidation memory consolidation
+    ) internal pure returns (bytes32) {
+        return
+            sha256(
+                bytes.concat(
+                    toLittleEndian(consolidation.sourceIndex),
+                    toLittleEndian(consolidation.targetIndex)
                 )
             );
     }
