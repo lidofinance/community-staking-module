@@ -239,7 +239,11 @@ abstract contract DeployImplementationsBase is DeployBase {
                     gIFirstHistoricalSummaryPrev: config.gIFirstHistoricalSummary,
                     gIFirstHistoricalSummaryCurr: config.gIFirstHistoricalSummary,
                     gIFirstBlockRootInSummaryPrev: config.gIFirstBlockRootInSummary,
-                    gIFirstBlockRootInSummaryCurr: config.gIFirstBlockRootInSummary
+                    gIFirstBlockRootInSummaryCurr: config.gIFirstBlockRootInSummary,
+                    gIFirstBalancesNodePrev: config.gIFirstBalancesNode,
+                    gIFirstBalancesNodeCurr: config.gIFirstBalancesNode,
+                    gIFirstPendingConsolidationPrev: config.gIFirstPendingConsolidation,
+                    gIFirstPendingConsolidationCurr: config.gIFirstPendingConsolidation
                 }),
                 firstSupportedSlot: Slot.wrap(uint64(config.verifierFirstSupportedSlot)),
                 pivotSlot: Slot.wrap(uint64(config.verifierFirstSupportedSlot)),
