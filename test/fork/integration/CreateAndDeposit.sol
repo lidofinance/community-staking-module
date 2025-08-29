@@ -22,6 +22,10 @@ import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 import { MerkleTree } from "../../helpers/MerkleTree.sol";
 
+// TODO: Re-enable tests below after v2 upgrade.
+//       Currently tests perform `v1 -> v3` upgrade and `finalizeUpgradeV3` doesn't contain bond curves setting
+//       The curves will be set during the v2 upgrade.
+
 contract IntegrationTestBase is
     Test,
     Utilities,
@@ -42,9 +46,9 @@ contract IntegrationTestBase is
         _;
         vm.pauseGasMetering();
         uint256 noCount = csm.getNodeOperatorsCount();
-        assertCSMKeys(csm);
-        assertCSMEnqueuedCount(csm);
-        assertCSMUnusedStorageSlots(csm);
+        assertModuleKeys(csm);
+        assertModuleEnqueuedCount(csm);
+        assertModuleUnusedStorageSlots(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
@@ -245,361 +249,361 @@ contract PermissionlessCreateNodeOperator10KeysTest is
     }
 }
 
-contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
-    uint256 internal immutable keysCount;
+// contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
+//     uint256 internal immutable keysCount;
 
-    constructor() {
-        keysCount = 1;
-    }
+//     constructor() {
+//         keysCount = 1;
+//     }
 
-    function test_createNodeOperatorETH() public assertInvariants {
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 amount = accounting.getBondAmountByKeysCount(
-            keysCount,
-            vettedGate.curveId()
-        );
-        vm.deal(nodeOperator, amount);
+//     function test_createNodeOperatorETH() public assertInvariants {
+//         (bytes memory keys, bytes memory signatures) = keysSignatures(
+//             keysCount
+//         );
+//         uint256 amount = accounting.getBondAmountByKeysCount(
+//             keysCount,
+//             vettedGate.curveId()
+//         );
+//         vm.deal(nodeOperator, amount);
 
-        uint256 preTotalShares = accounting.totalBondShares();
+//         uint256 preTotalShares = accounting.totalBondShares();
 
-        uint256 shares = lido.getSharesByPooledEth(amount);
+//         uint256 shares = lido.getSharesByPooledEth(amount);
 
-        vm.startPrank(nodeOperator);
-        vm.startSnapshotGas("VettedGate.addNodeOperatorETH");
-        uint256 noId = vettedGate.addNodeOperatorETH{ value: amount }({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof: merkleTree.getProof(0),
-            referrer: address(0)
-        });
-        vm.stopSnapshotGas();
-        vm.stopPrank();
+//         vm.startPrank(nodeOperator);
+//         vm.startSnapshotGas("VettedGate.addNodeOperatorETH");
+//         uint256 noId = vettedGate.addNodeOperatorETH{ value: amount }({
+//             keysCount: keysCount,
+//             publicKeys: keys,
+//             signatures: signatures,
+//             managementProperties: NodeOperatorManagementProperties({
+//                 managerAddress: address(0),
+//                 rewardAddress: address(0),
+//                 extendedManagerPermissions: false
+//             }),
+//             proof: merkleTree.getProof(0),
+//             referrer: address(0)
+//         });
+//         vm.stopSnapshotGas();
+//         vm.stopPrank();
 
-        assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
-        assertEq(accounting.getBondShares(noId), shares);
-        assertEq(accounting.totalBondShares(), shares + preTotalShares);
-        assertTrue(vettedGate.isConsumed(nodeOperator));
-    }
+//         assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
+//         assertEq(accounting.getBondShares(noId), shares);
+//         assertEq(accounting.totalBondShares(), shares + preTotalShares);
+//         assertTrue(vettedGate.isConsumed(nodeOperator));
+//     }
 
-    function test_createNodeOperatorETH_revertWhen_InvalidProof()
-        public
-        assertInvariants
-    {
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 amount = accounting.getBondAmountByKeysCount(
-            keysCount,
-            vettedGate.curveId()
-        );
-        vm.deal(nodeOperator, amount);
+//     function test_createNodeOperatorETH_revertWhen_InvalidProof()
+//         public
+//         assertInvariants
+//     {
+//         (bytes memory keys, bytes memory signatures) = keysSignatures(
+//             keysCount
+//         );
+//         uint256 amount = accounting.getBondAmountByKeysCount(
+//             keysCount,
+//             vettedGate.curveId()
+//         );
+//         vm.deal(nodeOperator, amount);
 
-        uint256 preTotalShares = accounting.totalBondShares();
+//         uint256 preTotalShares = accounting.totalBondShares();
 
-        bytes32[] memory proof = merkleTree.getProof(1);
+//         bytes32[] memory proof = merkleTree.getProof(1);
 
-        vm.expectRevert(IVettedGate.InvalidProof.selector);
-        vm.prank(nodeOperator);
-        vettedGate.addNodeOperatorETH{ value: amount }({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof: proof,
-            referrer: address(0)
-        });
+//         vm.expectRevert(IVettedGate.InvalidProof.selector);
+//         vm.prank(nodeOperator);
+//         vettedGate.addNodeOperatorETH{ value: amount }({
+//             keysCount: keysCount,
+//             publicKeys: keys,
+//             signatures: signatures,
+//             managementProperties: NodeOperatorManagementProperties({
+//                 managerAddress: address(0),
+//                 rewardAddress: address(0),
+//                 extendedManagerPermissions: false
+//             }),
+//             proof: proof,
+//             referrer: address(0)
+//         });
 
-        assertEq(accounting.totalBondShares(), preTotalShares);
-        assertFalse(vettedGate.isConsumed(nodeOperator));
-    }
+//         assertEq(accounting.totalBondShares(), preTotalShares);
+//         assertFalse(vettedGate.isConsumed(nodeOperator));
+//     }
 
-    function test_createNodeOperatorStETH() public assertInvariants {
-        vm.startPrank(nodeOperator);
-        vm.deal(nodeOperator, 32 ether);
-        lido.submit{ value: 32 ether }(address(0));
+//     function test_createNodeOperatorStETH() public assertInvariants {
+//         vm.startPrank(nodeOperator);
+//         vm.deal(nodeOperator, 32 ether);
+//         lido.submit{ value: 32 ether }(address(0));
 
-        uint256 preTotalShares = accounting.totalBondShares();
+//         uint256 preTotalShares = accounting.totalBondShares();
 
-        lido.approve(address(accounting), type(uint256).max);
+//         lido.approve(address(accounting), type(uint256).max);
 
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
+//         (bytes memory keys, bytes memory signatures) = keysSignatures(
+//             keysCount
+//         );
 
-        uint256 shares = lido.getSharesByPooledEth(
-            accounting.getBondAmountByKeysCount(keysCount, vettedGate.curveId())
-        );
-        vm.startSnapshotGas("VettedGate.addNodeOperatorStETH");
-        uint256 noId = vettedGate.addNodeOperatorStETH({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            permit: ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            proof: merkleTree.getProof(0),
-            referrer: address(0)
-        });
-        vm.stopSnapshotGas();
-        vm.stopPrank();
+//         uint256 shares = lido.getSharesByPooledEth(
+//             accounting.getBondAmountByKeysCount(keysCount, vettedGate.curveId())
+//         );
+//         vm.startSnapshotGas("VettedGate.addNodeOperatorStETH");
+//         uint256 noId = vettedGate.addNodeOperatorStETH({
+//             keysCount: keysCount,
+//             publicKeys: keys,
+//             signatures: signatures,
+//             managementProperties: NodeOperatorManagementProperties({
+//                 managerAddress: address(0),
+//                 rewardAddress: address(0),
+//                 extendedManagerPermissions: false
+//             }),
+//             permit: ICSAccounting.PermitInput({
+//                 value: 0,
+//                 deadline: 0,
+//                 v: 0,
+//                 r: 0,
+//                 s: 0
+//             }),
+//             proof: merkleTree.getProof(0),
+//             referrer: address(0)
+//         });
+//         vm.stopSnapshotGas();
+//         vm.stopPrank();
 
-        assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
-        assertEq(accounting.getBondShares(noId), shares);
-        assertEq(accounting.totalBondShares(), shares + preTotalShares);
-        assertTrue(vettedGate.isConsumed(nodeOperator));
-    }
+//         assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
+//         assertEq(accounting.getBondShares(noId), shares);
+//         assertEq(accounting.totalBondShares(), shares + preTotalShares);
+//         assertTrue(vettedGate.isConsumed(nodeOperator));
+//     }
 
-    function test_createNodeOperatorStETH_revertWhen_InvalidProof()
-        public
-        assertInvariants
-    {
-        vm.startPrank(nodeOperator);
-        vm.deal(nodeOperator, 32 ether);
-        lido.submit{ value: 32 ether }(address(0));
+//     function test_createNodeOperatorStETH_revertWhen_InvalidProof()
+//         public
+//         assertInvariants
+//     {
+//         vm.startPrank(nodeOperator);
+//         vm.deal(nodeOperator, 32 ether);
+//         lido.submit{ value: 32 ether }(address(0));
 
-        uint256 preTotalShares = accounting.totalBondShares();
+//         uint256 preTotalShares = accounting.totalBondShares();
 
-        lido.approve(address(accounting), type(uint256).max);
+//         lido.approve(address(accounting), type(uint256).max);
 
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
+//         (bytes memory keys, bytes memory signatures) = keysSignatures(
+//             keysCount
+//         );
 
-        bytes32[] memory proof = merkleTree.getProof(1);
+//         bytes32[] memory proof = merkleTree.getProof(1);
 
-        vm.expectRevert(IVettedGate.InvalidProof.selector);
-        vettedGate.addNodeOperatorStETH({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            permit: ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            proof: proof,
-            referrer: address(0)
-        });
-        vm.stopPrank();
+//         vm.expectRevert(IVettedGate.InvalidProof.selector);
+//         vettedGate.addNodeOperatorStETH({
+//             keysCount: keysCount,
+//             publicKeys: keys,
+//             signatures: signatures,
+//             managementProperties: NodeOperatorManagementProperties({
+//                 managerAddress: address(0),
+//                 rewardAddress: address(0),
+//                 extendedManagerPermissions: false
+//             }),
+//             permit: ICSAccounting.PermitInput({
+//                 value: 0,
+//                 deadline: 0,
+//                 v: 0,
+//                 r: 0,
+//                 s: 0
+//             }),
+//             proof: proof,
+//             referrer: address(0)
+//         });
+//         vm.stopPrank();
 
-        assertEq(accounting.totalBondShares(), preTotalShares);
-        assertFalse(vettedGate.isConsumed(nodeOperator));
-    }
+//         assertEq(accounting.totalBondShares(), preTotalShares);
+//         assertFalse(vettedGate.isConsumed(nodeOperator));
+//     }
 
-    function test_createNodeOperatorWstETH() public assertInvariants {
-        vm.startPrank(nodeOperator);
-        vm.deal(nodeOperator, 32 ether);
-        lido.submit{ value: 32 ether }(address(0));
-        lido.approve(address(wstETH), type(uint256).max);
-        uint256 preTotalShares = accounting.totalBondShares();
-        wstETH.approve(address(accounting), type(uint256).max);
+//     function test_createNodeOperatorWstETH() public assertInvariants {
+//         vm.startPrank(nodeOperator);
+//         vm.deal(nodeOperator, 32 ether);
+//         lido.submit{ value: 32 ether }(address(0));
+//         lido.approve(address(wstETH), type(uint256).max);
+//         uint256 preTotalShares = accounting.totalBondShares();
+//         wstETH.approve(address(accounting), type(uint256).max);
 
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 wstETHAmount = wstETH.wrap(
-            accounting.getBondAmountByKeysCount(keysCount, vettedGate.curveId())
-        );
+//         (bytes memory keys, bytes memory signatures) = keysSignatures(
+//             keysCount
+//         );
+//         uint256 wstETHAmount = wstETH.wrap(
+//             accounting.getBondAmountByKeysCount(keysCount, vettedGate.curveId())
+//         );
 
-        uint256 shares = lido.getSharesByPooledEth(
-            wstETH.getStETHByWstETH(wstETHAmount)
-        );
+//         uint256 shares = lido.getSharesByPooledEth(
+//             wstETH.getStETHByWstETH(wstETHAmount)
+//         );
 
-        vm.startSnapshotGas("VettedGate.addNodeOperatorWstETH");
-        uint256 noId = vettedGate.addNodeOperatorWstETH({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            permit: ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            proof: merkleTree.getProof(0),
-            referrer: address(0)
-        });
-        vm.stopSnapshotGas();
-        vm.stopPrank();
+//         vm.startSnapshotGas("VettedGate.addNodeOperatorWstETH");
+//         uint256 noId = vettedGate.addNodeOperatorWstETH({
+//             keysCount: keysCount,
+//             publicKeys: keys,
+//             signatures: signatures,
+//             managementProperties: NodeOperatorManagementProperties({
+//                 managerAddress: address(0),
+//                 rewardAddress: address(0),
+//                 extendedManagerPermissions: false
+//             }),
+//             permit: ICSAccounting.PermitInput({
+//                 value: 0,
+//                 deadline: 0,
+//                 v: 0,
+//                 r: 0,
+//                 s: 0
+//             }),
+//             proof: merkleTree.getProof(0),
+//             referrer: address(0)
+//         });
+//         vm.stopSnapshotGas();
+//         vm.stopPrank();
 
-        assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
-        assertEq(accounting.getBondShares(noId), shares);
-        assertEq(accounting.totalBondShares(), shares + preTotalShares);
-        assertTrue(vettedGate.isConsumed(nodeOperator));
-    }
+//         assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
+//         assertEq(accounting.getBondShares(noId), shares);
+//         assertEq(accounting.totalBondShares(), shares + preTotalShares);
+//         assertTrue(vettedGate.isConsumed(nodeOperator));
+//     }
 
-    function test_createNodeOperatorWstETH_revertWhen_InvalidProof()
-        public
-        assertInvariants
-    {
-        vm.startPrank(nodeOperator);
-        vm.deal(nodeOperator, 32 ether);
-        lido.submit{ value: 32 ether }(address(0));
-        lido.approve(address(wstETH), type(uint256).max);
-        uint256 preTotalShares = accounting.totalBondShares();
-        wstETH.approve(address(accounting), type(uint256).max);
+//     function test_createNodeOperatorWstETH_revertWhen_InvalidProof()
+//         public
+//         assertInvariants
+//     {
+//         vm.startPrank(nodeOperator);
+//         vm.deal(nodeOperator, 32 ether);
+//         lido.submit{ value: 32 ether }(address(0));
+//         lido.approve(address(wstETH), type(uint256).max);
+//         uint256 preTotalShares = accounting.totalBondShares();
+//         wstETH.approve(address(accounting), type(uint256).max);
 
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
+//         (bytes memory keys, bytes memory signatures) = keysSignatures(
+//             keysCount
+//         );
 
-        bytes32[] memory proof = merkleTree.getProof(1);
+//         bytes32[] memory proof = merkleTree.getProof(1);
 
-        vm.expectRevert(IVettedGate.InvalidProof.selector);
-        vettedGate.addNodeOperatorWstETH({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            permit: ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            }),
-            proof: proof,
-            referrer: address(0)
-        });
-        vm.stopPrank();
+//         vm.expectRevert(IVettedGate.InvalidProof.selector);
+//         vettedGate.addNodeOperatorWstETH({
+//             keysCount: keysCount,
+//             publicKeys: keys,
+//             signatures: signatures,
+//             managementProperties: NodeOperatorManagementProperties({
+//                 managerAddress: address(0),
+//                 rewardAddress: address(0),
+//                 extendedManagerPermissions: false
+//             }),
+//             permit: ICSAccounting.PermitInput({
+//                 value: 0,
+//                 deadline: 0,
+//                 v: 0,
+//                 r: 0,
+//                 s: 0
+//             }),
+//             proof: proof,
+//             referrer: address(0)
+//         });
+//         vm.stopPrank();
 
-        assertEq(accounting.totalBondShares(), preTotalShares);
-        assertFalse(vettedGate.isConsumed(nodeOperator));
-    }
-}
+//         assertEq(accounting.totalBondShares(), preTotalShares);
+//         assertFalse(vettedGate.isConsumed(nodeOperator));
+//     }
+// }
 
-contract VettedGateCreateNodeOperator10KeysTest is
-    VettedGateCreateNodeOperatorTest
-{
-    constructor() {
-        keysCount = 10;
-    }
-}
+// contract VettedGateCreateNodeOperator10KeysTest is
+//     VettedGateCreateNodeOperatorTest
+// {
+//     constructor() {
+//         keysCount = 10;
+//     }
+// }
 
 contract VettedGateMiscTest is IntegrationTestBase {
     uint256 internal constant keysCount = 2;
 
-    function test_claimBondCurve() public assertInvariants {
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 amount = accounting.getBondAmountByKeysCount(
-            keysCount,
-            permissionlessGate.CURVE_ID()
-        );
-        vm.deal(nodeOperator, amount);
+    // function test_claimBondCurve() public assertInvariants {
+    //     (bytes memory keys, bytes memory signatures) = keysSignatures(
+    //         keysCount
+    //     );
+    //     uint256 amount = accounting.getBondAmountByKeysCount(
+    //         keysCount,
+    //         permissionlessGate.CURVE_ID()
+    //     );
+    //     vm.deal(nodeOperator, amount);
 
-        vm.prank(nodeOperator);
-        uint256 noId = permissionlessGate.addNodeOperatorETH{ value: amount }({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            referrer: address(0)
-        });
+    //     vm.prank(nodeOperator);
+    //     uint256 noId = permissionlessGate.addNodeOperatorETH{ value: amount }({
+    //         keysCount: keysCount,
+    //         publicKeys: keys,
+    //         signatures: signatures,
+    //         managementProperties: NodeOperatorManagementProperties({
+    //             managerAddress: address(0),
+    //             rewardAddress: address(0),
+    //             extendedManagerPermissions: false
+    //         }),
+    //         referrer: address(0)
+    //     });
 
-        assertEq(
-            accounting.getBondCurveId(noId),
-            permissionlessGate.CURVE_ID()
-        );
-        vm.startPrank(nodeOperator);
-        vm.startSnapshotGas("VettedGate.claimBondCurve");
-        vettedGate.claimBondCurve(noId, merkleTree.getProof(0));
-        vm.stopSnapshotGas();
-        vm.stopPrank();
+    //     assertEq(
+    //         accounting.getBondCurveId(noId),
+    //         permissionlessGate.CURVE_ID()
+    //     );
+    //     vm.startPrank(nodeOperator);
+    //     vm.startSnapshotGas("VettedGate.claimBondCurve");
+    //     vettedGate.claimBondCurve(noId, merkleTree.getProof(0));
+    //     vm.stopSnapshotGas();
+    //     vm.stopPrank();
 
-        assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
-        assertTrue(accounting.getClaimableBondShares(noId) > 0);
-        assertTrue(vettedGate.isConsumed(nodeOperator));
-    }
+    //     assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
+    //     assertTrue(accounting.getClaimableBondShares(noId) > 0);
+    //     assertTrue(vettedGate.isConsumed(nodeOperator));
+    // }
 
-    function test_claimBondCurve_revertWhenInvalidProof()
-        public
-        assertInvariants
-    {
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 amount = accounting.getBondAmountByKeysCount(
-            keysCount,
-            permissionlessGate.CURVE_ID()
-        );
-        vm.deal(nodeOperator, amount);
+    // function test_claimBondCurve_revertWhenInvalidProof()
+    //     public
+    //     assertInvariants
+    // {
+    //     (bytes memory keys, bytes memory signatures) = keysSignatures(
+    //         keysCount
+    //     );
+    //     uint256 amount = accounting.getBondAmountByKeysCount(
+    //         keysCount,
+    //         permissionlessGate.CURVE_ID()
+    //     );
+    //     vm.deal(nodeOperator, amount);
 
-        vm.prank(nodeOperator);
-        uint256 noId = permissionlessGate.addNodeOperatorETH{ value: amount }({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            referrer: address(0)
-        });
+    //     vm.prank(nodeOperator);
+    //     uint256 noId = permissionlessGate.addNodeOperatorETH{ value: amount }({
+    //         keysCount: keysCount,
+    //         publicKeys: keys,
+    //         signatures: signatures,
+    //         managementProperties: NodeOperatorManagementProperties({
+    //             managerAddress: address(0),
+    //             rewardAddress: address(0),
+    //             extendedManagerPermissions: false
+    //         }),
+    //         referrer: address(0)
+    //     });
 
-        assertEq(
-            accounting.getBondCurveId(noId),
-            permissionlessGate.CURVE_ID()
-        );
+    //     assertEq(
+    //         accounting.getBondCurveId(noId),
+    //         permissionlessGate.CURVE_ID()
+    //     );
 
-        bytes32[] memory proof = merkleTree.getProof(1);
+    //     bytes32[] memory proof = merkleTree.getProof(1);
 
-        vm.expectRevert(IVettedGate.InvalidProof.selector);
-        vm.startPrank(nodeOperator);
-        vettedGate.claimBondCurve(noId, proof);
-        vm.stopPrank();
+    //     vm.expectRevert(IVettedGate.InvalidProof.selector);
+    //     vm.startPrank(nodeOperator);
+    //     vettedGate.claimBondCurve(noId, proof);
+    //     vm.stopPrank();
 
-        assertEq(
-            accounting.getBondCurveId(noId),
-            accounting.DEFAULT_BOND_CURVE_ID()
-        );
-        assertEq(accounting.getClaimableBondShares(noId), 0);
-        assertFalse(vettedGate.isConsumed(nodeOperator));
-    }
+    //     assertEq(
+    //         accounting.getBondCurveId(noId),
+    //         accounting.DEFAULT_BOND_CURVE_ID()
+    //     );
+    //     assertEq(accounting.getClaimableBondShares(noId), 0);
+    //     assertFalse(vettedGate.isConsumed(nodeOperator));
+    // }
 
     function test_setTreeParams() public {
         merkleTree = new MerkleTree();
@@ -615,237 +619,237 @@ contract VettedGateMiscTest is IntegrationTestBase {
         assertEq(vettedGate.treeCid(), cid);
     }
 
-    function test_referralSeason() public assertInvariants {
-        // Create a new node operator
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 amount = accounting.getBondAmountByKeysCount(
-            keysCount,
-            vettedGate.curveId()
-        );
-        vm.deal(nodeOperator, amount);
+    // function test_referralSeason() public assertInvariants {
+    //     // Create a new node operator
+    //     (bytes memory keys, bytes memory signatures) = keysSignatures(
+    //         keysCount
+    //     );
+    //     uint256 amount = accounting.getBondAmountByKeysCount(
+    //         keysCount,
+    //         vettedGate.curveId()
+    //     );
+    //     vm.deal(nodeOperator, amount);
 
-        uint256 shares = lido.getSharesByPooledEth(amount);
+    //     uint256 shares = lido.getSharesByPooledEth(amount);
 
-        vm.startPrank(nodeOperator);
-        vm.startSnapshotGas("VettedGate.addNodeOperatorETH");
-        uint256 firstNoId = vettedGate.addNodeOperatorETH{ value: amount }({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof: merkleTree.getProof(0),
-            referrer: address(0)
-        });
-        vm.stopSnapshotGas();
-        vm.stopPrank();
+    //     vm.startPrank(nodeOperator);
+    //     vm.startSnapshotGas("VettedGate.addNodeOperatorETH");
+    //     uint256 firstNoId = vettedGate.addNodeOperatorETH{ value: amount }({
+    //         keysCount: keysCount,
+    //         publicKeys: keys,
+    //         signatures: signatures,
+    //         managementProperties: NodeOperatorManagementProperties({
+    //             managerAddress: address(0),
+    //             rewardAddress: address(0),
+    //             extendedManagerPermissions: false
+    //         }),
+    //         proof: merkleTree.getProof(0),
+    //         referrer: address(0)
+    //     });
+    //     vm.stopSnapshotGas();
+    //     vm.stopPrank();
 
-        // Start a new referral season
-        ICSBondCurve.BondCurveIntervalInput[]
-            memory referralBondCurve = new ICSBondCurve.BondCurveIntervalInput[](
-                2
-            );
-        referralBondCurve[0] = ICSBondCurve.BondCurveIntervalInput({
-            minKeysCount: 1,
-            trend: 1.2 ether
-        });
-        referralBondCurve[1] = ICSBondCurve.BondCurveIntervalInput({
-            minKeysCount: 2,
-            trend: 1 ether
-        });
+    //     // Start a new referral season
+    //     ICSBondCurve.BondCurveIntervalInput[]
+    //         memory referralBondCurve = new ICSBondCurve.BondCurveIntervalInput[](
+    //             2
+    //         );
+    //     referralBondCurve[0] = ICSBondCurve.BondCurveIntervalInput({
+    //         minKeysCount: 1,
+    //         trend: 1.2 ether
+    //     });
+    //     referralBondCurve[1] = ICSBondCurve.BondCurveIntervalInput({
+    //         minKeysCount: 2,
+    //         trend: 1 ether
+    //     });
 
-        vm.startPrank(
-            accounting.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
-        );
-        accounting.grantRole(
-            accounting.MANAGE_BOND_CURVES_ROLE(),
-            address(this)
-        );
-        vm.stopPrank();
+    //     vm.startPrank(
+    //         accounting.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
+    //     );
+    //     accounting.grantRole(
+    //         accounting.MANAGE_BOND_CURVES_ROLE(),
+    //         address(this)
+    //     );
+    //     vm.stopPrank();
 
-        uint256 referralBondCurveId = accounting.addBondCurve(
-            referralBondCurve
-        );
+    //     uint256 referralBondCurveId = accounting.addBondCurve(
+    //         referralBondCurve
+    //     );
 
-        vm.startPrank(
-            vettedGate.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
-        );
-        vettedGate.grantRole(
-            vettedGate.START_REFERRAL_SEASON_ROLE(),
-            address(this)
-        );
-        vm.stopPrank();
+    //     vm.startPrank(
+    //         vettedGate.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
+    //     );
+    //     vettedGate.grantRole(
+    //         vettedGate.START_REFERRAL_SEASON_ROLE(),
+    //         address(this)
+    //     );
+    //     vm.stopPrank();
 
-        vettedGate.startNewReferralProgramSeason(referralBondCurveId, 1);
+    //     vettedGate.startNewReferralProgramSeason(referralBondCurveId, 1);
 
-        // Create a new node operator with a referrer pointing to the first one
-        (keys, signatures) = keysSignatures(keysCount);
-        amount = accounting.getBondAmountByKeysCount(
-            keysCount,
-            vettedGate.curveId()
-        );
-        vm.deal(anotherNodeOperator, amount);
+    //     // Create a new node operator with a referrer pointing to the first one
+    //     (keys, signatures) = keysSignatures(keysCount);
+    //     amount = accounting.getBondAmountByKeysCount(
+    //         keysCount,
+    //         vettedGate.curveId()
+    //     );
+    //     vm.deal(anotherNodeOperator, amount);
 
-        shares = lido.getSharesByPooledEth(amount);
+    //     shares = lido.getSharesByPooledEth(amount);
 
-        vm.startPrank(anotherNodeOperator);
-        vm.startSnapshotGas("VettedGate.addNodeOperatorETH");
-        vettedGate.addNodeOperatorETH{ value: amount }({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof: merkleTree.getProof(1),
-            referrer: nodeOperator
-        });
-        vm.stopSnapshotGas();
-        vm.stopPrank();
+    //     vm.startPrank(anotherNodeOperator);
+    //     vm.startSnapshotGas("VettedGate.addNodeOperatorETH");
+    //     vettedGate.addNodeOperatorETH{ value: amount }({
+    //         keysCount: keysCount,
+    //         publicKeys: keys,
+    //         signatures: signatures,
+    //         managementProperties: NodeOperatorManagementProperties({
+    //             managerAddress: address(0),
+    //             rewardAddress: address(0),
+    //             extendedManagerPermissions: false
+    //         }),
+    //         proof: merkleTree.getProof(1),
+    //         referrer: nodeOperator
+    //     });
+    //     vm.stopSnapshotGas();
+    //     vm.stopPrank();
 
-        assertEq(vettedGate.getReferralsCount(nodeOperator), 1);
+    //     assertEq(vettedGate.getReferralsCount(nodeOperator), 1);
 
-        // Claim the referral bond curve
-        bytes32[] memory proof = merkleTree.getProof(0);
+    //     // Claim the referral bond curve
+    //     bytes32[] memory proof = merkleTree.getProof(0);
 
-        vm.prank(nodeOperator);
-        vm.startSnapshotGas("VettedGate.claimReferrerBondCurve");
-        vettedGate.claimReferrerBondCurve(firstNoId, proof);
-        vm.stopSnapshotGas();
+    //     vm.prank(nodeOperator);
+    //     vm.startSnapshotGas("VettedGate.claimReferrerBondCurve");
+    //     vettedGate.claimReferrerBondCurve(firstNoId, proof);
+    //     vm.stopSnapshotGas();
 
-        assertEq(accounting.getBondCurveId(firstNoId), referralBondCurveId);
-        assertTrue(accounting.getClaimableBondShares(firstNoId) > 0);
-        assertTrue(vettedGate.isReferrerConsumed(nodeOperator));
+    //     assertEq(accounting.getBondCurveId(firstNoId), referralBondCurveId);
+    //     assertTrue(accounting.getClaimableBondShares(firstNoId) > 0);
+    //     assertTrue(vettedGate.isReferrerConsumed(nodeOperator));
 
-        // Attempt to claim the referral bond curve again
-        vm.expectRevert(IVettedGate.AlreadyConsumed.selector);
-        vm.prank(nodeOperator);
-        vettedGate.claimReferrerBondCurve(firstNoId, proof);
-    }
+    //     // Attempt to claim the referral bond curve again
+    //     vm.expectRevert(IVettedGate.AlreadyConsumed.selector);
+    //     vm.prank(nodeOperator);
+    //     vettedGate.claimReferrerBondCurve(firstNoId, proof);
+    // }
 
-    function test_referralSeason_noClaimsAfterEnd() public assertInvariants {
-        // Create a new node operator
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 amount = accounting.getBondAmountByKeysCount(
-            keysCount,
-            vettedGate.curveId()
-        );
-        vm.deal(nodeOperator, amount);
+    // function test_referralSeason_noClaimsAfterEnd() public assertInvariants {
+    //     // Create a new node operator
+    //     (bytes memory keys, bytes memory signatures) = keysSignatures(
+    //         keysCount
+    //     );
+    //     uint256 amount = accounting.getBondAmountByKeysCount(
+    //         keysCount,
+    //         vettedGate.curveId()
+    //     );
+    //     vm.deal(nodeOperator, amount);
 
-        uint256 shares = lido.getSharesByPooledEth(amount);
+    //     uint256 shares = lido.getSharesByPooledEth(amount);
 
-        vm.startPrank(nodeOperator);
-        vm.startSnapshotGas("VettedGate.addNodeOperatorETH");
-        uint256 firstNoId = vettedGate.addNodeOperatorETH{ value: amount }({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof: merkleTree.getProof(0),
-            referrer: address(0)
-        });
-        vm.stopSnapshotGas();
-        vm.stopPrank();
+    //     vm.startPrank(nodeOperator);
+    //     vm.startSnapshotGas("VettedGate.addNodeOperatorETH");
+    //     uint256 firstNoId = vettedGate.addNodeOperatorETH{ value: amount }({
+    //         keysCount: keysCount,
+    //         publicKeys: keys,
+    //         signatures: signatures,
+    //         managementProperties: NodeOperatorManagementProperties({
+    //             managerAddress: address(0),
+    //             rewardAddress: address(0),
+    //             extendedManagerPermissions: false
+    //         }),
+    //         proof: merkleTree.getProof(0),
+    //         referrer: address(0)
+    //     });
+    //     vm.stopSnapshotGas();
+    //     vm.stopPrank();
 
-        // Start a new referral season
-        ICSBondCurve.BondCurveIntervalInput[]
-            memory referralBondCurve = new ICSBondCurve.BondCurveIntervalInput[](
-                2
-            );
-        referralBondCurve[0] = ICSBondCurve.BondCurveIntervalInput({
-            minKeysCount: 1,
-            trend: 1.2 ether
-        });
-        referralBondCurve[1] = ICSBondCurve.BondCurveIntervalInput({
-            minKeysCount: 2,
-            trend: 1 ether
-        });
+    //     // Start a new referral season
+    //     ICSBondCurve.BondCurveIntervalInput[]
+    //         memory referralBondCurve = new ICSBondCurve.BondCurveIntervalInput[](
+    //             2
+    //         );
+    //     referralBondCurve[0] = ICSBondCurve.BondCurveIntervalInput({
+    //         minKeysCount: 1,
+    //         trend: 1.2 ether
+    //     });
+    //     referralBondCurve[1] = ICSBondCurve.BondCurveIntervalInput({
+    //         minKeysCount: 2,
+    //         trend: 1 ether
+    //     });
 
-        vm.startPrank(
-            accounting.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
-        );
-        accounting.grantRole(
-            accounting.MANAGE_BOND_CURVES_ROLE(),
-            address(this)
-        );
-        vm.stopPrank();
+    //     vm.startPrank(
+    //         accounting.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
+    //     );
+    //     accounting.grantRole(
+    //         accounting.MANAGE_BOND_CURVES_ROLE(),
+    //         address(this)
+    //     );
+    //     vm.stopPrank();
 
-        uint256 referralBondCurveId = accounting.addBondCurve(
-            referralBondCurve
-        );
+    //     uint256 referralBondCurveId = accounting.addBondCurve(
+    //         referralBondCurve
+    //     );
 
-        vm.startPrank(
-            vettedGate.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
-        );
-        vettedGate.grantRole(
-            vettedGate.START_REFERRAL_SEASON_ROLE(),
-            address(this)
-        );
-        vm.stopPrank();
+    //     vm.startPrank(
+    //         vettedGate.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
+    //     );
+    //     vettedGate.grantRole(
+    //         vettedGate.START_REFERRAL_SEASON_ROLE(),
+    //         address(this)
+    //     );
+    //     vm.stopPrank();
 
-        vettedGate.startNewReferralProgramSeason(referralBondCurveId, 1);
+    //     vettedGate.startNewReferralProgramSeason(referralBondCurveId, 1);
 
-        // Create a new node operator with a referrer pointing to the first one
-        (keys, signatures) = keysSignatures(keysCount);
-        amount = accounting.getBondAmountByKeysCount(
-            keysCount,
-            vettedGate.curveId()
-        );
-        vm.deal(anotherNodeOperator, amount);
+    //     // Create a new node operator with a referrer pointing to the first one
+    //     (keys, signatures) = keysSignatures(keysCount);
+    //     amount = accounting.getBondAmountByKeysCount(
+    //         keysCount,
+    //         vettedGate.curveId()
+    //     );
+    //     vm.deal(anotherNodeOperator, amount);
 
-        shares = lido.getSharesByPooledEth(amount);
+    //     shares = lido.getSharesByPooledEth(amount);
 
-        vm.startPrank(anotherNodeOperator);
-        vm.startSnapshotGas("VettedGate.addNodeOperatorETH");
-        vettedGate.addNodeOperatorETH{ value: amount }({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof: merkleTree.getProof(1),
-            referrer: nodeOperator
-        });
-        vm.stopSnapshotGas();
-        vm.stopPrank();
+    //     vm.startPrank(anotherNodeOperator);
+    //     vm.startSnapshotGas("VettedGate.addNodeOperatorETH");
+    //     vettedGate.addNodeOperatorETH{ value: amount }({
+    //         keysCount: keysCount,
+    //         publicKeys: keys,
+    //         signatures: signatures,
+    //         managementProperties: NodeOperatorManagementProperties({
+    //             managerAddress: address(0),
+    //             rewardAddress: address(0),
+    //             extendedManagerPermissions: false
+    //         }),
+    //         proof: merkleTree.getProof(1),
+    //         referrer: nodeOperator
+    //     });
+    //     vm.stopSnapshotGas();
+    //     vm.stopPrank();
 
-        assertEq(vettedGate.getReferralsCount(nodeOperator), 1);
+    //     assertEq(vettedGate.getReferralsCount(nodeOperator), 1);
 
-        // End the referral season
-        vm.startPrank(
-            vettedGate.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
-        );
-        vettedGate.grantRole(
-            vettedGate.END_REFERRAL_SEASON_ROLE(),
-            address(this)
-        );
-        vm.stopPrank();
+    //     // End the referral season
+    //     vm.startPrank(
+    //         vettedGate.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
+    //     );
+    //     vettedGate.grantRole(
+    //         vettedGate.END_REFERRAL_SEASON_ROLE(),
+    //         address(this)
+    //     );
+    //     vm.stopPrank();
 
-        vettedGate.endCurrentReferralProgramSeason();
+    //     vettedGate.endCurrentReferralProgramSeason();
 
-        // Attempt to claim the referral bond curve
-        bytes32[] memory proof = merkleTree.getProof(0);
+    //     // Attempt to claim the referral bond curve
+    //     bytes32[] memory proof = merkleTree.getProof(0);
 
-        vm.expectRevert(IVettedGate.ReferralProgramIsNotActive.selector);
-        vm.prank(nodeOperator);
-        vettedGate.claimReferrerBondCurve(firstNoId, proof);
-    }
+    //     vm.expectRevert(IVettedGate.ReferralProgramIsNotActive.selector);
+    //     vm.prank(nodeOperator);
+    //     vettedGate.claimReferrerBondCurve(firstNoId, proof);
+    // }
 }
 
 contract DepositTest is IntegrationTestBase {

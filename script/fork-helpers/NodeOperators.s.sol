@@ -262,7 +262,9 @@ contract NodeOperators is
     function settleStealing(uint256 noId) external broadcastPenaltySettler {
         uint256[] memory noIds = new uint256[](1);
         noIds[0] = noId;
-        csm.settleELRewardsStealingPenalty(noIds);
+        uint256[] memory maxAmounts = new uint256[](1);
+        maxAmounts[0] = type(uint256).max; // Set to max to settle
+        csm.settleELRewardsStealingPenalty(noIds, maxAmounts);
 
         assertEq(accounting.getActualLockedBond(noId), 0);
     }
