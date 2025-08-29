@@ -189,4 +189,20 @@ contract BondReserveTest is Test {
         assertEq(info.amount, 0);
         assertEq(info.removableAt, 0);
     }
+
+    function test_setBondReserve_NoOpWhenSameAmount() public {
+        uint256 noId = 0;
+        reserve.setBondReserve(noId, 3 ether);
+        IBondReserve.BondReserveInfo memory beforeInfo = reserve
+            .getBondReserveInfo(noId);
+
+        vm.warp(block.timestamp + 1 days);
+        reserve.setBondReserve(noId, 3 ether);
+
+        IBondReserve.BondReserveInfo memory info = reserve.getBondReserveInfo(
+            noId
+        );
+        assertEq(info.amount, beforeInfo.amount);
+        assertEq(info.removableAt, beforeInfo.removableAt);
+    }
 }

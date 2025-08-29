@@ -65,12 +65,13 @@ abstract contract BondReserve is Initializable, IBondReserve {
         BondReserveStorage storage $ = _getBondReserveStorage();
         IBondReserve.BondReserveInfo storage r = $.reserve[nodeOperatorId];
         uint128 currentAmount = r.amount;
+        if (currentAmount == newAmount) {
+            return;
+        }
         if (newAmount == 0) {
-            if (currentAmount == 0) {
-                return;
-            }
             delete $.reserve[nodeOperatorId];
             emit BondReserveRemoved(nodeOperatorId);
+            return;
         }
         uint128 removableAt = r.removableAt;
         if (currentAmount < newAmount) {

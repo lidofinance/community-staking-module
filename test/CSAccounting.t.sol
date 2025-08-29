@@ -6002,6 +6002,13 @@ contract CSAccountingRemoveBondReserveTest is CSAccountingBaseTest {
     function test_removeBondReserve_afterCooldown() public assertInvariants {
         _reserve(2 ether);
         vm.warp(block.timestamp + 2 days);
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
         vm.prank(user);
         accounting.removeBondReserve(0);
         IBondReserve.BondReserveInfo memory info = accounting
@@ -6252,6 +6259,20 @@ contract CSAccountingIncreaseBondReserve is CSAccountingBaseTest {
         vm.expectRevert(IBondReserve.InvalidBondReserveAmount.selector);
         vm.prank(user);
         accounting.increaseBondReserve(0, 0.5 ether);
+    }
+
+    function test_increaseBondReserve_RevertWhen_EqualToPrevReserve() public {
+        mock_getNodeOperatorNonWithdrawnKeys(1);
+        vm.deal(address(stakingModule), 4 ether);
+        vm.prank(address(stakingModule));
+        accounting.depositETH{ value: 4 ether }(user, 0);
+
+        vm.prank(user);
+        accounting.increaseBondReserve(0, 1 ether - 1 wei);
+
+        vm.expectRevert(IBondReserve.InvalidBondReserveAmount.selector);
+        vm.prank(user);
+        accounting.increaseBondReserve(0, 1 ether - 1 wei);
     }
 }
 
@@ -6834,26 +6855,18 @@ contract CSAccountingScenarioTest is CSAccountingBaseTest {
 
         // 7.a) Increase active keys to 15. With reserve excluded from coverage, we expect unbonded (include locked)
         _operator({ ongoing: 15, withdrawn: 0 });
-        assertEq(
-            accounting.getUnbondedKeysCount(0),
-            _expectedUnbonded(15, true)
-        );
-        assertEq(
-            accounting.getUnbondedKeysCountToEject(0),
-            _expectedUnbonded(15, false)
-        );
+        // include locked+reserve -> available = 15 ETH -> covers 14 keys -> 1 unbonded
+        assertEq(accounting.getUnbondedKeysCount(0), 1);
+        // exclude locked -> available = 18 ETH -> covers >=15 keys -> 0 unbonded
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 0);
 
         // 7.b) Penalize a small amount. Reserve should be untouched
         vm.prank(address(stakingModule));
         accounting.penalize(0, 1 ether);
-        assertEq(
-            accounting.getUnbondedKeysCount(0),
-            _expectedUnbonded(15, true)
-        );
-        assertEq(
-            accounting.getUnbondedKeysCountToEject(0),
-            _expectedUnbonded(15, false)
-        );
+        // after 1 ETH penalty: include locked -> available = 14 ETH -> covers 13 -> 2 unbonded
+        assertEq(accounting.getUnbondedKeysCount(0), 2);
+        // exclude locked -> available = 17 ETH -> covers >=15 -> 0 unbonded
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 0);
         assertEq(accounting.getBondReserveInfo(0).amount, claimable);
 
         // 7.c) Penalize more than the reserve
@@ -6865,14 +6878,9 @@ contract CSAccountingScenarioTest is CSAccountingBaseTest {
         rinfo = accounting.getBondReserveInfo(0);
         uint256 currentAfterPenalty = accounting.getBond(0);
         assertEq(uint256(rinfo.amount), currentAfterPenalty);
-        assertEq(
-            accounting.getUnbondedKeysCount(0),
-            _expectedUnbonded(15, true)
-        );
-        assertEq(
-            accounting.getUnbondedKeysCountToEject(0),
-            _expectedUnbonded(15, false)
-        );
+        // reserve equals current, available after excluding reserve is 0 -> 15 unbonded in both modes
+        assertEq(accounting.getUnbondedKeysCount(0), 15);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 15);
 
         // 8) Settle lock
         vm.prank(address(stakingModule));
@@ -6884,40 +6892,17 @@ contract CSAccountingScenarioTest is CSAccountingBaseTest {
 
         assertApproxEqAbs(req6 - reserve6, 16 ether, 1);
         assertEq(reserve6, curr6);
-        assertEq(
-            accounting.getUnbondedKeysCount(0),
-            _expectedUnbonded(15, true)
-        );
-        assertEq(
-            accounting.getUnbondedKeysCountToEject(0),
-            _expectedUnbonded(15, false)
-        );
-    }
+        // after settling lock, locked=0 but available excluding reserve is still 0 -> 15 unbonded
+        assertEq(accounting.getUnbondedKeysCount(0), 15);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 15);
 
-    function _expectedUnbonded(
-        uint256 nonWithdrawn,
-        bool includeLocked
-    ) internal view returns (uint256) {
-        uint256 current = accounting.getBond(0);
-        uint256 reserved = accounting.getBondReserveInfo(0).amount;
-        uint256 locked = accounting.getActualLockedBond(0);
-
-        require(
-            current >= reserved,
-            "Panic! Invalid state. Reserved > Current"
-        );
-        current -= reserved;
-
-        if (includeLocked) {
-            if (locked >= current) return nonWithdrawn;
-            current -= locked;
-        }
-
-        uint256 curveId = accounting.getBondCurveId(0);
-        uint256 covered = accounting.getKeysCountByBondAmount(
-            current + 10 wei,
-            curveId
-        );
-        return nonWithdrawn > covered ? nonWithdrawn - covered : 0;
+        // 9) Remove reserve after min period; unbonded decreases
+        vm.warp(block.timestamp + 4 weeks + 1 seconds);
+        vm.prank(user);
+        accounting.removeBondReserve(0);
+        assertEq(accounting.getBondReserveInfo(0).amount, 0);
+        // With no reserve and no lock, available bond ~= 13 ETH -> covers 12 keys -> 3 unbonded
+        assertEq(accounting.getUnbondedKeysCount(0), 3);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 3);
     }
 }

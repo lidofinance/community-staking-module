@@ -329,7 +329,9 @@ contract CSAccounting is
         (uint256 current, uint256 required) = getBondSummary(nodeOperatorId);
         uint256 reserve = BondReserve.getReservedBond(nodeOperatorId);
         // NOTE: `required` is always >= `reserve` due to fact that `reserve` is a part of `required`
-        if (reserve > newAmount || current < (required - reserve) + newAmount) {
+        if (
+            reserve >= newAmount || current < (required - reserve) + newAmount
+        ) {
             revert InvalidBondReserveAmount();
         }
         BondReserve._setBondReserve(nodeOperatorId, newAmount);
@@ -352,6 +354,7 @@ contract CSAccounting is
             revert MinReserveTimeHasNotPassed();
         }
         BondReserve._setBondReserve(nodeOperatorId, 0);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -707,40 +710,32 @@ contract CSAccounting is
         uint256 nonWithdrawnKeys = MODULE.getNodeOperatorNonWithdrawnKeys(
             nodeOperatorId
         );
+        uint256 currentBond = CSBondCore.getBond(nodeOperatorId);
         {
-            uint256 currentBond = CSBondCore.getBond(nodeOperatorId);
-            {
-                uint256 reservedBond = BondReserve.getReservedBond(
-                    nodeOperatorId
-                );
-                // NOTE: `reservedBond` cannot exceed `currentBond` because it can be created
-                // only from the excess bond portion (current - required > 0).
-                currentBond -= reservedBond;
-            }
-
-            // Optionally account for locked bond depending on the flag
-            if (includeLockedBond) {
-                uint256 lockedBond = CSBondLock.getActualLockedBond(
-                    nodeOperatorId
-                );
-                // We use strict condition here since in rare case of equality the outcome of the function will not change
-                if (lockedBond > currentBond) {
-                    return nonWithdrawnKeys;
-                }
-                currentBond -= lockedBond;
-            }
-            // 10 wei is added to account for possible stETH rounding errors
-            // https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
-            // Should be sufficient for ~ 40 years
-            uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
-                currentBond + 10 wei,
-                CSBondCurve.getBondCurveId(nodeOperatorId)
-            );
-            return
-                nonWithdrawnKeys > bondedKeys
-                    ? nonWithdrawnKeys - bondedKeys
-                    : 0;
+            uint256 reservedBond = BondReserve.getReservedBond(nodeOperatorId);
+            // NOTE: `reservedBond` cannot exceed `currentBond` because it can be created
+            // only from the excess bond portion (current - required > 0).
+            currentBond -= reservedBond;
         }
+
+        // Optionally account for locked bond depending on the flag
+        if (includeLockedBond) {
+            uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
+            // We use strict condition here since in rare case of equality the outcome of the function will not change
+            if (lockedBond > currentBond) {
+                return nonWithdrawnKeys;
+            }
+            currentBond -= lockedBond;
+        }
+        // 10 wei is added to account for possible stETH rounding errors
+        // https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
+        // Should be sufficient for ~ 40 years
+        uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
+            currentBond + 10 wei,
+            CSBondCurve.getBondCurveId(nodeOperatorId)
+        );
+        return
+            nonWithdrawnKeys > bondedKeys ? nonWithdrawnKeys - bondedKeys : 0;
     }
 
     function _onlyRecoverer() internal view override {
