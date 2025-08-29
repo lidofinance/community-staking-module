@@ -254,6 +254,19 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             true
         );
     }
+
+    function test_constructor_RevertWhen_InvalidBondLockPeriod_MinIsZero()
+        public
+    {
+        vm.expectRevert(ICSBondLock.InvalidBondLockPeriod.selector);
+        accounting = new CSAccounting(
+            address(locator),
+            address(0),
+            address(feeDistributor),
+            0,
+            154 days
+        );
+    }
 }
 
 contract CSAccountingBaseInitTest is CSAccountingFixtures {

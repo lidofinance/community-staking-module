@@ -1,5 +1,5 @@
 # ITriggerableWithdrawalsGateway
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ITriggerableWithdrawalsGateway.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/ITriggerableWithdrawalsGateway.sol)
 
 
 ## Functions
@@ -15,9 +15,11 @@ for the specified validator public keys.*
 
 
 ```solidity
-function triggerFullWithdrawals(ValidatorData[] calldata triggerableExitsData, address refundRecipient, uint8 exitType)
-    external
-    payable;
+function triggerFullWithdrawals(
+    ValidatorData[] calldata triggerableExitsData,
+    address refundRecipient,
+    uint256 exitType
+) external payable;
 ```
 **Parameters**
 
@@ -25,6 +27,6 @@ function triggerFullWithdrawals(ValidatorData[] calldata triggerableExitsData, a
 |----|----|-----------|
 |`triggerableExitsData`|`ValidatorData[]`|An array of `ValidatorData` structs, each representing a validator for which a withdrawal request will be submitted. Each entry includes: - `stakingModuleId`: ID of the staking module. - `nodeOperatorId`: ID of the node operator. - `pubkey`: Validator public key, 48 bytes length.|
 |`refundRecipient`|`address`|The address that will receive any excess ETH sent for fees.|
-|`exitType`|`uint8`|A parameter indicating the type of exit, passed to the Staking Module. Emits `TriggerableExitRequest` event for each validator in list.|
+|`exitType`|`uint256`|A parameter indicating the type of exit, passed to the Staking Module. Emits `TriggerableExitRequest` event for each validator in list.|
 
 

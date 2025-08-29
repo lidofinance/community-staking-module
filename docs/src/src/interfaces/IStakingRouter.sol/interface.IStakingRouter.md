@@ -1,5 +1,5 @@
 # IStakingRouter
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/IStakingRouter.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/IStakingRouter.sol)
 
 
 ## Functions
@@ -438,6 +438,19 @@ function renounceRole(bytes32 role, address account) external;
 
 ```solidity
 function reportRewardsMinted(uint256[] memory _stakingModuleIds, uint256[] memory _totalShares) external;
+```
+
+### reportValidatorExitDelay
+
+
+```solidity
+function reportValidatorExitDelay(
+    uint256 _stakingModuleId,
+    uint256 _nodeOperatorId,
+    uint256 _proofSlotTimestamp,
+    bytes calldata _publicKey,
+    uint256 _eligibleToExitInSec
+) external;
 ```
 
 ### reportStakingModuleExitedValidatorsCountByNodeOperator
@@ -896,10 +909,8 @@ struct StakingModuleDigest {
 struct ValidatorsCountsCorrection {
     uint256 currentModuleExitedValidatorsCount;
     uint256 currentNodeOperatorExitedValidatorsCount;
-    uint256 currentNodeOperatorStuckValidatorsCount;
     uint256 newModuleExitedValidatorsCount;
     uint256 newNodeOperatorExitedValidatorsCount;
-    uint256 newNodeOperatorStuckValidatorsCount;
 }
 ```
 

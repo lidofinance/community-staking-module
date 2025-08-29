@@ -36,4 +36,5 @@
 - [IVettedGate](IVettedGate.sol/interface.IVettedGate.md)
 - [IVettedGateFactory](IVettedGateFactory.sol/interface.IVettedGateFactory.md)
 - [IWithdrawalQueue](IWithdrawalQueue.sol/interface.IWithdrawalQueue.md)
+- [IWithdrawalVault](IWithdrawalVault.sol/interface.IWithdrawalVault.md)
 - [IWstETH](IWstETH.sol/interface.IWstETH.md)

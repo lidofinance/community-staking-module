@@ -6,6 +6,7 @@ title = ""
 no-section-label = true
 additional-js = ["solidity.min.js"]
 additional-css = ["book.css"]
+mathjax-support = true
 git-repository-url = "https://github.com/lidofinance/community-staking-module"
 
 [output.html.fold]

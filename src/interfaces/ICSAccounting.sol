@@ -138,6 +138,8 @@ interface ICSAccounting is
     ) external view returns (uint256);
 
     /// @notice Get the number of the unbonded keys to be ejected using a forcedTargetLimit
+    ///         Locked bond is not considered for this calculation to allow Node Operators to
+    ///         compensate the locked bond via `compensateLockedBondETH` method before the ejection happens
     /// @param nodeOperatorId ID of the Node Operator
     /// @return Unbonded keys count
     function getUnbondedKeysCountToEject(
@@ -334,6 +336,8 @@ interface ICSAccounting is
     function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external;
 
     /// @notice Penalize bond by burning stETH shares of the given Node Operator
+    /// @dev Penalty application has a priority over the locked bond.
+    ///      Method call can result in the remaining bond being lower than the locked bond.
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to penalize in ETH (stETH)
     /// @return fullyBurned True if the bond was fully burned, false otherwise
@@ -343,6 +347,8 @@ interface ICSAccounting is
     ) external returns (bool fullyBurned);
 
     /// @notice Charge fee from bond by transferring stETH shares of the given Node Operator to the charge recipient
+    /// @dev Charge confiscation has a priority over the locked bond.
+    ///      Method call can result in the remaining bond being lower than the locked bond.
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to charge in ETH (stETH)
     /// @return fullyCharged True if the bond was fully charged, false otherwise
