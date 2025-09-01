@@ -26,6 +26,11 @@ interface ICSAccounting is
         bytes32 s;
     }
 
+    struct FeeSplit {
+        address recipient;
+        uint256 share; // in basis points
+    }
+
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event ChargePenaltyRecipientSet(address chargePenaltyRecipient);
 
@@ -84,6 +89,15 @@ interface ICSAccounting is
     /// @notice Set min cooldown for additional bond reserve removal
     function setBondReserveMinPeriod(uint256 period) external;
 
+    /// @notice Set fee splits for the given Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param feeSplits Array of FeeSplit structs defining recipients and their shares in basis points
+    ///                  Total shares must be <= 10_000 (100%). Remainder goes to the Node Operator's bond
+    function setFeeSplits(
+        uint256 nodeOperatorId,
+        FeeSplit[] calldata feeSplits
+    ) external;
+
     /// @notice Add a new bond curve
     /// @param bondCurve Bond curve definition to add
     /// @return id Id of the added curve
@@ -129,6 +143,13 @@ interface ICSAccounting is
         uint256 nodeOperatorId,
         uint256 additionalKeys
     ) external view returns (uint256);
+
+    /// @notice Set fee splits for the given Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Array of FeeSplit structs defining recipients and their shares in basis points
+    function getFeeSplits(
+        uint256 nodeOperatorId
+    ) external view returns (FeeSplit[] memory);
 
     /// @notice Get the number of the unbonded keys
     /// @param nodeOperatorId ID of the Node Operator
