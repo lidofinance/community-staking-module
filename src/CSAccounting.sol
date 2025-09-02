@@ -12,6 +12,7 @@ import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
+import { FeeSplits } from "./lib/FeeSplits.sol";
 
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
@@ -47,6 +48,8 @@ contract CSAccounting is
     /// @custom:oz-renamed-from feeDistributor
     ICSFeeDistributor internal _feeDistributorOld;
     address public chargePenaltyRecipient;
+
+    mapping(uint256 nodeOperatorId => FeeSplit[]) internal _feeSplits;
 
     modifier onlyModule() {
         if (msg.sender != address(MODULE)) {
@@ -159,6 +162,16 @@ contract CSAccounting is
         uint256 period
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         BondReserve._setBondReserveMinPeriod(period);
+    }
+
+    /// @inheritdoc ICSAccounting
+    function setFeeSplits(
+        uint256 nodeOperatorId,
+        FeeSplit[] calldata feeSplits
+    ) external {
+        _onlyNodeOperatorOwner(nodeOperatorId);
+
+        FeeSplits.setFeeSplits(_feeSplits, nodeOperatorId, feeSplits);
     }
 
     /// @inheritdoc ICSAccounting
@@ -466,6 +479,13 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
+    function getFeeSplits(
+        uint256 nodeOperatorId
+    ) external view returns (FeeSplit[] memory) {
+        return _feeSplits[nodeOperatorId];
+    }
+
+    /// @inheritdoc ICSAccounting
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
@@ -594,7 +614,20 @@ contract CSAccounting is
             cumulativeFeeShares,
             rewardsProof
         );
-        CSBondCore._increaseBond(nodeOperatorId, distributed);
+
+        // @dev If there are fee splits, distribute the shares accordingly.
+        //      At low amounts, due to rounding, it is possible that some split recipients
+        //      will not receive any shares. The remainder goes to the bond.
+        uint256 reminder = FeeSplits.splitAndTransferFees(
+            _feeSplits,
+            LIDO,
+            nodeOperatorId,
+            distributed
+        );
+
+        if (reminder != 0) {
+            CSBondCore._increaseBond(nodeOperatorId, reminder);
+        }
     }
 
     function _unwrapStETHPermitIfRequired(
@@ -752,6 +785,12 @@ contract CSAccounting is
         }
 
         revert NodeOperatorDoesNotExist();
+    }
+
+    function _onlyNodeOperatorOwner(uint256 nodeOperatorId) internal view {
+        if (MODULE.getNodeOperatorOwner(nodeOperatorId) != msg.sender) {
+            revert SenderIsNotEligible();
+        }
     }
 
     function _checkAndGetEligibleNodeOperatorProperties(

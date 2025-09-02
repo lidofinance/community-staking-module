@@ -23,6 +23,7 @@ import { CSBondCore } from "../src/abstract/CSBondCore.sol";
 import { CSBondLock } from "../src/abstract/CSBondLock.sol";
 import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
 import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
+import { IFeeSplits, FeeSplits } from "../src/lib/FeeSplits.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
 import { StETHMock } from "./helpers/mocks/StETHMock.sol";
@@ -108,6 +109,14 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
                 0
             ),
             ""
+        );
+    }
+
+    function mock_getNodeOperatorOwner(address owner) internal {
+        vm.mockCall(
+            address(stakingModule),
+            abi.encodeWithSelector(ICSModule.getNodeOperatorOwner.selector, 0),
+            abi.encode(owner)
         );
     }
 
@@ -264,7 +273,8 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             address(0),
             address(feeDistributor),
             0,
-            154 days
+            154 days,
+            true
         );
     }
 }
@@ -6782,6 +6792,446 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
 
         vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
         accounting.pullFeeRewards(0, 0, new bytes32[](0));
+    }
+
+    function test_pullFeeRewards_withSplits() public assertInvariants {
+        uint256 feeShares = 10 ether;
+
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            2
+        );
+        splits[0] = ICSAccounting.FeeSplit({
+            recipient: nextAddress(),
+            share: 3000
+        });
+        splits[1] = ICSAccounting.FeeSplit({
+            recipient: nextAddress(),
+            share: 5000
+        });
+
+        uint256[] memory sharesBefore = new uint256[](splits.length);
+        for (uint8 i = 0; i < splits.length; i++) {
+            sharesBefore[i] = stETH.sharesOf(splits[i].recipient);
+        }
+
+        mock_getNodeOperatorOwner(user);
+
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
+
+        stETH.mintShares(address(feeDistributor), feeShares);
+        mock_getNodeOperatorsCount(1);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 totalBondSharesBefore = accounting.totalBondShares();
+
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+        accounting.pullFeeRewards(0, feeShares, new bytes32[](0));
+
+        feeShares -= 8 ether; // remaining shares after splits
+
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+        uint256 totalBondSharesAfter = accounting.totalBondShares();
+
+        assertEq(bondSharesAfter, bondSharesBefore + feeShares);
+        assertEq(totalBondSharesAfter, totalBondSharesBefore + feeShares);
+
+        assertEq(
+            stETH.sharesOf(splits[0].recipient),
+            sharesBefore[0] + 3 ether,
+            "fee split shares mismatch"
+        );
+        assertEq(
+            stETH.sharesOf(splits[1].recipient),
+            sharesBefore[1] + 5 ether,
+            "fee split shares mismatch"
+        );
+    }
+
+    function test_pullFeeRewards_withSplits_lowFeeAmount()
+        public
+        assertInvariants
+    {
+        uint256 feeShares = 3 wei;
+
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            2
+        );
+        splits[0] = ICSAccounting.FeeSplit({
+            recipient: nextAddress(),
+            share: 100
+        });
+        splits[1] = ICSAccounting.FeeSplit({
+            recipient: nextAddress(),
+            share: 500
+        });
+
+        uint256[] memory sharesBefore = new uint256[](splits.length);
+        for (uint8 i = 0; i < splits.length; i++) {
+            sharesBefore[i] = stETH.sharesOf(splits[i].recipient);
+        }
+
+        mock_getNodeOperatorOwner(user);
+
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
+
+        stETH.mintShares(address(feeDistributor), feeShares);
+        mock_getNodeOperatorsCount(1);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 totalBondSharesBefore = accounting.totalBondShares();
+
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+        accounting.pullFeeRewards(0, feeShares, new bytes32[](0));
+
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+        uint256 totalBondSharesAfter = accounting.totalBondShares();
+
+        assertEq(bondSharesAfter, bondSharesBefore + feeShares);
+        assertEq(totalBondSharesAfter, totalBondSharesBefore + feeShares);
+
+        assertEq(
+            stETH.sharesOf(splits[0].recipient),
+            sharesBefore[0],
+            "fee split shares mismatch"
+        );
+        assertEq(
+            stETH.sharesOf(splits[1].recipient),
+            sharesBefore[1],
+            "fee split shares mismatch"
+        );
+    }
+
+    function test_pullFeeRewards_withSplits_allBPSUsed_noReminderDueToRounding()
+        public
+        assertInvariants
+    {
+        uint256 feeShares = 1 ether;
+
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            2
+        );
+        splits[0] = ICSAccounting.FeeSplit({
+            recipient: nextAddress(),
+            share: 3000
+        });
+        splits[1] = ICSAccounting.FeeSplit({
+            recipient: nextAddress(),
+            share: 7000
+        });
+
+        uint256[] memory sharesBefore = new uint256[](splits.length);
+        for (uint8 i = 0; i < splits.length; i++) {
+            sharesBefore[i] = stETH.sharesOf(splits[i].recipient);
+        }
+
+        mock_getNodeOperatorOwner(user);
+
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
+
+        stETH.mintShares(address(feeDistributor), feeShares);
+        mock_getNodeOperatorsCount(1);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 totalBondSharesBefore = accounting.totalBondShares();
+
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+        accounting.pullFeeRewards(0, feeShares, new bytes32[](0));
+
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+        uint256 totalBondSharesAfter = accounting.totalBondShares();
+
+        assertEq(bondSharesAfter, bondSharesBefore);
+        assertEq(totalBondSharesAfter, totalBondSharesBefore);
+
+        assertEq(
+            stETH.sharesOf(splits[0].recipient),
+            sharesBefore[0] + 0.3 ether,
+            "fee split shares mismatch"
+        );
+        assertEq(
+            stETH.sharesOf(splits[1].recipient),
+            sharesBefore[1] + 0.7 ether,
+            "fee split shares mismatch"
+        );
+    }
+
+    function test_pullFeeRewards_withSplits_ZeroFeeAmount()
+        public
+        assertInvariants
+    {
+        uint256 feeShares = 0;
+
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            2
+        );
+        splits[0] = ICSAccounting.FeeSplit({
+            recipient: nextAddress(),
+            share: 100
+        });
+        splits[1] = ICSAccounting.FeeSplit({
+            recipient: nextAddress(),
+            share: 500
+        });
+
+        uint256[] memory sharesBefore = new uint256[](splits.length);
+        for (uint8 i = 0; i < splits.length; i++) {
+            sharesBefore[i] = stETH.sharesOf(splits[i].recipient);
+        }
+
+        mock_getNodeOperatorOwner(user);
+
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
+
+        mock_getNodeOperatorsCount(1);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 totalBondSharesBefore = accounting.totalBondShares();
+
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+        accounting.pullFeeRewards(0, feeShares, new bytes32[](0));
+
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+        uint256 totalBondSharesAfter = accounting.totalBondShares();
+
+        assertEq(bondSharesAfter, bondSharesBefore + feeShares);
+        assertEq(totalBondSharesAfter, totalBondSharesBefore + feeShares);
+
+        assertEq(
+            stETH.sharesOf(splits[0].recipient),
+            sharesBefore[0],
+            "fee split shares mismatch"
+        );
+        assertEq(
+            stETH.sharesOf(splits[1].recipient),
+            sharesBefore[1],
+            "fee split shares mismatch"
+        );
+    }
+
+    function testFuzz_pullFeeRewards_withSplits(
+        uint256 feeShares,
+        uint8 splitsCount,
+        uint256 shareSeed
+    ) public assertInvariants {
+        splitsCount = uint8(bound(splitsCount, 1, FeeSplits.MAX_FEE_SPLITS));
+        feeShares = bound(feeShares, 0, 10 ether);
+
+        uint256[] memory fees = new uint256[](splitsCount);
+        uint256 totalFeeSharesForSplits;
+
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            splitsCount
+        );
+        uint256 totalShare;
+        for (uint8 i = 0; i < splitsCount; i++) {
+            splits[i].recipient = nextAddress();
+            splits[i].share = (shareSeed % (10_000 + i)) / splitsCount + 1; // ensure total share <= 10_000
+            totalShare += splits[i].share;
+            fees[i] = (feeShares * splits[i].share) / 10_000;
+            totalFeeSharesForSplits += fees[i];
+        }
+
+        uint256[] memory sharesBefore = new uint256[](splitsCount);
+
+        for (uint8 i = 0; i < splitsCount; i++) {
+            sharesBefore[i] = stETH.sharesOf(splits[i].recipient);
+        }
+
+        mock_getNodeOperatorOwner(user);
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
+
+        stETH.mintShares(address(feeDistributor), feeShares);
+        mock_getNodeOperatorsCount(1);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 totalBondSharesBefore = accounting.totalBondShares();
+
+        vm.expectCall(
+            address(accounting.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+        accounting.pullFeeRewards(0, feeShares, new bytes32[](0));
+
+        feeShares -= totalFeeSharesForSplits; // remaining shares after splits
+
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+        uint256 totalBondSharesAfter = accounting.totalBondShares();
+
+        assertEq(bondSharesAfter, bondSharesBefore + feeShares);
+        assertEq(totalBondSharesAfter, totalBondSharesBefore + feeShares);
+
+        for (uint8 i = 0; i < splitsCount; i++) {
+            assertEq(
+                stETH.sharesOf(splits[i].recipient),
+                sharesBefore[i] + fees[i],
+                "fee split shares mismatch"
+            );
+        }
+    }
+}
+
+contract CSAccountingFeeSplits is CSAccountingBaseTest {
+    function test_setFeeSplits() public {
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            2
+        );
+        splits[0] = ICSAccounting.FeeSplit({
+            recipient: address(1),
+            share: 3000
+        });
+        splits[1] = ICSAccounting.FeeSplit({
+            recipient: address(2),
+            share: 5000
+        });
+        mock_getNodeOperatorOwner(user);
+
+        vm.expectEmit(address(accounting));
+        emit IFeeSplits.FeeSplitsSet(0, splits);
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
+
+        ICSAccounting.FeeSplit[] memory actual = accounting.getFeeSplits(0);
+        assertEq(actual.length, splits.length);
+        for (uint256 i = 0; i < splits.length; i++) {
+            assertEq(actual[i].recipient, splits[i].recipient);
+            assertEq(actual[i].share, splits[i].share);
+        }
+    }
+
+    function test_setFeeSplits_ZeroLength() public {
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            0
+        );
+        mock_getNodeOperatorOwner(user);
+
+        vm.expectEmit(address(accounting));
+        emit IFeeSplits.FeeSplitsSet(0, splits);
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
+
+        ICSAccounting.FeeSplit[] memory actual = accounting.getFeeSplits(0);
+        assertEq(actual.length, 0);
+    }
+
+    function test_setFeeSplits_revertWhen_SenderIsNotEligible() public {
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            2
+        );
+        splits[0] = ICSAccounting.FeeSplit({
+            recipient: address(1),
+            share: 3000
+        });
+        splits[1] = ICSAccounting.FeeSplit({
+            recipient: address(2),
+            share: 5000
+        });
+        mock_getNodeOperatorOwner(user);
+
+        vm.expectRevert(ICSAccounting.SenderIsNotEligible.selector);
+        vm.prank(stranger);
+        accounting.setFeeSplits(0, splits);
+    }
+
+    function test_setFeeSplits_revertWhen_TooManySplits() public {
+        uint256 length = FeeSplits.MAX_FEE_SPLITS + 1;
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            length
+        );
+        for (uint256 i = 0; i < splits.length; i++) {
+            splits[i].recipient = nextAddress();
+            splits[i].share = 1000;
+        }
+        mock_getNodeOperatorOwner(user);
+
+        vm.expectRevert(IFeeSplits.TooManySplits.selector);
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
+    }
+
+    function test_setFeeSplits_revertWhen_TooManySplitShares() public {
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            2
+        );
+        splits[0] = ICSAccounting.FeeSplit({
+            recipient: address(1),
+            share: 3000
+        });
+        splits[1] = ICSAccounting.FeeSplit({
+            recipient: address(2),
+            share: 8000
+        });
+        mock_getNodeOperatorOwner(user);
+
+        vm.expectRevert(IFeeSplits.TooManySplitShares.selector);
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
+    }
+
+    function test_setFeeSplits_revertWhen_ZeroSplitRecipient() public {
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            2
+        );
+        splits[0] = ICSAccounting.FeeSplit({
+            recipient: address(1),
+            share: 3000
+        });
+        splits[1] = ICSAccounting.FeeSplit({
+            recipient: address(0),
+            share: 5000
+        });
+        mock_getNodeOperatorOwner(user);
+
+        vm.expectRevert(IFeeSplits.ZeroSplitRecipient.selector);
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
+    }
+
+    function test_setFeeSplits_revertWhen_ZeroSplitShare() public {
+        ICSAccounting.FeeSplit[] memory splits = new ICSAccounting.FeeSplit[](
+            2
+        );
+        splits[0] = ICSAccounting.FeeSplit({
+            recipient: address(1),
+            share: 3000
+        });
+        splits[1] = ICSAccounting.FeeSplit({ recipient: address(2), share: 0 });
+        mock_getNodeOperatorOwner(user);
+
+        vm.expectRevert(IFeeSplits.ZeroSplitShare.selector);
+        vm.prank(user);
+        accounting.setFeeSplits(0, splits);
     }
 }
 
