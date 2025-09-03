@@ -1,7 +1,7 @@
 from web3 import Web3
 
-ARBITRUM_BLOCK_CUTOFF = 361332200 # TODO Update block from arbitrum
-ETHEREUM_BLOCK_CUTOFF = 22773472 # TODO Update block from ethereum
+ARBITRUM_BLOCK_CUTOFF = 375206162 # TODO Update block from arbitrum
+ETHEREUM_BLOCK_CUTOFF = 23281557 # TODO Update block from ethereum
 
 # Preferably use infura for unlimited block range
 ARBITRUM_PROVIDER_URL = 'http://localhost:8545/'
