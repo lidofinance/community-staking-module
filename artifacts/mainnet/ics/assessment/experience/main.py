@@ -24,6 +24,12 @@ scores = {
     "sdvtm-mainnet": 7
 }
 
+# TODO update
+MAINNET_PERFORMANCE_REPORTS = [
+    "QmVgGQS7QBeRMq2noqqxekY5ezmqRsgu7JjiyMyRaaWEDv",  # 23048383 block
+    "QmaUC2HBv88mJ9Gf99hfNgtH4qo2F1yHaBMC4imwVhxDDi"  # 23248929 block
+]
+
 MIN_SCORE = 5
 MAX_SCORE = 8
 
@@ -145,14 +151,10 @@ def _csm_mainnet_score(addresses: set[str]) -> int:
     """
     Returns the score for CSM mainnet participation if any address is eligible, otherwise 0.
     """
-    perf_reports = [
-        "QmVgGQS7QBeRMq2noqqxekY5ezmqRsgu7JjiyMyRaaWEDv",  # 23048383
-        "QmaUC2HBv88mJ9Gf99hfNgtH4qo2F1yHaBMC4imwVhxDDi"  # 23248929
-    ]
     if _check_csm_performance_logs(
             addresses,
             "node_operator_owners_mainnet.json",
-            perf_reports,
+            MAINNET_PERFORMANCE_REPORTS,
             "Mainnet"  # Network name for logging
     ):
         return scores["csm-mainnet"]
