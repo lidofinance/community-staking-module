@@ -146,7 +146,8 @@ def _csm_mainnet_score(addresses: set[str]) -> int:
     Returns the score for CSM mainnet participation if any address is eligible, otherwise 0.
     """
     perf_reports = [
-        "QmaHU6Ah99Yk6kQVtSrN4inxqqYoU6epZ5UKyDvwdYUKAS"
+        "QmVgGQS7QBeRMq2noqqxekY5ezmqRsgu7JjiyMyRaaWEDv",  # 23048383
+        "QmaUC2HBv88mJ9Gf99hfNgtH4qo2F1yHaBMC4imwVhxDDi"  # 23248929
     ]
     if _check_csm_performance_logs(
             addresses,
@@ -176,7 +177,6 @@ def _request_performance_report(report_file, retries=3, delay=2):
 def _check_csm_performance_logs(addresses: set[str], no_owners_file_name, perf_reports, network_name) -> bool:
     """
     Returns True if any address is a node operator with all validators above the threshold in all logs.
-    Used for both testnet and mainnet CSM checks.
     """
     with open(current_dir / no_owners_file_name, 'r') as f:
         node_operators = json.load(f)
