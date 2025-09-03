@@ -24,6 +24,12 @@ scores = {
     "sdvtm-mainnet": 7
 }
 
+# TODO update
+MAINNET_PERFORMANCE_REPORTS = [
+    "QmVgGQS7QBeRMq2noqqxekY5ezmqRsgu7JjiyMyRaaWEDv",  # 23048383 block
+    "QmaUC2HBv88mJ9Gf99hfNgtH4qo2F1yHaBMC4imwVhxDDi"  # 23248929 block
+]
+
 MIN_SCORE = 5
 MAX_SCORE = 8
 
@@ -145,13 +151,10 @@ def _csm_mainnet_score(addresses: set[str]) -> int:
     """
     Returns the score for CSM mainnet participation if any address is eligible, otherwise 0.
     """
-    perf_reports = [
-        "QmaHU6Ah99Yk6kQVtSrN4inxqqYoU6epZ5UKyDvwdYUKAS"
-    ]
     if _check_csm_performance_logs(
             addresses,
             "node_operator_owners_mainnet.json",
-            perf_reports,
+            MAINNET_PERFORMANCE_REPORTS,
             "Mainnet"  # Network name for logging
     ):
         return scores["csm-mainnet"]
@@ -176,7 +179,6 @@ def _request_performance_report(report_file, retries=3, delay=2):
 def _check_csm_performance_logs(addresses: set[str], no_owners_file_name, perf_reports, network_name) -> bool:
     """
     Returns True if any address is a node operator with all validators above the threshold in all logs.
-    Used for both testnet and mainnet CSM checks.
     """
     with open(current_dir / no_owners_file_name, 'r') as f:
         node_operators = json.load(f)
@@ -241,7 +243,7 @@ def main():
     print("\nResults:")
     total_score = 0
     for key, score in results.items():
-        print(f"    {key.replace('-', ' ').title()}: {score if score else '❌'}")
+        print(f"    {key.replace('-', ' ').title()}: {str(score) + ' ✅' if score else '❌'}")
         if score:
             total_score += score
     print(f"Aggregate score from all sources: {total_score}")

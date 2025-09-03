@@ -49,26 +49,26 @@ pip install -r requirements.txt
 Run any category or the orchestrator with one or more addresses:
 ```bash
 # Orchestrator (runs all categories)
-python artifacts/mainnet/ics/assessment/main.py 0xabc... 0xdef...
+python main.py 0xabc... 0xdef...
 
 # Individual categories
-python artifacts/mainnet/ics/assessment/engagement/main.py 0xabc... 0xdef...
-python artifacts/mainnet/ics/assessment/experience/main.py 0xabc... 0xdef...
-python artifacts/mainnet/ics/assessment/humanity/main.py 0xabc... 0xdef...
+python engagement/main.py 0xabc... 0xdef...
+python experience/main.py 0xabc... 0xdef...
+python humanity/main.py 0xabc... 0xdef...
 ```
 
 ## Tests
 Pytest suites are included and fully offline via mocks.
 ```bash
+# Install pytest if not already done
+pip install pytest
+
 # Engagement
-pytest artifacts/mainnet/ics/assessment/engagement/tests -q
+pytest engagement/tests -q
 
 # Experience
-pytest artifacts/mainnet/ics/assessment/experience/tests -q
+pytest experience/tests -q
 
 # Humanity
-pytest artifacts/mainnet/ics/assessment/humanity/tests -q
-
-# All assessment tests
-pytest artifacts/mainnet/ics/assessment -q
+pytest humanity/tests -q
 ```

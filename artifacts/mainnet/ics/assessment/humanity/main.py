@@ -65,9 +65,9 @@ def circles_verified_score(addresses: set[str]) -> int:
 
 def discord_account_score() -> int:
     has_discord = input("⚠️ Discord account provided? (yes/no): ").strip().lower()
-    if has_discord == "yes":
+    if has_discord in ["yes", "y"]:
         return scores["discord-account"]
-    elif has_discord == "no":
+    elif has_discord in ["no", "n"]:
         print("No Discord handle provided. Returning score of 0.")
         return 0
     else:
@@ -77,9 +77,9 @@ def discord_account_score() -> int:
 
 def x_account_score() -> int:
     has_x = input("⚠️ X account provided? (yes/no): ").strip().lower()
-    if has_x == "yes":
+    if has_x in ["yes", "y"]:
         return scores["x-account"]
-    elif has_x == "no":
+    elif has_x in ["no", "n"]:
         print("No X handle provided. Returning score of 0.")
         return 0
     else:
@@ -105,7 +105,7 @@ def main():
     total_score = 0
     print("\nResults:")
     for key, score in results.items():
-        print(f"    {key.replace('-', ' ').title()}: {score if score else '❌'}")
+        print(f"    {key.replace('-', ' ').title()}: {str(score) + ' ✅' if score else '❌'}")
         if score:
             total_score += score
     print(f"Aggregate score from all sources: {total_score}")

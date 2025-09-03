@@ -23,13 +23,14 @@ scores = {
 MIN_SCORE = 2
 MAX_SCORE = 7
 
-SNAPSHOT_VOTE_TIMESTAMP = 1750758263  # TODO update
+SNAPSHOT_VOTE_TIMESTAMP = 1756890119  # TODO update
 REQUIRED_SNAPSHOT_VOTES = 3
 REQUIRED_SNAPSHOT_VP = 100  # 100 LDO
 REQUIRED_ARAGON_VOTES = 2
 
+# TODO update dates
 HIGH_SIGNAL_START_DATE = datetime(2025, 7, 1)  # YYYY, MM, DD
-HIGH_SIGNAL_END_DATE = datetime(2025, 8, 1)  # YYYY, MM, DD
+HIGH_SIGNAL_END_DATE = datetime(2025, 9, 3)  # YYYY, MM, DD
 
 current_dir = Path(__file__).parent.resolve()
 
@@ -193,7 +194,7 @@ def high_signal(addresses: set[str]) -> int:
         params = {
             "apiKey": api_key,
             "project": "lido",
-            "searchType": "address",
+            "searchType": "ethereumAddress",
             "startDate": HIGH_SIGNAL_START_DATE.strftime("%Y-%m-%d"),
             "endDate": HIGH_SIGNAL_END_DATE.strftime("%Y-%m-%d"),
         }
@@ -256,7 +257,7 @@ def main():
     total_score = 0
     print("\nResults:")
     for key, score in results.items():
-        print(f"    {key.replace('-', ' ').title()}: {score if score else '❌'}")
+        print(f"    {key.replace('-', ' ').title()}: {str(score) + ' ✅' if score else '❌'}")
         if score:
             total_score += score
     print(f"Aggregate score from all sources: {total_score}")
