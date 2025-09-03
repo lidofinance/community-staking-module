@@ -194,7 +194,7 @@ def high_signal(addresses: set[str]) -> int:
         params = {
             "apiKey": api_key,
             "project": "lido",
-            "searchType": "address",
+            "searchType": "ethereumAddress",
             "startDate": HIGH_SIGNAL_START_DATE.strftime("%Y-%m-%d"),
             "endDate": HIGH_SIGNAL_END_DATE.strftime("%Y-%m-%d"),
         }
@@ -257,7 +257,7 @@ def main():
     total_score = 0
     print("\nResults:")
     for key, score in results.items():
-        print(f"    {key.replace('-', ' ').title()}: {score if score else '❌'}")
+        print(f"    {key.replace('-', ' ').title()}: {'✅' + str(score) if score else '❌'}")
         if score:
             total_score += score
     print(f"Aggregate score from all sources: {total_score}")

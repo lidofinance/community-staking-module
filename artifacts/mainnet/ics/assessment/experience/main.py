@@ -241,7 +241,7 @@ def main():
     print("\nResults:")
     total_score = 0
     for key, score in results.items():
-        print(f"    {key.replace('-', ' ').title()}: {score if score else '❌'}")
+        print(f"    {key.replace('-', ' ').title()}: {'✅' + str(score) if score else '❌'}")
         if score:
             total_score += score
     print(f"Aggregate score from all sources: {total_score}")

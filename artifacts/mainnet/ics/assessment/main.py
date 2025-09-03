@@ -10,16 +10,16 @@ def main():
         print("Usage: python main.py <address1> [<address2> ...]")
         return
 
-    print("==== Proof of Engagement ====")
-    engagement_score = engagement_main()
     print("\n==== Proof of Experience ====")
     experience_score = experience_main()
     print("\n==== Proof of Humanity ====")
     humanity_score = humanity_main()
+    print("==== Proof of Engagement ====")
+    engagement_score = engagement_main()
     print("\n==== Assessment Completed ====")
-    print(f"Total Engagement Score: {engagement_score} " + ("✅" if engagement_score else "❌"))
     print(f"Total Experience Score: {experience_score} " + ("✅" if experience_score else "❌"))
     print(f"Total Humanity Score: {humanity_score} " + ("✅" if humanity_score else "❌"))
+    print(f"Total Engagement Score: {engagement_score} " + ("✅" if engagement_score else "❌"))
 
 if __name__ == "__main__":
     main()
