@@ -1,11 +1,10 @@
-import sys
 from importlib import util
 from pathlib import Path
 import pytest
 
 
 HERE = Path(__file__).resolve()
-EXPERIENCE_DIR = HERE.parent.parent  # .../experience
+EXPERIENCE_DIR = HERE.parent.parent / "experience"
 MODULE_PATH = EXPERIENCE_DIR / "main.py"
 
 
@@ -205,8 +204,7 @@ def test_main_aggregator_threshold_and_capping(monkeypatch, mod):
     monkeypatch.setattr(mod, "ssv_verified_score", lambda a: 0)
     monkeypatch.setattr(mod, "sdvtm_score", lambda a: 0)
     monkeypatch.setattr(mod, "csm_score", lambda a: 4)
-    sys.argv = [str(MODULE_PATH), "0xabc"]
-    assert mod.main() == 0
+    assert mod.main(addresses={"0xabc"}) == 0
 
     # Exceed MAX_SCORE -> capped
     monkeypatch.setattr(mod, "eth_staker_score", lambda a: 6)
@@ -215,8 +213,7 @@ def test_main_aggregator_threshold_and_capping(monkeypatch, mod):
     monkeypatch.setattr(mod, "ssv_verified_score", lambda a: 7)
     monkeypatch.setattr(mod, "sdvtm_score", lambda a: 5)
     monkeypatch.setattr(mod, "csm_score", lambda a: 6)
-    sys.argv = [str(MODULE_PATH), "0xabc"]
-    assert mod.main() == mod.MAX_SCORE
+    assert mod.main(addresses={"0xabc"}) == mod.MAX_SCORE
 
     # Normal within range
     monkeypatch.setattr(mod, "eth_staker_score", lambda a: 6)
@@ -225,5 +222,5 @@ def test_main_aggregator_threshold_and_capping(monkeypatch, mod):
     monkeypatch.setattr(mod, "ssv_verified_score", lambda a: 0)
     monkeypatch.setattr(mod, "sdvtm_score", lambda a: 0)
     monkeypatch.setattr(mod, "csm_score", lambda a: 0)
-    sys.argv = [str(MODULE_PATH), "0xabc"]
-    assert mod.main() == 6
+    assert mod.main(addresses={"0xabc"}) == 6
+

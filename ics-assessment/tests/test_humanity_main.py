@@ -1,11 +1,10 @@
-import sys
 from importlib import util
 from pathlib import Path
 import pytest
 
 
 HERE = Path(__file__).resolve()
-HUMANITY_DIR = HERE.parent.parent  # .../humanity
+HUMANITY_DIR = HERE.parent.parent / "humanity"
 MODULE_PATH = HUMANITY_DIR / "main.py"
 
 
@@ -111,26 +110,22 @@ def test_discord_and_x_account_scores(monkeypatch, mod):
 
 def test_main_aggregator_threshold_and_capping(monkeypatch, mod):
     # below min -> 0
-    monkeypatch.setattr(mod, "human_passport_score", lambda a: 0)
+    monkeypatch.setattr(mod, "human_passport_score", lambda a, score=None: 0)
     monkeypatch.setattr(mod, "circles_verified_score", lambda a: 0)
-    monkeypatch.setattr(mod, "discord_account_score", lambda: 2)
-    monkeypatch.setattr(mod, "x_account_score", lambda: 1)
-    sys.argv = [str(MODULE_PATH), "0xabc"]
-    assert mod.main() == 0  # 3 < MIN_SCORE=4
+    monkeypatch.setattr(mod, "discord_account_score", lambda discord=None: 2)
+    monkeypatch.setattr(mod, "x_account_score", lambda x=None: 1)
+    assert mod.main(addresses={"0xabc"}) == 0  # 3 < MIN_SCORE=4
 
     # cap above MAX_SCORE
-    monkeypatch.setattr(mod, "human_passport_score", lambda a: 8)
+    monkeypatch.setattr(mod, "human_passport_score", lambda a, score=None: 8)
     monkeypatch.setattr(mod, "circles_verified_score", lambda a: 4)
-    monkeypatch.setattr(mod, "discord_account_score", lambda: 2)
-    monkeypatch.setattr(mod, "x_account_score", lambda: 1)
-    sys.argv = [str(MODULE_PATH), "0xabc"]
-    assert mod.main() == mod.MAX_SCORE
+    monkeypatch.setattr(mod, "discord_account_score", lambda discord=None: 2)
+    monkeypatch.setattr(mod, "x_account_score", lambda x=None: 1)
+    assert mod.main(addresses={"0xabc"}) == mod.MAX_SCORE
 
     # normal within range
-    monkeypatch.setattr(mod, "human_passport_score", lambda a: 4)
+    monkeypatch.setattr(mod, "human_passport_score", lambda a, score=None: 4)
     monkeypatch.setattr(mod, "circles_verified_score", lambda a: 0)
-    monkeypatch.setattr(mod, "discord_account_score", lambda: 0)
-    monkeypatch.setattr(mod, "x_account_score", lambda: 0)
-    sys.argv = [str(MODULE_PATH), "0xabc"]
-    assert mod.main() == 4
-
+    monkeypatch.setattr(mod, "discord_account_score", lambda discord=None: 0)
+    monkeypatch.setattr(mod, "x_account_score", lambda x=None: 0)
+    assert mod.main(addresses={"0xabc"}) == 4
