@@ -254,6 +254,22 @@ def high_signal(addresses: set[str], score: float | None = None) -> int:
         return 0
     return hs_points
 
+
+def protocol_guild(addresses: set[str]) -> float:
+    """
+    Check if any of the given addresses is in the Protocol Guild list.
+    Always returns 0, but prints a note if present.
+    """
+    pg_path = current_dir / "protocol_guild.csv"
+    with open(pg_path, "r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if row and row[0].strip().lower() in addresses:
+                print(f"    🤩 Found address {row[0]} in Protocol Guild list")
+                return True
+    return False
+
+
 def main(addresses: set[str], high_signal_score: float | None = None):
     """
     Run engagement scoring.
@@ -268,15 +284,18 @@ def main(addresses: set[str], high_signal_score: float | None = None):
         "aragon-vote": aragon_vote(addresses),
         "galxe-score": galxe_scores(addresses),
         "git-poap": gitpoap(addresses),
-        "high-signal": high_signal(addresses, score=high_signal_score)
+        "high-signal": high_signal(addresses, score=high_signal_score),
     }
+    is_pg = protocol_guild(addresses)
 
     total_score = 0
     print("\nResults:")
     for key, score in results.items():
         print(f"    {key.replace('-', ' ').title()}: {str(score) + ' ✅' if score else '❌'}")
         if score:
-            total_score += score
+            total_score += int(score)
+    if is_pg:
+        print("    Protocol Guild: ✅ (no points awarded)")
     print(f"Aggregate score from all sources: {total_score}")
     if total_score < MIN_SCORE:
         print(f"❌ The score is below the minimum required for this category ({MIN_SCORE}).")
