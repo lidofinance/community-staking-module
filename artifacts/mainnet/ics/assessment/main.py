@@ -22,12 +22,14 @@ def main():
         print("Usage: python main.py <address1> [<address2> ...]")
         return
 
+    addrs = set([a.strip().lower() for a in sys.argv[1:]])
+
     print("\n==== Proof of Experience ====")
-    experience_score = experience_main()
+    experience_score = experience_main(addrs)
     print("\n==== Proof of Humanity ====")
-    humanity_score = humanity_main()
+    humanity_score = humanity_main(addrs)
     print("==== Proof of Engagement ====")
-    engagement_score = engagement_main()
+    engagement_score = engagement_main(addrs)
     print("\n==== Assessment Completed ====")
     print(
         f"Total Experience Score: {experience_score} (limits: min={EXP_MIN_SCORE}, max={EXP_MAX_SCORE}) "

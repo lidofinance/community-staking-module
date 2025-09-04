@@ -63,12 +63,5 @@ Pytest suites are included and fully offline via mocks.
 # Install pytest if not already done
 pip install pytest
 
-# Engagement
-pytest engagement/tests -q
-
-# Experience
-pytest experience/tests -q
-
-# Humanity
-pytest humanity/tests -q
+pytest tests
 ```

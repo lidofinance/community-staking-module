@@ -6,7 +6,7 @@ import pytest
 
 
 HERE = Path(__file__).resolve()
-ENGAGEMENT_DIR = HERE.parent.parent  # artifacts/.../engagement
+ENGAGEMENT_DIR = HERE.parent.parent / "engagement"
 MODULE_PATH = ENGAGEMENT_DIR / "main.py"
 
 
@@ -262,11 +262,10 @@ def test_main_aggregator_threshold_and_capping(monkeypatch, mod):
     monkeypatch.setattr(mod, "aragon_vote", lambda addrs: 0)
     monkeypatch.setattr(mod, "galxe_scores", lambda addrs: 0)
     monkeypatch.setattr(mod, "gitpoap", lambda addrs: 0)
-    monkeypatch.setattr(mod, "high_signal", lambda addrs: 0)
+    monkeypatch.setattr(mod, "high_signal", lambda addrs, score=None: 0)
 
     # Below MIN_SCORE (2) -> 0
-    sys.argv = [str(MODULE_PATH), "0xabc"]
-    res = mod.main()
+    res = mod.main(addresses={"0xabc"})
     assert res == 0
 
     # Now make it exceed MAX_SCORE (7)
@@ -274,9 +273,8 @@ def test_main_aggregator_threshold_and_capping(monkeypatch, mod):
     monkeypatch.setattr(mod, "aragon_vote", lambda addrs: 3)
     monkeypatch.setattr(mod, "galxe_scores", lambda addrs: 3)
     monkeypatch.setattr(mod, "gitpoap", lambda addrs: 3)
-    monkeypatch.setattr(mod, "high_signal", lambda addrs: 3)
-    sys.argv = [str(MODULE_PATH), "0xabc"]
-    res2 = mod.main()
+    monkeypatch.setattr(mod, "high_signal", lambda addrs, score=None: 3)
+    res2 = mod.main(addresses={"0xabc"})
     assert res2 == mod.MAX_SCORE
 
     # Normal sum within range
@@ -284,7 +282,6 @@ def test_main_aggregator_threshold_and_capping(monkeypatch, mod):
     monkeypatch.setattr(mod, "aragon_vote", lambda addrs: 2)
     monkeypatch.setattr(mod, "galxe_scores", lambda addrs: 0)
     monkeypatch.setattr(mod, "gitpoap", lambda addrs: 2)
-    monkeypatch.setattr(mod, "high_signal", lambda addrs: 2)
-    sys.argv = [str(MODULE_PATH), "0xabc", "0xdef"]
-    res3 = mod.main()
+    monkeypatch.setattr(mod, "high_signal", lambda addrs, score=None: 2)
+    res3 = mod.main(addresses={"0xabc", "0xdef"})
     assert res3 == 7  # 1+2+0+2+2 = 7, capped by MAX_SCORE=7 but already equal

@@ -223,11 +223,11 @@ def _check_csm_performance_logs(addresses: set[str], no_owners_file_name, perf_r
     return True
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <address1> [<address2> ...]")
-        return
-    addresses = set([a.strip().lower() for a in sys.argv[1:]])
+def main(addresses: set[str]):
+    """
+    Run experience scoring.
+    - `addresses`: set of lowercase addresses.
+    """
     print(f"Your addresses: {', '.join(addresses)}")
     print("Checking addresses for Proof of Experience...")
 
@@ -258,4 +258,8 @@ def main():
     return final_score
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <address1> [<address2> ...]")
+        exit(1)
+    addrs = set([a.strip().lower() for a in sys.argv[1:]])
+    main(addrs)
