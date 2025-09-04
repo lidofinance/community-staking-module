@@ -8,7 +8,7 @@ PROVIDER_URL_HOODI = 'http://localhost:8545/'
 CONTRACT_ADDRESS_MAINNET = '0xdA7dE2ECdDfccC6c3AF10108Db212ACBBf9EA83F'
 CONTRACT_ADDRESS_HOODI = '0x79CEf36D84743222f37765204Bec41E92a93E59d'
 
-with open("../../abi/csm_abi.json", "r") as file:
+with open("../../artifacts/mainnet/ics/abi/csm_abi.json", "r") as file:
     CSM_ABI = file.read()
 
 REFERENCE_BLOCK_MAINNET = 22773472 # TODO: Update

@@ -263,6 +263,7 @@ def test_main_aggregator_threshold_and_capping(monkeypatch, mod):
     monkeypatch.setattr(mod, "galxe_scores", lambda addrs: 0)
     monkeypatch.setattr(mod, "gitpoap", lambda addrs: 0)
     monkeypatch.setattr(mod, "high_signal", lambda addrs, score=None: 0)
+    monkeypatch.setattr(mod, "protocol_guild", lambda addrs, score=None: 0)
 
     # Below MIN_SCORE (2) -> 0
     res = mod.main(addresses={"0xabc"})
@@ -274,6 +275,7 @@ def test_main_aggregator_threshold_and_capping(monkeypatch, mod):
     monkeypatch.setattr(mod, "galxe_scores", lambda addrs: 3)
     monkeypatch.setattr(mod, "gitpoap", lambda addrs: 3)
     monkeypatch.setattr(mod, "high_signal", lambda addrs, score=None: 3)
+    monkeypatch.setattr(mod, "protocol_guild", lambda addrs, score=None: 0)
     res2 = mod.main(addresses={"0xabc"})
     assert res2 == mod.MAX_SCORE
 
@@ -283,5 +285,6 @@ def test_main_aggregator_threshold_and_capping(monkeypatch, mod):
     monkeypatch.setattr(mod, "galxe_scores", lambda addrs: 0)
     monkeypatch.setattr(mod, "gitpoap", lambda addrs: 2)
     monkeypatch.setattr(mod, "high_signal", lambda addrs, score=None: 2)
+    monkeypatch.setattr(mod, "protocol_guild", lambda addrs, score=None: 0)
     res3 = mod.main(addresses={"0xabc", "0xdef"})
     assert res3 == 7  # 1+2+0+2+2 = 7, capped by MAX_SCORE=7 but already equal

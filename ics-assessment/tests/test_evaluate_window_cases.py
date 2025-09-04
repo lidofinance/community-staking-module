@@ -1,4 +1,4 @@
-from ..experience import _collect_hoodi_eligible as mod
+from experience import _collect_hoodi_eligible as mod
 
 
 def make_reports(day_epochs, statuses_per_frame, version="v1"):
