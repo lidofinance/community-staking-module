@@ -11,6 +11,32 @@ The methodology, scoring and the sources are described in the corresponding [Res
 
 ![img.png](img.png)
 
+
+## Requirements
+- Python 3.10+
+- `requests` library
+- `web3` (only for Engagement High Signal address checksum)
+
+Install (example):
+```bash
+python -m venv venv && . venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Usage
+Script asks for manual input for certain scores (Human Passport, High Signal, Discord/X presence). 
+
+Run any category or the orchestrator with one or more addresses separated by space.
+```bash
+# Orchestrator (runs all categories)
+python main.py 0xabc... 0xdef...
+
+# Individual categories
+python engagement/main.py 0xabc... 0xdef...
+python experience/main.py 0xabc... 0xdef...
+python humanity/main.py 0xabc... 0xdef...
+```
+
 ## How Data Is Collected
 - Static, curated snapshots (as-of a date or block):
   - Community lists (Experience): [EthStaker](https://github.com/ethstaker/solo-stakers) and [StakeCat](https://github.com/Stake-Cat/Solo-Stakers/tree/main) solo-staker CSVs are compiled from community sources and reflect membership as of the collection date.
@@ -30,32 +56,10 @@ The methodology, scoring and the sources are described in the corresponding [Res
   - High Signal (Engagement): if `HIGH_SIGNAL_API_KEY` is set, activity scores are queried for a configured date range; otherwise the operator provides the score manually.
   - Gitcoin Passport (Humanity): if `HUMAN_PASSPORT_API_KEY` is set, the passport score is fetched live; otherwise the operator provides the score manually.
 
-## Requirements
-- Python 3.10+
-- `requests` library
-- `web3` (only for Engagement High Signal address checksum)
-
-Install (example):
-```bash
-python -m venv venv && . venv/bin/activate
-pip install -r requirements.txt
-```
 
 ## Environment Variables (optional)
 - `HIGH_SIGNAL_API_KEY` (Engagement): Enables automatic High Signal lookups; otherwise manual input is prompted.
 - `HUMAN_PASSPORT_API_KEY` (Humanity): Enables automatic Gitcoin Passport score; otherwise manual input is prompted.
-
-## Usage
-Run any category or the orchestrator with one or more addresses:
-```bash
-# Orchestrator (runs all categories)
-python main.py 0xabc... 0xdef...
-
-# Individual categories
-python engagement/main.py 0xabc... 0xdef...
-python experience/main.py 0xabc... 0xdef...
-python humanity/main.py 0xabc... 0xdef...
-```
 
 ## Tests
 Pytest suites are included and fully offline via mocks.
