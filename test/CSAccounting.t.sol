@@ -5811,10 +5811,17 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         assertTrue(fullyBurned, "should be fully burned");
     }
 
-    function test_penalize_onInsufficientBond() public assertInvariants {
+    function test_penalize_onInsufficientBondWithLock()
+        public
+        assertInvariants
+    {
         uint256 bond = accounting.getBond(0);
         uint256 bondShares = accounting.getBondShares(0);
         uint256 amountToBurn = bond + 1 ether; // burn more than bond
+
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(0, 1 ether); // lock some bond
+        uint256 bondLockBefore = accounting.getActualLockedBond(0);
 
         vm.expectCall(
             locator.burner(),
@@ -5828,6 +5835,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         vm.prank(address(stakingModule));
         bool fullyBurned = accounting.penalize(0, amountToBurn);
         uint256 bondSharesAfter = accounting.getBondShares(0);
+        uint256 bondLockAfter = accounting.getActualLockedBond(0);
 
         assertEq(
             bondSharesAfter,
@@ -5839,6 +5847,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
             0,
             "total bond shares should be zero"
         );
+        assertApproxEqAbs(bondLockAfter, bondLockBefore + 1 ether, 1);
         assertFalse(fullyBurned, "should no be fully burned");
     }
 
@@ -6457,7 +6466,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         bool applied = accounting.settleLockedBondETH(noId);
         vm.stopPrank();
 
-        assertEq(accounting.getActualLockedBond(noId), 0);
+        assertEq(accounting.getActualLockedBond(noId), 1 ether);
         assertEq(accounting.getBondShares(noId), 0);
         assertTrue(applied);
     }

@@ -410,9 +410,17 @@ contract CSAccounting is
 
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
-            CSBondCore._burn(nodeOperatorId, lockedAmount);
-            // reduce all locked bond even if bond isn't covered lock fully
-            CSBondLock._remove(nodeOperatorId);
+            uint256 notBurnedAmount = CSBondCore._burn(
+                nodeOperatorId,
+                lockedAmount
+            );
+            // NOTE: If we could not burn the full locked amount, set the remaining amount and make the lock infinite.
+            //       Remove the lock if nothing is left to burn.
+            CSBondLock._changeBondLock({
+                nodeOperatorId: nodeOperatorId,
+                amount: notBurnedAmount,
+                until: INFINITE_BOND_LOCK_UNTIL
+            });
             _adjustBondReserve(nodeOperatorId);
             applied = true;
         }
@@ -423,7 +431,17 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 amount
     ) external onlyModule returns (bool fullyBurned) {
-        fullyBurned = CSBondCore._burn(nodeOperatorId, amount);
+        uint256 notBurnedAmount = CSBondCore._burn(nodeOperatorId, amount);
+        fullyBurned = notBurnedAmount == 0;
+        if (!fullyBurned) {
+            // NOTE:  If we could not burn the full amount, add the remaining to the current lock and make it infinite.
+            uint256 locked = CSBondLock.getActualLockedBond(nodeOperatorId);
+            CSBondLock._changeBondLock({
+                nodeOperatorId: nodeOperatorId,
+                amount: locked + notBurnedAmount,
+                until: INFINITE_BOND_LOCK_UNTIL
+            });
+        }
         _adjustBondReserve(nodeOperatorId);
     }
 
@@ -432,6 +450,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 amount
     ) external onlyModule returns (bool fullyCharged) {
+        // NOTE: If we could not burn the full amount, add the remaining to the current lock and make it infinite
         fullyCharged = CSBondCore._charge(
             nodeOperatorId,
             amount,

@@ -35,7 +35,7 @@ contract CSBondLockTestable is CSBondLock(4 weeks, 365 days) {
     }
 
     function remove(uint256 nodeOperatorId) external {
-        _remove(nodeOperatorId);
+        _changeBondLock(nodeOperatorId, 0, 0);
     }
 }
 
