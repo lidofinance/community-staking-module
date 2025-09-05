@@ -213,19 +213,16 @@ def high_signal(addresses: set[str], score: float | None = None) -> int:
         if high_signal_score is None:
             high_signal_score = 0
         for address in addresses:
-            try:
-                params["searchValue"] = Web3.to_checksum_address(address)
-            except Exception:
-                params["searchValue"] = address
-                response = requests.get(high_signal_url, params=params)
-                if response.status_code == 404:
-                    continue
-                response.raise_for_status()
-                response = response.json()
-                address_score = response.get("totalScores", 0)[0]["totalScore"]
+            params["searchValue"] = Web3.to_checksum_address(address)
+            response = requests.get(high_signal_url, params=params)
+            if response.status_code == 404:
+                continue
+            response.raise_for_status()
+            response = response.json()
+            address_score = response.get("totalScores", 0)[0]["totalScore"]
 
-                high_signal_score = max(address_score, high_signal_score)
-                print(f"    Found High-signal score {address_score} for address {address}")
+            high_signal_score = max(address_score, high_signal_score)
+            print(f"    Found High-signal score {address_score} for address {address}")
 
             if high_signal_score == 0:
                 print("    No High-signal score found for the given addresses.")
