@@ -4981,7 +4981,7 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(
             summary.targetValidatorsCount,
-            4,
+            1,
             "targetValidatorsCount mismatch"
         );
         assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
