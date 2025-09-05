@@ -79,7 +79,7 @@ contract CSBondCoreTestable is CSBondCore {
         uint256 nodeOperatorId,
         uint256 amount
     ) external returns (bool) {
-        return _burn(nodeOperatorId, amount) > 0 ? false : true;
+        return _burn(nodeOperatorId, amount) == 0;
     }
 
     function charge(
