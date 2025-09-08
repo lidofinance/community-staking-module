@@ -1,5 +1,5 @@
 # ILido
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ILido.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/ILido.sol)
 
 **Inherits:**
 [IStETH](/src/interfaces/IStETH.sol/interface.IStETH.md)
@@ -17,7 +17,7 @@ function STAKING_CONTROL_ROLE() external view returns (bytes32);
 
 
 ```solidity
-function submit(address _referal) external payable returns (uint256);
+function submit(address _referral) external payable returns (uint256);
 ```
 
 ### deposit

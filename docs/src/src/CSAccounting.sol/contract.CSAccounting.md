@@ -1,5 +1,5 @@
 # CSAccounting
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/CSAccounting.sol)
 
 **Inherits:**
 [ICSAccounting](/src/interfaces/ICSAccounting.sol/interface.ICSAccounting.md), [CSBondCore](/src/abstract/CSBondCore.sol/abstract.CSBondCore.md), [CSBondCurve](/src/abstract/CSBondCurve.sol/abstract.CSBondCurve.md), [CSBondLock](/src/abstract/CSBondLock.sol/abstract.CSBondLock.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -106,7 +106,7 @@ constructor(
 |----|----|-----------|
 |`lidoLocator`|`address`|Lido locator contract address|
 |`module`|`address`|Community Staking Module contract address|
-|`_feeDistributor`|`address`||
+|`_feeDistributor`|`address`|Fee Distributor contract address|
 |`minBondLockPeriod`|`uint256`|Min time in seconds for the bondLock period|
 |`maxBondLockPeriod`|`uint256`|Max time in seconds for the bondLock period|
 
@@ -133,6 +133,9 @@ function initialize(
 
 
 ### finalizeUpgradeV2
+
+*This method is expected to be called only when the contract is upgraded from version 1 to version 2 for the existing version 1 deployment.
+If the version 2 contract is deployed from scratch, the `initialize` method should be used instead.*
 
 
 ```solidity
@@ -224,7 +227,9 @@ function addBondCurve(BondCurveIntervalInput[] calldata bondCurve)
 Update existing bond curve
 
 *If the curve is updated to a curve with higher values for any point,
-Extensive checks should be performed to avoid inconsistency in the keys accounting*
+Extensive checks and actions should be performed by the method caller to avoid
+inconsistency in the keys accounting. A manual update of the depositable validators count
+in CSM might be required to ensure that the keys pointers are consistent.*
 
 
 ```solidity
@@ -551,6 +556,9 @@ function settleLockedBondETH(uint256 nodeOperatorId) external onlyModule returns
 
 Penalize bond by burning stETH shares of the given Node Operator
 
+*Penalty application has a priority over the locked bond.
+Method call can result in the remaining bond being lower than the locked bond.*
+
 
 ```solidity
 function penalize(uint256 nodeOperatorId, uint256 amount) external onlyModule;
@@ -566,6 +574,9 @@ function penalize(uint256 nodeOperatorId, uint256 amount) external onlyModule;
 ### chargeFee
 
 Charge fee from bond by transferring stETH shares of the given Node Operator to the charge recipient
+
+*Charge confiscation has a priority over the locked bond.
+Method call can result in the remaining bond being lower than the locked bond.*
 
 
 ```solidity
@@ -693,6 +704,8 @@ function getUnbondedKeysCount(uint256 nodeOperatorId) external view returns (uin
 ### getUnbondedKeysCountToEject
 
 Get the number of the unbonded keys to be ejected using a forcedTargetLimit
+Locked bond is not considered for this calculation to allow Node Operators to
+compensate the locked bond via `compensateLockedBondETH` method before the ejection happens
 
 
 ```solidity

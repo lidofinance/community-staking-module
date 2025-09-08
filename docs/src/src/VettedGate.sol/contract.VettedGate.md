@@ -1,5 +1,5 @@
 # VettedGate
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/VettedGate.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/VettedGate.sol)
 
 **Inherits:**
 [IVettedGate](/src/interfaces/IVettedGate.sol/interface.IVettedGate.md), AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -230,7 +230,9 @@ function endCurrentReferralProgramSeason() external onlyRole(END_REFERRAL_SEASON
 ### addNodeOperatorETH
 
 Add a new Node Operator using ETH as a bond.
-At least one deposit data and corresponding bond should be provided
+At least one deposit data and corresponding bond should be provided.
+msg.sender is marked as consumed and will not be able to create Node Operators or claim the beneficial curve
+via a particular instance of VettedGate.
 
 
 ```solidity
@@ -264,7 +266,9 @@ function addNodeOperatorETH(
 ### addNodeOperatorStETH
 
 Add a new Node Operator using stETH as a bond.
-At least one deposit data and corresponding bond should be provided
+At least one deposit data and corresponding bond should be provided.
+msg.sender is marked as consumed and will not be able to create more Node Operators or claim the beneficial curve
+via a particular instance of VettedGate.
 
 
 ```solidity
@@ -300,7 +304,9 @@ function addNodeOperatorStETH(
 ### addNodeOperatorWstETH
 
 Add a new Node Operator using wstETH as a bond.
-At least one deposit data and corresponding bond should be provided
+At least one deposit data and corresponding bond should be provided.
+msg.sender is marked as consumed and will not be able to create more Node Operators or claim the beneficial curve
+via a particular instance of VettedGate.
 
 
 ```solidity
@@ -335,7 +341,9 @@ function addNodeOperatorWstETH(
 
 ### claimBondCurve
 
-Claim the bond curve for the eligible Node Operator
+Claim the bond curve for the eligible Node Operator.
+msg.sender is marked as consumed and will not be able to create Node Operators or claim the beneficial curve
+via a particular instance of VettedGate.
 
 *Should be called by the reward address of the Node Operator
 In case of the extended manager permissions, should be called by the manager address*
