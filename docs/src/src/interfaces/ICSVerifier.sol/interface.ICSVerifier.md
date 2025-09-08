@@ -1,5 +1,5 @@
 # ICSVerifier
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSVerifier.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/ICSVerifier.sol)
 
 
 ## Functions
@@ -31,6 +31,13 @@ function BEACON_ROOTS() external view returns (address);
 function SLOTS_PER_EPOCH() external view returns (uint64);
 ```
 
+### SLOTS_PER_HISTORICAL_ROOT
+
+
+```solidity
+function SLOTS_PER_HISTORICAL_ROOT() external view returns (uint64);
+```
+
 ### GI_FIRST_WITHDRAWAL_PREV
 
 
@@ -59,18 +66,32 @@ function GI_FIRST_VALIDATOR_PREV() external view returns (GIndex);
 function GI_FIRST_VALIDATOR_CURR() external view returns (GIndex);
 ```
 
-### GI_HISTORICAL_SUMMARIES_PREV
+### GI_FIRST_HISTORICAL_SUMMARY_PREV
 
 
 ```solidity
-function GI_HISTORICAL_SUMMARIES_PREV() external view returns (GIndex);
+function GI_FIRST_HISTORICAL_SUMMARY_PREV() external view returns (GIndex);
 ```
 
-### GI_HISTORICAL_SUMMARIES_CURR
+### GI_FIRST_HISTORICAL_SUMMARY_CURR
 
 
 ```solidity
-function GI_HISTORICAL_SUMMARIES_CURR() external view returns (GIndex);
+function GI_FIRST_HISTORICAL_SUMMARY_CURR() external view returns (GIndex);
+```
+
+### GI_FIRST_BLOCK_ROOT_IN_SUMMARY_PREV
+
+
+```solidity
+function GI_FIRST_BLOCK_ROOT_IN_SUMMARY_PREV() external view returns (GIndex);
+```
+
+### GI_FIRST_BLOCK_ROOT_IN_SUMMARY_CURR
+
+
+```solidity
+function GI_FIRST_BLOCK_ROOT_IN_SUMMARY_CURR() external view returns (GIndex);
 ```
 
 ### FIRST_SUPPORTED_SLOT
@@ -85,6 +106,13 @@ function FIRST_SUPPORTED_SLOT() external view returns (Slot);
 
 ```solidity
 function PIVOT_SLOT() external view returns (Slot);
+```
+
+### CAPELLA_SLOT
+
+
+```solidity
+function CAPELLA_SLOT() external view returns (Slot);
 ```
 
 ### WITHDRAWAL_ADDRESS
@@ -180,12 +208,6 @@ function processHistoricalWithdrawalProof(
 error RootNotFound();
 ```
 
-### InvalidGIndex
-
-```solidity
-error InvalidGIndex();
-```
-
 ### InvalidBlockHeader
 
 ```solidity
@@ -246,6 +268,18 @@ error ZeroAdminAddress();
 error InvalidPivotSlot();
 ```
 
+### InvalidCapellaSlot
+
+```solidity
+error InvalidCapellaSlot();
+```
+
+### HistoricalSummaryDoesNotExist
+
+```solidity
+error HistoricalSummaryDoesNotExist();
+```
+
 ## Structs
 ### GIndices
 
@@ -255,8 +289,10 @@ struct GIndices {
     GIndex gIFirstWithdrawalCurr;
     GIndex gIFirstValidatorPrev;
     GIndex gIFirstValidatorCurr;
-    GIndex gIHistoricalSummariesPrev;
-    GIndex gIHistoricalSummariesCurr;
+    GIndex gIFirstHistoricalSummaryPrev;
+    GIndex gIFirstHistoricalSummaryCurr;
+    GIndex gIFirstBlockRootInSummaryPrev;
+    GIndex gIFirstBlockRootInSummaryCurr;
 }
 ```
 
@@ -309,7 +345,6 @@ struct WithdrawalWitness {
 ```solidity
 struct HistoricalHeaderWitness {
     BeaconBlockHeader header;
-    GIndex rootGIndex;
     bytes32[] proof;
 }
 ```

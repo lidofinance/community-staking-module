@@ -383,9 +383,16 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
         Slot recentSlot,
         Slot targetSlot
     ) internal view returns (GIndex gI) {
-        uint256 targetSlotShifted = targetSlot.unwrap() - CAPELLA_SLOT.unwrap();
-        uint256 summaryIndex = targetSlotShifted / SLOTS_PER_HISTORICAL_ROOT;
-        uint256 rootIndex = targetSlot.unwrap() % SLOTS_PER_HISTORICAL_ROOT;
+        uint64 targetSlotShifted = targetSlot.unwrap() - CAPELLA_SLOT.unwrap();
+        uint64 summaryIndex = targetSlotShifted / SLOTS_PER_HISTORICAL_ROOT;
+        uint64 rootIndex = targetSlot.unwrap() % SLOTS_PER_HISTORICAL_ROOT;
+
+        Slot summaryCreatedAtSlot = Slot.wrap(
+            targetSlot.unwrap() - rootIndex + SLOTS_PER_HISTORICAL_ROOT
+        );
+        if (summaryCreatedAtSlot > recentSlot) {
+            revert HistoricalSummaryDoesNotExist();
+        }
 
         gI = recentSlot < PIVOT_SLOT
             ? GI_FIRST_HISTORICAL_SUMMARY_PREV
@@ -393,7 +400,7 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
 
         gI = gI.shr(summaryIndex); // historicalSummaries[summaryIndex]
         gI = gI.concat(
-            targetSlot < PIVOT_SLOT
+            summaryCreatedAtSlot < PIVOT_SLOT
                 ? GI_FIRST_BLOCK_ROOT_IN_SUMMARY_PREV
                 : GI_FIRST_BLOCK_ROOT_IN_SUMMARY_CURR
         ); // historicalSummaries[summaryIndex].blockRoots[0]

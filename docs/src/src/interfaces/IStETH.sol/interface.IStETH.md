@@ -1,5 +1,5 @@
 # IStETH
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/IStETH.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/IStETH.sol)
 
 
 ## Functions
@@ -61,7 +61,7 @@ function balanceOf(address _account) external view returns (uint256);
 
 ### transferSharesFrom
 
-Transfer `_sharesAmount` stETH shares from `_sender` to `_receiver` using allowance.
+Transfer `_sharesAmount` stETH shares from `_sender` to `_recipient` using allowance.
 
 
 ```solidity
@@ -79,7 +79,7 @@ function transferShares(address _recipient, uint256 _sharesAmount) external retu
 
 ### transfer
 
-Moves `_pooledEthAmount` stETH from the caller's account to the `_recipient` account.
+Moves `_amount` stETH from the caller's account to the `_recipient` account.
 
 
 ```solidity
@@ -88,7 +88,7 @@ function transfer(address _recipient, uint256 _amount) external returns (bool);
 
 ### transferFrom
 
-Moves `_pooledEthAmount` stETH from the `_sender` account to the `_recipient` account.
+Moves `_amount` stETH from the `_sender` account to the `_recipient` account.
 
 
 ```solidity

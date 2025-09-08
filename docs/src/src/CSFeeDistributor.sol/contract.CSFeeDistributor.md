@@ -1,5 +1,5 @@
 # CSFeeDistributor
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSFeeDistributor.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/CSFeeDistributor.sol)
 
 **Inherits:**
 [ICSFeeDistributor](/src/interfaces/ICSFeeDistributor.sol/interface.ICSFeeDistributor.md), Initializable, AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -140,6 +140,9 @@ function initialize(address admin, address _rebateRecipient) external reinitiali
 
 ### finalizeUpgradeV2
 
+*This method is expected to be called only when the contract is upgraded from version 1 to version 2 for the existing version 1 deployment.
+If the version 2 contract is deployed from scratch, the `initialize` method should be used instead.*
+
 
 ```solidity
 function finalizeUpgradeV2(address _rebateRecipient) external reinitializer(2);
@@ -261,11 +264,17 @@ Get the historical record of distribution data
 ```solidity
 function getHistoricalDistributionData(uint256 index) external view returns (DistributionData memory);
 ```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`index`|`uint256`|Historical entry index|
+
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`DistributionData`|index Historical entry index|
+|`<none>`|`DistributionData`|Historical distribution data|
 
 
 ### getFeesToDistribute
