@@ -5835,7 +5835,8 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         vm.prank(address(stakingModule));
         bool fullyBurned = accounting.penalize(0, amountToBurn);
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        uint256 bondLockAfter = accounting.getActualLockedBond(0);
+        CSAccounting.BondLock memory bondLockAfter = accounting
+            .getLockedBondInfo(0);
 
         assertEq(
             bondSharesAfter,
@@ -5847,7 +5848,8 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
             0,
             "total bond shares should be zero"
         );
-        assertApproxEqAbs(bondLockAfter, bondLockBefore + 1 ether, 1);
+        assertApproxEqAbs(bondLockAfter.amount, bondLockBefore + 1 ether, 1);
+        assertEq(bondLockAfter.until, type(uint128).max);
         assertFalse(fullyBurned, "should no be fully burned");
     }
 
@@ -5855,6 +5857,95 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         vm.prank(stranger);
         accounting.penalize(0, 20);
+    }
+
+    function test_penalize_unburnedAmount_noExistingLock_createsInfiniteLock()
+        public
+        assertInvariants
+    {
+        uint256 bondBefore = accounting.getBond(0);
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 amountToBurn = bondBefore + 1 ether;
+
+        vm.expectCall(
+            locator.burner(),
+            abi.encodeWithSelector(
+                IBurner.requestBurnShares.selector,
+                address(accounting),
+                bondSharesBefore
+            )
+        );
+
+        vm.prank(address(stakingModule));
+        bool fullyBurned = accounting.penalize(0, amountToBurn);
+
+        CSAccounting.BondLock memory lockAfter = accounting.getLockedBondInfo(
+            0
+        );
+        assertApproxEqAbs(lockAfter.amount, amountToBurn - bondBefore, 1);
+        assertEq(lockAfter.until, type(uint128).max);
+        assertFalse(fullyBurned);
+    }
+
+    function test_penalize_unburnedAmount_expiredLock_notAdded()
+        public
+        assertInvariants
+    {
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(0, 1 ether);
+        CSAccounting.BondLock memory lockBefore = accounting.getLockedBondInfo(
+            0
+        );
+        assertEq(accounting.getActualLockedBond(0), 1 ether);
+
+        vm.warp(lockBefore.until);
+        assertEq(accounting.getActualLockedBond(0), 0);
+
+        uint256 bondBefore = accounting.getBond(0);
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 amountToBurn = bondBefore + 1 ether;
+
+        vm.expectCall(
+            locator.burner(),
+            abi.encodeWithSelector(
+                IBurner.requestBurnShares.selector,
+                address(accounting),
+                bondSharesBefore
+            )
+        );
+
+        vm.prank(address(stakingModule));
+        accounting.penalize(0, amountToBurn);
+
+        CSAccounting.BondLock memory lockAfter = accounting.getLockedBondInfo(
+            0
+        );
+        assertApproxEqAbs(lockAfter.amount, amountToBurn - bondBefore, 1);
+        assertEq(lockAfter.until, type(uint128).max);
+    }
+
+    function test_penalize_fullyBurned_keepsExistingLock()
+        public
+        assertInvariants
+    {
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(0, 2 ether);
+        CSAccounting.BondLock memory lockBefore = accounting.getLockedBondInfo(
+            0
+        );
+        assertEq(accounting.getActualLockedBond(0), 2 ether);
+
+        uint256 amountToBurn = accounting.getBond(0) / 2;
+
+        vm.prank(address(stakingModule));
+        bool fullyBurned = accounting.penalize(0, amountToBurn);
+        CSAccounting.BondLock memory lockAfter = accounting.getLockedBondInfo(
+            0
+        );
+
+        assertTrue(fullyBurned);
+        assertEq(lockAfter.amount, lockBefore.amount);
+        assertEq(lockAfter.until, lockBefore.until);
     }
 }
 
@@ -6466,9 +6557,71 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         bool applied = accounting.settleLockedBondETH(noId);
         vm.stopPrank();
 
-        assertEq(accounting.getActualLockedBond(noId), 1 ether);
+        CSAccounting.BondLock memory bondLockAfter = accounting
+            .getLockedBondInfo(0);
+
+        assertEq(bondLockAfter.amount, 1 ether);
+        assertEq(bondLockAfter.until, type(uint128).max);
         assertEq(accounting.getBondShares(noId), 0);
         assertTrue(applied);
+    }
+
+    function test_settleLockedBondETH_partialBurn_setsInfiniteLockToRestOnly()
+        public
+        assertInvariants
+    {
+        mock_getNodeOperatorsCount(1);
+        uint256 noId = 0;
+
+        uint256 bond = 10 ether;
+        uint256 locked = 15 ether;
+        addBond(noId, bond);
+
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(noId, locked);
+
+        uint256 bondSharesBefore = accounting.getBondShares(noId);
+        vm.expectCall(
+            locator.burner(),
+            abi.encodeWithSelector(
+                IBurner.requestBurnShares.selector,
+                address(accounting),
+                bondSharesBefore
+            )
+        );
+
+        vm.prank(address(stakingModule));
+        accounting.settleLockedBondETH(noId);
+
+        CSAccounting.BondLock memory lockAfter = accounting.getLockedBondInfo(
+            noId
+        );
+        assertApproxEqAbs(lockAfter.amount, locked - bond, 1);
+        assertEq(lockAfter.until, type(uint128).max);
+    }
+
+    function test_settleLockedBondETH_restZero_removesLock()
+        public
+        assertInvariants
+    {
+        mock_getNodeOperatorsCount(1);
+        uint256 noId = 0;
+
+        uint256 amount = 5 ether;
+        addBond(noId, amount);
+
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(noId, amount);
+
+        vm.prank(address(stakingModule));
+        accounting.settleLockedBondETH(noId);
+
+        CSAccounting.BondLock memory lockAfter = accounting.getLockedBondInfo(
+            noId
+        );
+        assertEq(lockAfter.amount, 0);
+        assertEq(lockAfter.until, 0);
+        assertEq(accounting.getActualLockedBond(noId), 0);
     }
 }
 

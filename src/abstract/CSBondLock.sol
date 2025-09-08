@@ -95,13 +95,15 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         if (lock.until > block.timestamp) {
             amount += lock.amount;
         }
-        unchecked {
-            _changeBondLock({
-                nodeOperatorId: nodeOperatorId,
-                amount: amount,
-                until: block.timestamp + $.bondLockPeriod
-            });
+        uint256 until = block.timestamp + $.bondLockPeriod;
+        if (lock.until > until) {
+            until = lock.until;
         }
+        _changeBondLock({
+            nodeOperatorId: nodeOperatorId,
+            amount: amount,
+            until: until
+        });
     }
 
     /// @dev Reduce the locked bond amount for the given Node Operator without changing the lock period
