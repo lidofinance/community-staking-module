@@ -1195,11 +1195,16 @@ contract CSModule is
             // If there is `targetLimit` set no matter the `targetLimitMode` we switch to `FORCED_TARGET_LIMIT_MODE`
             // to ensure that there is no way to bypass the regular limit by having unbonded keys.
             unchecked {
-                targetValidatorsCount = Math.min(
-                    no.targetLimitMode > 0 ? no.targetLimit : type(uint32).max,
+                targetValidatorsCount =
                     no.totalAddedKeys -
-                        no.totalWithdrawnKeys -
-                        totalUnbondedKeys
+                    no.totalWithdrawnKeys -
+                    totalUnbondedKeys;
+            }
+            // Account for the no.targetLimit only when target limit is enabled
+            if (no.targetLimitMode > 0) {
+                targetValidatorsCount = Math.min(
+                    targetValidatorsCount,
+                    no.targetLimit
                 );
             }
         } else {
