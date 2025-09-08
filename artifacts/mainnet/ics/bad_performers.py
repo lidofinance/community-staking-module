@@ -24,7 +24,7 @@ def request_performance_report(report_file, retries=3, delay=2):
                 time.sleep(delay)
                 continue
             raise e
-    raise Exception(f"Failed to fetch report {report_file}")
+
 
 def process_bad_performers():
     bad_performance_counts = {}

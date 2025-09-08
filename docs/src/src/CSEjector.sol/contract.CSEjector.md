@@ -1,5 +1,5 @@
 # CSEjector
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/CSEjector.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSEjector.sol)
 
 **Inherits:**
 [ICSEjector](/src/interfaces/ICSEjector.sol/interface.ICSEjector.md), [ExitTypes](/src/abstract/ExitTypes.sol/abstract.ExitTypes.md), AccessControlEnumerable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)

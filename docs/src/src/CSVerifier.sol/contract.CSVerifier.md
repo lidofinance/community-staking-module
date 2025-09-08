@@ -1,5 +1,5 @@
 # CSVerifier
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/CSVerifier.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSVerifier.sol)
 
 **Inherits:**
 [ICSVerifier](/src/interfaces/ICSVerifier.sol/interface.ICSVerifier.md), AccessControlEnumerable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md)
@@ -31,17 +31,6 @@ address public constant BEACON_ROOTS = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac0
 
 ```solidity
 uint64 public immutable SLOTS_PER_EPOCH;
-```
-
-
-### SLOTS_PER_HISTORICAL_ROOT
-*Count of historical roots per accumulator.*
-
-*See https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters*
-
-
-```solidity
-uint64 public immutable SLOTS_PER_HISTORICAL_ROOT;
 ```
 
 
@@ -81,39 +70,21 @@ GIndex public immutable GI_FIRST_VALIDATOR_CURR;
 ```
 
 
-### GI_FIRST_HISTORICAL_SUMMARY_PREV
-*This index is relative to a state like: `BeaconState.historical_summaries[0]`.*
+### GI_HISTORICAL_SUMMARIES_PREV
+*This index is relative to a state like: `BeaconState.historical_summaries`.*
 
 
 ```solidity
-GIndex public immutable GI_FIRST_HISTORICAL_SUMMARY_PREV;
+GIndex public immutable GI_HISTORICAL_SUMMARIES_PREV;
 ```
 
 
-### GI_FIRST_HISTORICAL_SUMMARY_CURR
-*This index is relative to a state like: `BeaconState.historical_summaries[0]`.*
+### GI_HISTORICAL_SUMMARIES_CURR
+*This index is relative to a state like: `BeaconState.historical_summaries`.*
 
 
 ```solidity
-GIndex public immutable GI_FIRST_HISTORICAL_SUMMARY_CURR;
-```
-
-
-### GI_FIRST_BLOCK_ROOT_IN_SUMMARY_PREV
-*This index is relative to HistoricalSummary like: HistoricalSummary.blockRoots[0].*
-
-
-```solidity
-GIndex public immutable GI_FIRST_BLOCK_ROOT_IN_SUMMARY_PREV;
-```
-
-
-### GI_FIRST_BLOCK_ROOT_IN_SUMMARY_CURR
-*This index is relative to HistoricalSummary like: HistoricalSummary.blockRoots[0].*
-
-
-```solidity
-GIndex public immutable GI_FIRST_BLOCK_ROOT_IN_SUMMARY_CURR;
+GIndex public immutable GI_HISTORICAL_SUMMARIES_CURR;
 ```
 
 
@@ -135,15 +106,6 @@ Slot public immutable PIVOT_SLOT;
 ```
 
 
-### CAPELLA_SLOT
-*Historical summaries started accumulating from the slot of Capella fork.*
-
-
-```solidity
-Slot public immutable CAPELLA_SLOT;
-```
-
-
 ### WITHDRAWAL_ADDRESS
 *An address withdrawals are supposed to happen to (Lido withdrawal credentials).*
 
@@ -154,7 +116,7 @@ address public immutable WITHDRAWAL_ADDRESS;
 
 
 ### MODULE
-*Staking module contract.*
+*Staking module contract*
 
 
 ```solidity
@@ -173,11 +135,9 @@ constructor(
     address withdrawalAddress,
     address module,
     uint64 slotsPerEpoch,
-    uint64 slotsPerHistoricalRoot,
     GIndices memory gindices,
     Slot firstSupportedSlot,
     Slot pivotSlot,
-    Slot capellaSlot,
     address admin
 );
 ```
@@ -289,11 +249,11 @@ function _getValidatorGI(uint256 offset, Slot stateSlot) internal view returns (
 function _getWithdrawalGI(uint256 offset, Slot stateSlot) internal view returns (GIndex);
 ```
 
-### _getHistoricalBlockRootGI
+### _getHistoricalSummariesGI
 
 
 ```solidity
-function _getHistoricalBlockRootGI(Slot recentSlot, Slot targetSlot) internal view returns (GIndex gI);
+function _getHistoricalSummariesGI(Slot stateSlot) internal view returns (GIndex);
 ```
 
 ### _computeEpochAtSlot

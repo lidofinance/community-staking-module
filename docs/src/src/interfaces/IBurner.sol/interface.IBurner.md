@@ -1,8 +1,9 @@
 # IBurner
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/IBurner.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/IBurner.sol)
 
 
 ## Functions
+
 ### REQUEST_BURN_SHARES_ROLE
 
 
@@ -45,10 +46,10 @@ function revokeRole(bytes32 role, address account) external;
 function hasRole(bytes32 role, address account) external view returns (bool);
 ```
 
-### requestBurnShares
+### requestBurnMyStETH
 
 
 ```solidity
-function requestBurnShares(address _from, uint256 _sharesAmountToBurn) external;
+function requestBurnMyStETH(uint256 _stETHAmountToBurn) external;
 ```
 

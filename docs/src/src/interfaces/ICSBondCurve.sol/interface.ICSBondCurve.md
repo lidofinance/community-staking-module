@@ -1,5 +1,5 @@
 # ICSBondCurve
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/ICSBondCurve.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSBondCurve.sol)
 
 
 ## Functions
@@ -177,6 +177,12 @@ event BondCurveSet(uint256 indexed nodeOperatorId, uint256 curveId);
 error InvalidBondCurveLength();
 ```
 
+### InvalidBondCurveMaxLength
+
+```solidity
+error InvalidBondCurveMaxLength();
+```
+
 ### InvalidBondCurveValues
 
 ```solidity
@@ -199,7 +205,7 @@ error InvalidInitializationCurveId();
 ### BondCurve
 *Bond curve structure.
 It contains:
-- intervals    |> intervals-based representation of the bond curve
+- internals    |> intervals-based representation of the bond curve
 The interval is defined by:
 - minKeysCount |> minimum keys count (inclusive) of the interval
 - minBond      |> minimum bond amount (inclusive) of the interval

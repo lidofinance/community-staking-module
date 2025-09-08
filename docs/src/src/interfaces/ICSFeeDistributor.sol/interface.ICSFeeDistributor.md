@@ -1,5 +1,5 @@
 # ICSFeeDistributor
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/ICSFeeDistributor.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSFeeDistributor.sol)
 
 **Inherits:**
 [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
@@ -208,17 +208,11 @@ Get the historical record of distribution data
 ```solidity
 function getHistoricalDistributionData(uint256 index) external view returns (DistributionData memory);
 ```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`index`|`uint256`|Historical entry index|
-
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`DistributionData`|Historical distribution data|
+|`<none>`|`DistributionData`|index Historical entry index|
 
 
 ### hashLeaf

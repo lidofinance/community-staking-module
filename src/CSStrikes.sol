@@ -244,12 +244,11 @@ contract CSStrikes is
             revert NotEnoughStrikesToEject();
         }
 
-        EXIT_PENALTIES.processStrikesReport(keyStrikes.nodeOperatorId, pubkey);
-
         ejector.ejectBadPerformer{ value: value }(
             keyStrikes.nodeOperatorId,
             keyStrikes.keyIndex,
             refundRecipient
         );
+        EXIT_PENALTIES.processStrikesReport(keyStrikes.nodeOperatorId, pubkey);
     }
 }

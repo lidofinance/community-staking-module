@@ -1,5 +1,5 @@
 # SigningKeys
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/lib/SigningKeys.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/lib/SigningKeys.sol)
 
 **Author:**
 KRogLA
@@ -109,7 +109,7 @@ function loadKeysSigs(
 |`nodeOperatorId`|`uint256`|operator id|
 |`startIndex`|`uint256`|start index|
 |`keysCount`|`uint256`|keys count to load|
-|`pubkeys`|`bytes`|preallocated keys buffer to read in|
+|`pubkeys`|`bytes`|preallocated kes buffer to read in|
 |`signatures`|`bytes`|preallocated signatures buffer to read in|
 |`bufOffset`|`uint256`|start offset in `pubkeys`/`signatures` buffer to place values (in number of keys)|
 

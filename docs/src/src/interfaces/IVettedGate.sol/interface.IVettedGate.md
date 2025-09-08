@@ -1,5 +1,5 @@
 # IVettedGate
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/IVettedGate.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/IVettedGate.sol)
 
 
 ## Functions
@@ -170,9 +170,7 @@ function endCurrentReferralProgramSeason() external;
 ### addNodeOperatorETH
 
 Add a new Node Operator using ETH as a bond.
-At least one deposit data and corresponding bond should be provided.
-msg.sender is marked as consumed and will not be able to create Node Operators or claim the beneficial curve
-via a particular instance of VettedGate.
+At least one deposit data and corresponding bond should be provided
 
 
 ```solidity
@@ -206,9 +204,7 @@ function addNodeOperatorETH(
 ### addNodeOperatorStETH
 
 Add a new Node Operator using stETH as a bond.
-At least one deposit data and corresponding bond should be provided.
-msg.sender is marked as consumed and will not be able to create more Node Operators or claim the beneficial curve
-via a particular instance of VettedGate.
+At least one deposit data and corresponding bond should be provided
 
 Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
 
@@ -246,9 +242,7 @@ function addNodeOperatorStETH(
 ### addNodeOperatorWstETH
 
 Add a new Node Operator using wstETH as a bond.
-At least one deposit data and corresponding bond should be provided.
-msg.sender is marked as consumed and will not be able to create more Node Operators or claim the beneficial curve
-via a particular instance of VettedGate.
+At least one deposit data and corresponding bond should be provided
 
 Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
 
@@ -285,9 +279,7 @@ function addNodeOperatorWstETH(
 
 ### claimBondCurve
 
-Claim the bond curve for the eligible Node Operator.
-msg.sender is marked as consumed and will not be able to create Node Operators or claim the beneficial curve
-via a particular instance of VettedGate.
+Claim the bond curve for the eligible Node Operator
 
 *Should be called by the reward address of the Node Operator
 In case of the extended manager permissions, should be called by the manager address*

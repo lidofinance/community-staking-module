@@ -47,9 +47,6 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     uint256 public immutable MAX_BOND_LOCK_PERIOD;
 
     constructor(uint256 minBondLockPeriod, uint256 maxBondLockPeriod) {
-        if (minBondLockPeriod == 0) {
-            revert InvalidBondLockPeriod();
-        }
         if (minBondLockPeriod > maxBondLockPeriod) {
             revert InvalidBondLockPeriod();
         }
