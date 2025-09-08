@@ -450,7 +450,6 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 amount
     ) external onlyModule returns (bool fullyCharged) {
-        // NOTE: If we could not burn the full amount, add the remaining to the current lock and make it infinite
         fullyCharged = CSBondCore._charge(
             nodeOperatorId,
             amount,
