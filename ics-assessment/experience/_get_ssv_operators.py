@@ -7,6 +7,7 @@ def main():
     output_csv = "ssv-verified-operators.csv"
 
     items = set([item["owner_address"] for item in items])
+    items = sorted(items)
 
     with open(output_csv, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)

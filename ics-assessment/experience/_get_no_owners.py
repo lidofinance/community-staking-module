@@ -8,11 +8,11 @@ PROVIDER_URL_HOODI = 'http://localhost:8545/'
 CONTRACT_ADDRESS_MAINNET = '0xdA7dE2ECdDfccC6c3AF10108Db212ACBBf9EA83F'
 CONTRACT_ADDRESS_HOODI = '0x79CEf36D84743222f37765204Bec41E92a93E59d'
 
-with open("../abi/csm_abi.json", "r") as file:
+with open("../../artifacts/mainnet/ics/abi/csm_abi.json", "r") as file:
     CSM_ABI = file.read()
 
-REFERENCE_BLOCK_MAINNET = 22773472 # TODO: Update
-REFERENCE_BLOCK_HOODI = 727304 # TODO: Update
+REFERENCE_BLOCK_MAINNET = 23295811 # TODO: Update
+REFERENCE_BLOCK_HOODI = 1149717 # TODO: Update
 
 OUTPUT_FILE_MAINNET = 'node_operator_owners_mainnet.json'
 OUTPUT_FILE_HOODI = 'node_operator_owners_hoodi.json'
@@ -45,13 +45,13 @@ async def fetch_node_operator_owners(provider_url, contract_address, reference_b
 
             queue.task_done()
 
-    workers = [asyncio.create_task(worker()) for _ in range(5)]  # 5 concurrent workers
+    workers = [asyncio.create_task(worker()) for _ in range(4)]  # 4 concurrent workers
     await queue.join()
     for w in workers:
         w.cancel()
 
     with open(json_output, 'w') as f:
-        json.dump(node_operators, f, indent=2)
+        json.dump(dict(sorted(node_operators.items(), key=lambda item: item[0])), f, indent=2)
 
 
 if __name__ == '__main__':
