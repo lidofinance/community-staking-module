@@ -75,16 +75,19 @@ contract CSBondCoreTestable is CSBondCore {
         return _getClaimableBondShares(nodeOperatorId);
     }
 
-    function burn(uint256 nodeOperatorId, uint256 amount) external {
-        _burn(nodeOperatorId, amount);
+    function burn(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external returns (uint256) {
+        return _burn(nodeOperatorId, amount);
     }
 
     function charge(
         uint256 nodeOperatorId,
         uint256 amount,
         address recipient
-    ) external {
-        _charge(nodeOperatorId, amount, recipient);
+    ) external returns (bool) {
+        return _charge(nodeOperatorId, amount, recipient);
     }
 }
 
@@ -472,7 +475,7 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
                 shares
             )
         );
-        bondCore.burn(0, 1 ether);
+        uint256 unburned = bondCore.burn(0, 1 ether);
         uint256 bondSharesAfter = bondCore.getBondShares(0);
 
         assertEq(
@@ -481,6 +484,7 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             "bond shares should be decreased by burning"
         );
         assertEq(bondCore.totalBondShares(), bondSharesAfter);
+        assertEq(unburned, 0, "should be fully burned");
     }
 
     function test_burn_MoreThanDeposit() public {
@@ -505,7 +509,7 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             )
         );
 
-        bondCore.burn(0, 33 ether);
+        uint256 unburned = bondCore.burn(0, 33 ether);
 
         assertEq(
             bondCore.getBondShares(0),
@@ -513,6 +517,7 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             "bond shares should be 0 after burning"
         );
         assertEq(bondCore.totalBondShares(), 0);
+        assertEq(unburned, 1 ether, "should not be fully burned");
     }
 
     function test_burn_EqualToDeposit() public {
@@ -532,7 +537,7 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             )
         );
 
-        bondCore.burn(0, 32 ether);
+        uint256 unburned = bondCore.burn(0, 32 ether);
 
         assertEq(
             bondCore.getBondShares(0),
@@ -540,6 +545,7 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             "bond shares should be 0 after burning"
         );
         assertEq(bondCore.totalBondShares(), 0);
+        assertEq(unburned, 0, "should be fully burned");
     }
 
     function test_burn_ZeroAmount() public {
@@ -550,7 +556,7 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
 
         // Should not emit any events for zero burn
         vm.recordLogs();
-        bondCore.burn(0, 0);
+        uint256 unburned = bondCore.burn(0, 0);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         // Verify no events were emitted
@@ -567,6 +573,7 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             totalBondSharesBefore,
             "total bond shares should remain unchanged for zero burn"
         );
+        assertEq(unburned, 0, "should be fully burned");
     }
 }
 
@@ -588,7 +595,11 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
                 shares
             )
         );
-        bondCore.charge(0, 1 ether, testChargePenaltyRecipient);
+        bool fullyCharged = bondCore.charge(
+            0,
+            1 ether,
+            testChargePenaltyRecipient
+        );
         uint256 bondSharesAfter = bondCore.getBondShares(0);
 
         assertEq(
@@ -597,6 +608,7 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             "bond shares should be decreased by charging"
         );
         assertEq(bondCore.totalBondShares(), bondSharesAfter);
+        assertTrue(fullyCharged, "should be fully charged");
     }
 
     function test_charge_MoreThanDeposit() public {
@@ -619,7 +631,11 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
                 stETH.getSharesByPooledEth(32 ether)
             )
         );
-        bondCore.charge(0, 33 ether, testChargePenaltyRecipient);
+        bool fullyCharged = bondCore.charge(
+            0,
+            33 ether,
+            testChargePenaltyRecipient
+        );
 
         assertEq(
             bondCore.getBondShares(0),
@@ -627,6 +643,7 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             "bond shares should be 0 after charging"
         );
         assertEq(bondCore.totalBondShares(), 0);
+        assertFalse(fullyCharged, "should not be fully charged");
     }
 
     function test_charge_EqualToDeposit() public {
@@ -646,7 +663,11 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             )
         );
 
-        bondCore.charge(0, 32 ether, testChargePenaltyRecipient);
+        bool fullyCharged = bondCore.charge(
+            0,
+            32 ether,
+            testChargePenaltyRecipient
+        );
 
         assertEq(
             bondCore.getBondShares(0),
@@ -654,6 +675,7 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             "bond shares should be 0 after charging"
         );
         assertEq(bondCore.totalBondShares(), 0);
+        assertTrue(fullyCharged, "should be fully charged");
     }
 
     function test_charge_ZeroAmount() public {
@@ -664,7 +686,7 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
 
         // Should not emit any events for zero charge
         vm.recordLogs();
-        bondCore.charge(0, 0, testChargePenaltyRecipient);
+        bool fullyCharged = bondCore.charge(0, 0, testChargePenaltyRecipient);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         // Verify no events were emitted
@@ -681,5 +703,6 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             totalBondSharesBefore,
             "total bond shares should remain unchanged for zero charge"
         );
+        assertTrue(fullyCharged, "should be fully charged");
     }
 }

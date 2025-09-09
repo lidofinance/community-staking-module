@@ -1,5 +1,5 @@
 # CSFeeOracle
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/CSFeeOracle.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/CSFeeOracle.sol)
 
 **Inherits:**
 [ICSFeeOracle](/src/interfaces/ICSFeeOracle.sol/interface.ICSFeeOracle.md), [BaseOracle](/src/lib/base-oracle/BaseOracle.sol/abstract.BaseOracle.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -102,7 +102,8 @@ function initialize(address admin, address consensusContract, uint256 consensusV
 
 ### finalizeUpgradeV2
 
-*should be called after update on the proxy*
+*This method is expected to be called only when the contract is upgraded from version 1 to version 2 for the existing version 1 deployment.
+If the version 2 contract is deployed from scratch, the `initialize` method should be used instead.*
 
 
 ```solidity

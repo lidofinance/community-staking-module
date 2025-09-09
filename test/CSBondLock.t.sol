@@ -35,7 +35,7 @@ contract CSBondLockTestable is CSBondLock(4 weeks, 365 days) {
     }
 
     function remove(uint256 nodeOperatorId) external {
-        _remove(nodeOperatorId);
+        _changeBondLock(nodeOperatorId, 0, 0);
     }
 }
 
@@ -165,6 +165,24 @@ contract CSBondLockTest is Test {
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 1 ether);
         assertEq(lock.until, block.timestamp + period);
+    }
+
+    function test_lock_secondLockWithShorterPeriod_keepsPreviousUntil() public {
+        uint256 noId = 0;
+
+        bondLock.lock(noId, 1 ether);
+        CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
+            noId
+        );
+
+        bondLock.setBondLockPeriod(4 weeks);
+
+        vm.warp(block.timestamp + 1 days);
+
+        bondLock.lock(noId, 2 ether);
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
+        assertEq(lock.amount, 3 ether);
+        assertEq(lock.until, lockBefore.until);
     }
 
     function test_lock_RevertWhen_ZeroAmount() public {

@@ -1,5 +1,5 @@
 # ICSModule
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/ICSModule.sol)
 
 **Inherits:**
 [IQueueLib](/src/lib/QueueLib.sol/interface.IQueueLib.md), [INOAddresses](/src/lib/NOAddresses.sol/interface.INOAddresses.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md), [IStakingModule](/src/interfaces/IStakingModule.sol/interface.IStakingModule.md)
@@ -186,7 +186,7 @@ function createNodeOperator(
 
 |Name|Type|Description|
 |----|----|-----------|
-|`from`|`address`|Sender address. Initial sender address to be used as a default manager and reward addresses. Gates must pass the correct address in order to specify which address should be the owner of the Node Operator|
+|`from`|`address`|Sender address. Initial sender address to be used as a default manager and reward addresses. Gates must pass the correct address in order to specify which address should be the owner of the Node Operator.|
 |`managementProperties`|`NodeOperatorManagementProperties`|Optional. Management properties to be used for the Node Operator. managerAddress: Used as `managerAddress` for the Node Operator. If not passed `from` will be used. rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `from` will be used. extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`. If set to true `resetNodeOperatorManagerAddress` method will be disabled|
 |`referrer`|`address`|Optional. Referrer address. Should be passed when Node Operator is created using partners integration|
 
@@ -511,9 +511,13 @@ function cleanDepositQueue(uint256 maxItems) external returns (uint256 removed, 
 
 ### updateDepositableValidatorsCount
 
-Update depositable validators data and enqueue all unqueued keys for the given Node Operator
+Update depositable validators data and enqueue all unqueued keys for the given Node Operator.
+Unqueued stands for vetted but not enqueued keys.
 
-Unqueued stands for vetted but not enqueued keys
+*The following rules are applied:
+- Unbonded keys can not be depositable
+- Unvetted keys can not be depositable
+- Depositable keys count should respect targetLimit value*
 
 
 ```solidity
@@ -528,12 +532,17 @@ function updateDepositableValidatorsCount(uint256 nodeOperatorId) external;
 
 ### migrateToPriorityQueue
 
-Performs a one-time migration of allocated seats from the legacy queue to a priority queue
+Performs a one-time migration of allocated seats from the legacy or default queue to a priority queue
 for an eligible node operator. This is possible, e.g., in the following scenario: A node
-operator with EA curve added their keys before CSM v2 and has no deposits due to a very long
-queue. The EA curve gives the node operator the ability to get some count of deposits through
+operator uploaded keys before CSM v2 and have no deposits due to a long queue.
+After the CSM v2 release, the node operator has claimed the ICS or other priority node operator type.
+This node operator type gives the node operator the ability to get several deposits through
 the priority queue. So, by calling the migration method, the node operator can obtain seats
-in the priority queue even though they already have seats in the legacy queue.
+in the priority queue, even though they already have seats in the legacy queue.
+The method can also be used by the node operators who joined CSM v2 permissionlessly after the release
+and had their node operator type upgraded to ICS or another priority type.
+The method does not remove the old queue items. Hence, the node operator can upload additional keys that
+will take the place of the migrated keys in the original queue.
 
 
 ```solidity
@@ -750,6 +759,9 @@ function isValidatorWithdrawn(uint256 nodeOperatorId, uint256 keyIndex) external
 ### removeKeys
 
 Remove keys for the Node Operator and confiscate removal charge for each deleted key
+This method is a part of the Optimistic Vetting scheme. After key deletion `totalVettedKeys`
+is set equal to `totalAddedKeys`. If invalid keys are not removed, the unvetting process will be repeated
+and `decreaseVettedSigningKeysCount` will be called by StakingRouter.
 
 
 ```solidity
@@ -923,6 +935,24 @@ error NotEnoughKeys();
 error PriorityQueueAlreadyUsed();
 ```
 
+### NotEligibleForPriorityQueue
+
+```solidity
+error NotEligibleForPriorityQueue();
+```
+
+### PriorityQueueMaxDepositsUsed
+
+```solidity
+error PriorityQueueMaxDepositsUsed();
+```
+
+### NoQueuedKeysToMigrate
+
+```solidity
+error NoQueuedKeysToMigrate();
+```
+
 ### KeysLimitExceeded
 
 ```solidity
@@ -933,12 +963,6 @@ error KeysLimitExceeded();
 
 ```solidity
 error SigningKeysInvalidOffset();
-```
-
-### AlreadyWithdrawn
-
-```solidity
-error AlreadyWithdrawn();
 ```
 
 ### InvalidAmount

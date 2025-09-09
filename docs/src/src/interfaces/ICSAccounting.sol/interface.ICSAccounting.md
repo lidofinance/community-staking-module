@@ -1,5 +1,5 @@
 # ICSAccounting
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/efc92ba178845b0562e369d8d71b585ba381ab86/src/interfaces/ICSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/3a4f57c9cf742468b087015f451ef8dce648f719/src/interfaces/ICSAccounting.sol)
 
 **Inherits:**
 [ICSBondCore](/src/interfaces/ICSBondCore.sol/interface.ICSBondCore.md), [ICSBondCurve](/src/interfaces/ICSBondCurve.sol/interface.ICSBondCurve.md), [ICSBondLock](/src/interfaces/ICSBondLock.sol/interface.ICSBondLock.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
@@ -162,7 +162,9 @@ function addBondCurve(BondCurveIntervalInput[] calldata bondCurve) external retu
 Update existing bond curve
 
 *If the curve is updated to a curve with higher values for any point,
-Extensive checks should be performed to avoid inconsistency in the keys accounting*
+Extensive checks and actions should be performed by the method caller to avoid
+inconsistency in the keys accounting. A manual update of the depositable validators count
+in CSM might be required to ensure that the keys pointers are consistent.*
 
 
 ```solidity
@@ -269,6 +271,8 @@ function getUnbondedKeysCount(uint256 nodeOperatorId) external view returns (uin
 ### getUnbondedKeysCountToEject
 
 Get the number of the unbonded keys to be ejected using a forcedTargetLimit
+Locked bond is not considered for this calculation to allow Node Operators to
+compensate the locked bond via `compensateLockedBondETH` method before the ejection happens
 
 
 ```solidity
@@ -694,6 +698,9 @@ function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external;
 
 Penalize bond by burning stETH shares of the given Node Operator
 
+*Penalty application has a priority over the locked bond.
+Method call can result in the remaining bond being lower than the locked bond.*
+
 
 ```solidity
 function penalize(uint256 nodeOperatorId, uint256 amount) external;
@@ -709,6 +716,9 @@ function penalize(uint256 nodeOperatorId, uint256 amount) external;
 ### chargeFee
 
 Charge fee from bond by transferring stETH shares of the given Node Operator to the charge recipient
+
+*Charge confiscation has a priority over the locked bond.
+Method call can result in the remaining bond being lower than the locked bond.*
 
 
 ```solidity
