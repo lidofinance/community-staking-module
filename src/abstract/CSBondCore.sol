@@ -199,18 +199,23 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev Burn Node Operator's bond shares (stETH). Shares will be burned on the next stETH rebase
     /// @dev The contract that uses this implementation should be granted `Burner.REQUEST_BURN_SHARES_ROLE` and have stETH allowance for `Burner`
     /// @param amount Bond amount to burn in ETH (stETH)
-    /// @return fullyBurned True if the amount to burn is equal to the amount burned
+    /// @return notBurnedAmount Amount in ETH that was not burned due to insufficient bond shares
     function _burn(
         uint256 nodeOperatorId,
         uint256 amount
-    ) internal returns (bool fullyBurned) {
+    ) internal returns (uint256 notBurnedAmount) {
         uint256 sharesToBurn = _sharesByEth(amount);
         uint256 burnedShares = _reduceBond(nodeOperatorId, sharesToBurn);
-        fullyBurned = burnedShares == sharesToBurn; // fully burned if the amount to burn is equal to the amount reduced
 
         // If no bond already or the amount to burn is zero
         if (burnedShares == 0) {
-            return fullyBurned;
+            return amount;
+        }
+
+        uint256 amountToBurn = _ethByShares(sharesToBurn);
+        uint256 amountBurned = _ethByShares(burnedShares);
+        unchecked {
+            notBurnedAmount = amountToBurn - amountBurned;
         }
 
         // TODO: Replace with `requestBurnMyShares` (https://github.com/lidofinance/core/pull/1142) in the next major release
@@ -219,11 +224,7 @@ abstract contract CSBondCore is ICSBondCore {
             burnedShares
         );
 
-        emit BondBurned(
-            nodeOperatorId,
-            _ethByShares(sharesToBurn),
-            _ethByShares(burnedShares)
-        );
+        emit BondBurned(nodeOperatorId, amountToBurn, amountBurned);
     }
 
     /// @dev Transfer Node Operator's bond shares (stETH) to charge recipient
