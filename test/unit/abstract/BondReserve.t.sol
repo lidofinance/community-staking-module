@@ -6,8 +6,8 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import { BondReserve } from "../../../src/abstract/BondReserve.sol";
-import { IBondReserve } from "../../../src/interfaces/IBondReserve.sol";
+import { BondReserve } from "src/abstract/BondReserve.sol";
+import { IBondReserve } from "src/interfaces/IBondReserve.sol";
 
 contract BondReserveTestable is BondReserve {
     function initialize(uint256 minPeriod) public initializer {

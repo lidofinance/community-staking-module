@@ -7,25 +7,25 @@ import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Utilities } from "../helpers/Utilities.sol";
 import { Fixtures } from "../helpers/Fixtures.sol";
 import { InvariantAsserts } from "../helpers/InvariantAsserts.sol";
-import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "../../src/interfaces/ICSModule.sol";
+import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "src/interfaces/ICSModule.sol";
 import { CSAccountingMock } from "../helpers/mocks/CSAccountingMock.sol";
 import { ExitPenaltiesMock } from "../helpers/mocks/ExitPenaltiesMock.sol";
 import { CSParametersRegistryMock } from "../helpers/mocks/CSParametersRegistryMock.sol";
 import { LidoLocatorMock } from "../helpers/mocks/LidoLocatorMock.sol";
 import { LidoMock } from "../helpers/mocks/LidoMock.sol";
 import { WstETHMock } from "../helpers/mocks/WstETHMock.sol";
-import { CSModule } from "../../src/CSModule.sol";
+import { CSModule } from "src/CSModule.sol";
 import { Stub } from "../helpers/mocks/Stub.sol";
-import { Batch } from "../../src/lib/QueueLib.sol";
+import { Batch } from "src/lib/QueueLib.sol";
 import { ERC20Testable } from "../helpers/ERCTestable.sol";
-import { PausableUntil } from "../../src/lib/utils/PausableUntil.sol";
-import { ICSAccounting } from "../../src/interfaces/ICSAccounting.sol";
-import { IStakingModule } from "../../src/interfaces/IStakingModule.sol";
-import { SigningKeys } from "../../src/lib/SigningKeys.sol";
-import { INOAddresses } from "../../src/lib/NOAddresses.sol";
-import { CSBondLock } from "../../src/abstract/CSBondLock.sol";
-import { ICSExitPenalties, ExitPenaltyInfo, MarkedUint248 } from "../../src/interfaces/ICSExitPenalties.sol";
-import { IAssetRecovererLib } from "../../src/lib/AssetRecovererLib.sol";
+import { PausableUntil } from "src/lib/utils/PausableUntil.sol";
+import { ICSAccounting } from "src/interfaces/ICSAccounting.sol";
+import { IStakingModule } from "src/interfaces/IStakingModule.sol";
+import { SigningKeys } from "src/lib/SigningKeys.sol";
+import { INOAddresses } from "src/lib/NOAddresses.sol";
+import { CSBondLock } from "src/abstract/CSBondLock.sol";
+import { ICSExitPenalties, ExitPenaltyInfo, MarkedUint248 } from "src/interfaces/ICSExitPenalties.sol";
+import { IAssetRecovererLib } from "src/lib/AssetRecovererLib.sol";
 
 abstract contract ModuleFixtures is
     Test,

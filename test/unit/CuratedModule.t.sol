@@ -3,16 +3,16 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
-import { CuratedModule } from "../../src/CuratedModule.sol";
+import { CuratedModule } from "src/CuratedModule.sol";
 import { Stub } from "../helpers/mocks/Stub.sol";
 import { CSParametersRegistryMock } from "../helpers/mocks/CSParametersRegistryMock.sol";
 import { ExitPenaltiesMock } from "../helpers/mocks/ExitPenaltiesMock.sol";
-import { ICSBondCurve } from "../../src/interfaces/ICSBondCurve.sol";
+import { ICSBondCurve } from "src/interfaces/ICSBondCurve.sol";
 import { CSAccountingMock } from "../helpers/mocks/CSAccountingMock.sol";
-import { CSModule } from "../../src/CSModule.sol";
+import { CSModule } from "src/CSModule.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { TransientUintUintMap, TransientUintUintMapLib } from "../../src/lib/TransientUintUintMapLib.sol";
-import { Batch, QueueLib, IQueueLib } from "../../src/lib/QueueLib.sol";
+import { TransientUintUintMap, TransientUintUintMapLib } from "src/lib/TransientUintUintMapLib.sol";
+import { Batch, QueueLib, IQueueLib } from "src/lib/QueueLib.sol";
 import "./ModuleAbstract.t.sol";
 
 // TODO uncomment all the commented tests after implementing obtainDepositData

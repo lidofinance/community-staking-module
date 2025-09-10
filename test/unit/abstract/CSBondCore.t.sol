@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSBondCore } from "../../../src/abstract/CSBondCore.sol";
+import { CSBondCore } from "src/abstract/CSBondCore.sol";
 
 import { Stub } from "../../helpers/mocks/Stub.sol";
 import { LidoMock } from "../../helpers/mocks/LidoMock.sol";
@@ -14,10 +14,10 @@ import { LidoLocatorMock } from "../../helpers/mocks/LidoLocatorMock.sol";
 import { BurnerMock } from "../../helpers/mocks/BurnerMock.sol";
 import { WithdrawalQueueMock } from "../../helpers/mocks/WithdrawalQueueMock.sol";
 
-import { IStETH } from "../../../src/interfaces/IStETH.sol";
-import { IBurner } from "../../../src/interfaces/IBurner.sol";
-import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
-import { ICSBondCore } from "../../../src/interfaces/ICSBondCore.sol";
+import { IStETH } from "src/interfaces/IStETH.sol";
+import { IBurner } from "src/interfaces/IBurner.sol";
+import { IWithdrawalQueue } from "src/interfaces/IWithdrawalQueue.sol";
+import { ICSBondCore } from "src/interfaces/ICSBondCore.sol";
 
 import { Utilities } from "../../helpers/Utilities.sol";
 import { Fixtures } from "../../helpers/Fixtures.sol";

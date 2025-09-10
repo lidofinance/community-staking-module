@@ -4,7 +4,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import "../../../../src/lib/utils/PausableUntil.sol";
+import "src/lib/utils/PausableUntil.sol";
 
 contract PausableUntilTest is Test {
     PausableUntilImpl pausable;

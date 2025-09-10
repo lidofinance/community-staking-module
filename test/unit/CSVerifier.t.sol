@@ -5,15 +5,15 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import { stdJson } from "forge-std/StdJson.sol";
 
-import { ICSVerifier } from "../../src/interfaces/ICSVerifier.sol";
-import { ICSModule } from "../../src/interfaces/ICSModule.sol";
-import { PausableUntil } from "../../src/lib/utils/PausableUntil.sol";
+import { ICSVerifier } from "src/interfaces/ICSVerifier.sol";
+import { ICSModule } from "src/interfaces/ICSModule.sol";
+import { PausableUntil } from "src/lib/utils/PausableUntil.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import { CSVerifier } from "../../src/CSVerifier.sol";
-import { pack } from "../../src/lib/GIndex.sol";
-import { Slot, BeaconBlockHeader } from "../../src/lib/Types.sol";
-import { GIndex } from "../../src/lib/GIndex.sol";
+import { CSVerifier } from "src/CSVerifier.sol";
+import { pack } from "src/lib/GIndex.sol";
+import { Slot, BeaconBlockHeader } from "src/lib/Types.sol";
+import { GIndex } from "src/lib/GIndex.sol";
 
 import { Utilities } from "../helpers/Utilities.sol";
 import { Stub } from "../helpers/mocks/Stub.sol";

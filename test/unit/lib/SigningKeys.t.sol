@@ -5,8 +5,8 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import { IStakingModule } from "../../../src/interfaces/IStakingModule.sol";
-import { SigningKeys } from "../../../src/lib/SigningKeys.sol";
+import { IStakingModule } from "src/interfaces/IStakingModule.sol";
+import { SigningKeys } from "src/lib/SigningKeys.sol";
 import { Utilities } from "../../helpers/Utilities.sol";
 
 // Wrap the library internal methods to make an actual call to them.

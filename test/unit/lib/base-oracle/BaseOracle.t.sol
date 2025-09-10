@@ -4,8 +4,8 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
-import "../../../../src/lib/base-oracle/BaseOracle.sol";
-import "../../../../src/lib/UnstructuredStorage.sol";
+import "src/lib/base-oracle/BaseOracle.sol";
+import "src/lib/UnstructuredStorage.sol";
 import { Utilities, hasLog } from "../../../helpers/Utilities.sol";
 import "../../../helpers/mocks/ConsensusContractMock.sol";
 

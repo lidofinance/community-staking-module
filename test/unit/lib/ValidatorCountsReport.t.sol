@@ -4,7 +4,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { ValidatorCountsReport } from "../../../src/lib/ValidatorCountsReport.sol";
+import { ValidatorCountsReport } from "src/lib/ValidatorCountsReport.sol";
 
 contract ReportCaller {
     function safeCountOperators(

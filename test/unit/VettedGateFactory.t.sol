@@ -3,11 +3,11 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
-import { VettedGate } from "../../src/VettedGate.sol";
-import { VettedGateFactory } from "../../src/VettedGateFactory.sol";
-import { IVettedGateFactory } from "../../src/interfaces/IVettedGateFactory.sol";
-import { IVettedGate } from "../../src/interfaces/IVettedGate.sol";
-import { OssifiableProxy } from "../../src/lib/proxy/OssifiableProxy.sol";
+import { VettedGate } from "src/VettedGate.sol";
+import { VettedGateFactory } from "src/VettedGateFactory.sol";
+import { IVettedGateFactory } from "src/interfaces/IVettedGateFactory.sol";
+import { IVettedGate } from "src/interfaces/IVettedGate.sol";
+import { OssifiableProxy } from "src/lib/proxy/OssifiableProxy.sol";
 import { Utilities } from "../helpers/Utilities.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { CSMMock } from "../helpers/mocks/CSMMock.sol";

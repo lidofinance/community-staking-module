@@ -7,8 +7,8 @@ import "forge-std/Test.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { CSBondCurve } from "../../../src/abstract/CSBondCurve.sol";
-import { ICSBondCurve } from "../../../src/interfaces/ICSBondCurve.sol";
+import { CSBondCurve } from "src/abstract/CSBondCurve.sol";
+import { ICSBondCurve } from "src/interfaces/ICSBondCurve.sol";
 
 import { console } from "forge-std/console.sol";
 

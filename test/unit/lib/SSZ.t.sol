@@ -4,11 +4,11 @@ pragma solidity 0.8.24;
 
 import { Test } from "forge-std/Test.sol";
 
-import { BeaconBlockHeader, Validator, Withdrawal } from "../../../src/lib/Types.sol";
-import { GIndex, pack } from "../../../src/lib/GIndex.sol";
+import { BeaconBlockHeader, Validator, Withdrawal } from "src/lib/Types.sol";
+import { GIndex, pack } from "src/lib/GIndex.sol";
 import { Utilities } from "../../helpers/Utilities.sol";
-import { Slot } from "../../../src/lib/Types.sol";
-import { SSZ } from "../../../src/lib/SSZ.sol";
+import { Slot } from "src/lib/Types.sol";
+import { SSZ } from "src/lib/SSZ.sol";
 
 // Wrap the library internal methods to make an actual call to them.
 // Supposed to be used with `expectRevert` cheatcode and to pass

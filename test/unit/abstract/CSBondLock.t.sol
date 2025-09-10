@@ -7,8 +7,8 @@ import "forge-std/Test.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import { CSBondLock } from "../../../src/abstract/CSBondLock.sol";
-import { ICSBondLock } from "../../../src/interfaces/ICSBondLock.sol";
+import { CSBondLock } from "src/abstract/CSBondLock.sol";
+import { ICSBondLock } from "src/interfaces/ICSBondLock.sol";
 import { Stub } from "../../helpers/mocks/Stub.sol";
 import { LidoMock } from "../../helpers/mocks/LidoMock.sol";
 import { WstETHMock } from "../../helpers/mocks/WstETHMock.sol";

@@ -3,7 +3,7 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
-import "../../../../src/lib/proxy/OssifiableProxy.sol";
+import "src/lib/proxy/OssifiableProxy.sol";
 import { Utilities } from "../../../helpers/Utilities.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 

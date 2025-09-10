@@ -4,8 +4,8 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import "../../../../src/lib/utils/Versioned.sol";
-import { OssifiableProxy } from "../../../../src/lib/proxy/OssifiableProxy.sol";
+import "src/lib/utils/Versioned.sol";
+import { OssifiableProxy } from "src/lib/proxy/OssifiableProxy.sol";
 
 contract VersionedTest is Test {
     VersionedImpl impl;

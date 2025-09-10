@@ -4,7 +4,7 @@ pragma solidity 0.8.24;
 
 import { Test } from "forge-std/Test.sol";
 
-import { TransientUintUintMap, TransientUintUintMapLib } from "../../../src/lib/TransientUintUintMapLib.sol";
+import { TransientUintUintMap, TransientUintUintMapLib } from "src/lib/TransientUintUintMapLib.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { Utilities } from "../../helpers/Utilities.sol";

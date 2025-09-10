@@ -6,7 +6,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { UnstructuredStorage } from "../../../src/lib/UnstructuredStorage.sol";
+import { UnstructuredStorage } from "src/lib/UnstructuredStorage.sol";
 
 contract ExposedUnstructuredStorageTest is Test {
     ExposedUnstructuredStorage public unstructuredStorage;

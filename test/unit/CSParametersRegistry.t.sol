@@ -5,8 +5,8 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSParametersRegistry } from "../../src/CSParametersRegistry.sol";
-import { ICSParametersRegistry } from "../../src/interfaces/ICSParametersRegistry.sol";
+import { CSParametersRegistry } from "src/CSParametersRegistry.sol";
+import { ICSParametersRegistry } from "src/interfaces/ICSParametersRegistry.sol";
 
 import { Utilities } from "../helpers/Utilities.sol";
 import { Fixtures } from "../helpers/Fixtures.sol";
