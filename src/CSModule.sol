@@ -1185,30 +1185,23 @@ contract CSModule is
         );
         uint256 totalNonDepositedKeys = no.totalAddedKeys -
             no.totalDepositedKeys;
-        // Force mode enabled and unbonded deposited keys
-        if (
-            totalUnbondedKeys > totalNonDepositedKeys &&
-            no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID
-        ) {
+        // Unbonded deposited keys
+        if (totalUnbondedKeys > totalNonDepositedKeys) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
-            unchecked {
-                targetValidatorsCount = Math.min(
-                    no.targetLimit,
-                    no.totalAddedKeys -
-                        no.totalWithdrawnKeys -
-                        totalUnbondedKeys
-                );
-            }
-            // No force mode enabled but unbonded deposited keys.
-            // In this case we override possible targetValidatorsCount set with targetLimitMode = 1
-            // since requesting exits for the unbonded keys has a higher priority compared to targetLimitMode = 1
-        } else if (totalUnbondedKeys > totalNonDepositedKeys) {
-            targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
+            // If there is `targetLimit` set no matter the `targetLimitMode` we switch to `FORCED_TARGET_LIMIT_MODE`
+            // to ensure that there is no way to bypass the regular limit by having unbonded keys.
             unchecked {
                 targetValidatorsCount =
                     no.totalAddedKeys -
                     no.totalWithdrawnKeys -
                     totalUnbondedKeys;
+            }
+            // Account for the no.targetLimit only when target limit is enabled
+            if (no.targetLimitMode > 0) {
+                targetValidatorsCount = Math.min(
+                    targetValidatorsCount,
+                    no.targetLimit
+                );
             }
         } else {
             targetLimitMode = no.targetLimitMode;

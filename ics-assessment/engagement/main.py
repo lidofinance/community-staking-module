@@ -23,13 +23,14 @@ scores = {
 MIN_SCORE = 2
 MAX_SCORE = 7
 
-SNAPSHOT_VOTE_TIMESTAMP = 1750758263  # TODO update
+SNAPSHOT_VOTE_TIMESTAMP = 1756890119  # TODO update
 REQUIRED_SNAPSHOT_VOTES = 3
 REQUIRED_SNAPSHOT_VP = 100  # 100 LDO
 REQUIRED_ARAGON_VOTES = 2
 
+# TODO update dates
 HIGH_SIGNAL_START_DATE = datetime(2025, 7, 1)  # YYYY, MM, DD
-HIGH_SIGNAL_END_DATE = datetime(2025, 8, 1)  # YYYY, MM, DD
+HIGH_SIGNAL_END_DATE = datetime(2025, 9, 3)  # YYYY, MM, DD
 
 current_dir = Path(__file__).parent.resolve()
 
@@ -187,18 +188,30 @@ def gitpoap(addresses: set[str]) -> int:
     return final_score
 
 
-def high_signal(addresses: set[str]) -> int:
+def high_signal(addresses: set[str], score: float | None = None) -> int:
+    """
+    Determine High-signal points.
+    - If `score` is provided, use it directly.
+    - Else, if `HIGH_SIGNAL_API_KEY` is set, query the API and use the max across addresses.
+    - Else, prompt the user for input.
+    """
+    if score is not None:
+        high_signal_score = score
+    else:
+        high_signal_score = None
+
     if api_key := os.getenv("HIGH_SIGNAL_API_KEY"):
         high_signal_url = "https://app.highsignal.xyz/api/data/v1/user"
         params = {
             "apiKey": api_key,
             "project": "lido",
-            "searchType": "address",
+            "searchType": "ethereumAddress",
             "startDate": HIGH_SIGNAL_START_DATE.strftime("%Y-%m-%d"),
             "endDate": HIGH_SIGNAL_END_DATE.strftime("%Y-%m-%d"),
         }
 
-        high_signal_score = 0
+        if high_signal_score is None:
+            high_signal_score = 0
         for address in addresses:
             params["searchValue"] = Web3.to_checksum_address(address)
             response = requests.get(high_signal_url, params=params)
@@ -211,16 +224,17 @@ def high_signal(addresses: set[str]) -> int:
             high_signal_score = max(address_score, high_signal_score)
             print(f"    Found High-signal score {address_score} for address {address}")
 
-        if high_signal_score == 0:
-            print("    No High-signal score found for the given addresses.")
-            return 0
+            if high_signal_score == 0:
+                print("    No High-signal score found for the given addresses.")
+                return 0
     else:
-        print("    ⚠️ For taking into account high-signal score, please visit the https://app.highsignal.xyz/ and enter the given score manually")
-        try:
-            high_signal_score = float(input("    High-signal score (0-100): "))
-        except ValueError:
-            print("    Invalid input for high-signal score. Defaulting to 0.")
-            return 0
+        if high_signal_score is None:
+            print("    ⚠️ For taking into account high-signal score, please visit the https://app.highsignal.xyz/ and enter the given score manually")
+            try:
+                high_signal_score = float(input("    High-signal score (0-100): "))
+            except ValueError:
+                print("    Invalid input for high-signal score. Defaulting to 0.")
+                return 0
     if high_signal_score < 0 or high_signal_score > 100:
         print("    Invalid input for high-signal score. Defaulting to 0.")
         return 0
@@ -237,11 +251,28 @@ def high_signal(addresses: set[str]) -> int:
         return 0
     return hs_points
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <address1> [<address2> ...]")
-        return
-    addresses = set([a.strip().lower() for a in sys.argv[1:]])
+
+def protocol_guild(addresses: set[str]) -> float:
+    """
+    Check if any of the given addresses is in the Protocol Guild list.
+    Always returns 0, but prints a note if present.
+    """
+    pg_path = current_dir / "protocol_guild.csv"
+    with open(pg_path, "r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if row and row[0].strip().lower() in addresses:
+                print(f"    🤩 Found address {row[0]} in Protocol Guild list")
+                return True
+    return False
+
+
+def main(addresses: set[str], high_signal_score: float | None = None):
+    """
+    Run engagement scoring.
+    - `addresses`: set of lowercase addresses.
+    - `high_signal_score`: optional override for High-signal score; if None, use API or prompt.
+    """
     print(f"Your addresses: {', '.join(addresses)}")
     print("Checking addresses for Proof of Engagement...")
 
@@ -250,15 +281,18 @@ def main():
         "aragon-vote": aragon_vote(addresses),
         "galxe-score": galxe_scores(addresses),
         "git-poap": gitpoap(addresses),
-        "high-signal": high_signal(addresses)
+        "high-signal": high_signal(addresses, score=high_signal_score),
     }
+    is_pg = protocol_guild(addresses)
 
     total_score = 0
     print("\nResults:")
     for key, score in results.items():
-        print(f"    {key.replace('-', ' ').title()}: {score if score else '❌'}")
+        print(f"    {key.replace('-', ' ').title()}: {str(score) + ' ✅' if score else '❌'}")
         if score:
-            total_score += score
+            total_score += int(score)
+    if is_pg:
+        print("    Protocol Guild: ✅ (no points awarded)")
     print(f"Aggregate score from all sources: {total_score}")
     if total_score < MIN_SCORE:
         print(f"❌ The score is below the minimum required for this category ({MIN_SCORE}).")
@@ -271,4 +305,8 @@ def main():
     return final_score
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <address1> [<address2> ...]")
+        exit(1)
+    addrs = set([a.strip().lower() for a in sys.argv[1:]])
+    main(addrs)

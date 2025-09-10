@@ -71,7 +71,7 @@ def collect_circles():
 
     print("Total circles collected:", len(events))
     with open("circle_group_members.csv", "w") as f:
-        for addr in circle_addresses:
+        for addr in sorted(circle_addresses):
             f.write(f"{addr}\n")
 
 if __name__ == '__main__':
