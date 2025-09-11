@@ -4,6 +4,7 @@ pragma solidity 0.8.24;
 
 import { ICSAccounting } from "../interfaces/ICSAccounting.sol";
 import { ILido } from "../interfaces/ILido.sol";
+import { ICSFeeDistributor } from "../interfaces/ICSFeeDistributor.sol";
 
 /// Library for managing FeeSplits
 /// @dev the only use of this to be a library is to save CSAccounting contract size via delegatecalls
@@ -13,6 +14,7 @@ interface IFeeSplits {
         ICSAccounting.FeeSplit[] feeSplits
     );
 
+    error PendingOrUndistributedSharesExist();
     error TooManySplits();
     error TooManySplitShares();
     error ZeroSplitRecipient();
@@ -25,11 +27,26 @@ library FeeSplits {
 
     function setFeeSplits(
         mapping(uint256 => ICSAccounting.FeeSplit[]) storage feeSplitsStorage,
+        mapping(uint256 => uint256) storage pendingSharesToSplitStorage,
+        ICSFeeDistributor feeDistributor,
         uint256 nodeOperatorId,
+        uint256 cumulativeFeeShares,
+        bytes32[] calldata rewardsProof,
         ICSAccounting.FeeSplit[] calldata feeSplits
     ) external {
         if (feeSplits.length > MAX_FEE_SPLITS) {
             revert IFeeSplits.TooManySplits();
+        }
+        uint256 feesToDistribute = feeDistributor.getFeesToDistribute(
+            nodeOperatorId,
+            cumulativeFeeShares,
+            rewardsProof
+        );
+        if (
+            pendingSharesToSplitStorage[nodeOperatorId] > 0 ||
+            feesToDistribute > 0
+        ) {
+            revert IFeeSplits.PendingOrUndistributedSharesExist();
         }
 
         uint256 totalShare = 0;
@@ -58,23 +75,42 @@ library FeeSplits {
 
     function splitAndTransferFees(
         mapping(uint256 => ICSAccounting.FeeSplit[]) storage feeSplitsStorage,
+        mapping(uint256 => uint256) storage pendingSharesToSplitStorage,
         ILido lido,
         uint256 nodeOperatorId,
-        uint256 amount
-    ) external returns (uint256 reminder) {
-        reminder = amount;
+        uint256 distributed,
+        function(uint256) external view returns (uint256) getClaimableBondShares
+    ) external returns (uint256 transferred) {
         ICSAccounting.FeeSplit[] memory feeSplits = feeSplitsStorage[
             nodeOperatorId
         ];
-        if (feeSplits.length != 0) {
-            for (uint256 i = 0; i < feeSplits.length; i++) {
-                ICSAccounting.FeeSplit memory feeSplit = feeSplits[i];
-                uint256 splitAmount = (amount * feeSplit.share) / MAX_BP;
-                if (splitAmount != 0) {
-                    lido.transferShares(feeSplit.recipient, splitAmount);
-                    reminder -= splitAmount;
-                }
+        if (feeSplits.length == 0 || distributed == 0) {
+            return 0;
+        }
+        uint256 claimableShares = getClaimableBondShares(nodeOperatorId);
+        pendingSharesToSplitStorage[nodeOperatorId] += distributed;
+        if (claimableShares == 0) {
+            return 0;
+        }
+        uint256 pendingSharesToSplit = pendingSharesToSplitStorage[
+            nodeOperatorId
+        ];
+        if (pendingSharesToSplit == 0) {
+            return 0;
+        }
+        // NOTE: Value to split through fee splits should not exceed `claimableShares`.
+        claimableShares = pendingSharesToSplit > claimableShares
+            ? claimableShares
+            : pendingSharesToSplit;
+        for (uint256 i = 0; i < feeSplits.length; i++) {
+            ICSAccounting.FeeSplit memory feeSplit = feeSplits[i];
+            uint256 splitSharesAmount = (claimableShares * feeSplit.share) /
+                MAX_BP;
+            if (splitSharesAmount != 0) {
+                lido.transferShares(feeSplit.recipient, splitSharesAmount);
+                transferred += splitSharesAmount;
             }
         }
+        pendingSharesToSplitStorage[nodeOperatorId] -= pendingSharesToSplit;
     }
 }

@@ -50,6 +50,8 @@ contract CSAccounting is
     address public chargePenaltyRecipient;
 
     mapping(uint256 nodeOperatorId => FeeSplit[]) internal _feeSplits;
+    mapping(uint256 nodeOperatorId => uint256 pendingSharesToSplit)
+        internal _pendingSharesToSplit;
 
     modifier onlyModule() {
         if (msg.sender != address(MODULE)) {
@@ -167,11 +169,20 @@ contract CSAccounting is
     /// @inheritdoc ICSAccounting
     function setFeeSplits(
         uint256 nodeOperatorId,
+        uint256 cumulativeFeeShares,
+        bytes32[] calldata rewardsProof,
         FeeSplit[] calldata feeSplits
     ) external {
         _onlyNodeOperatorOwner(nodeOperatorId);
-
-        FeeSplits.setFeeSplits(_feeSplits, nodeOperatorId, feeSplits);
+        FeeSplits.setFeeSplits({
+            feeSplitsStorage: _feeSplits,
+            pendingSharesToSplitStorage: _pendingSharesToSplit,
+            feeDistributor: FEE_DISTRIBUTOR,
+            nodeOperatorId: nodeOperatorId,
+            cumulativeFeeShares: cumulativeFeeShares,
+            rewardsProof: rewardsProof,
+            feeSplits: feeSplits
+        });
     }
 
     /// @inheritdoc ICSAccounting
@@ -355,7 +366,9 @@ contract CSAccounting is
     function removeBondReserve(
         uint256 nodeOperatorId
     ) external whenResumed whenBondReserveIsEnabled {
-        _checkAndGetEligibleNodeOperatorProperties(nodeOperatorId);
+        if (MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) > 0) {
+            _checkAndGetEligibleNodeOperatorProperties(nodeOperatorId);
+        }
 
         IBondReserve.BondReserveInfo memory r = BondReserve.getBondReserveInfo(
             nodeOperatorId
@@ -504,6 +517,13 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
+    function getPendingSharesToSplit(
+        uint256 nodeOperatorId
+    ) external view returns (uint256) {
+        return _pendingSharesToSplit[nodeOperatorId];
+    }
+
+    /// @inheritdoc ICSAccounting
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
@@ -632,19 +652,25 @@ contract CSAccounting is
             cumulativeFeeShares,
             rewardsProof
         );
-
+        // NOTE: Increase the bond shares first to respect the invariant:
+        //       any feature amount to transfer from bond should be bounded by `claimable`.
+        CSBondCore._increaseBond(nodeOperatorId, distributed);
         // @dev If there are fee splits, distribute the shares accordingly.
         //      At low amounts, due to rounding, it is possible that some split recipients
-        //      will not receive any shares. The remainder goes to the bond.
-        uint256 reminder = FeeSplits.splitAndTransferFees(
-            _feeSplits,
-            LIDO,
-            nodeOperatorId,
-            distributed
-        );
-
-        if (reminder != 0) {
-            CSBondCore._increaseBond(nodeOperatorId, reminder);
+        //      will not receive any shares. The remainder stays in the bond.
+        uint256 transferredSplitShares = FeeSplits.splitAndTransferFees({
+            feeSplitsStorage: _feeSplits,
+            pendingSharesToSplitStorage: _pendingSharesToSplit,
+            lido: LIDO,
+            nodeOperatorId: nodeOperatorId,
+            distributed: distributed,
+            getClaimableBondShares: this.getClaimableBondShares
+        });
+        if (transferredSplitShares != 0) {
+            CSBondCore._unsafeReduceBond(
+                nodeOperatorId,
+                transferredSplitShares
+            );
         }
     }
 
