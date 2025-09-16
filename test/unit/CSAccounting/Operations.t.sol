@@ -1124,7 +1124,16 @@ contract PullFeeRewardsTest is BaseTest {
 
         uint256 expectedClaimableAfterPull = feeShares - requiredShares;
 
+        uint256 pendingBefore = accounting.getPendingSharesToSplit(0);
         accounting.pullFeeRewards(0, feeShares, new bytes32[](0));
+        uint256 pendingAfter = accounting.getPendingSharesToSplit(0);
+
+        uint256 expectedPendingIncrease = feeShares;
+        uint256 expectedPendingDecrease = expectedClaimableAfterPull;
+        uint256 expectedPendingAfter = pendingBefore +
+            expectedPendingIncrease -
+            expectedPendingDecrease;
+        assertEq(pendingAfter, expectedPendingAfter);
 
         uint256 expectedSplit0 = (expectedClaimableAfterPull * 5000) / 10000;
         uint256 expectedSplit1 = (expectedClaimableAfterPull * 3000) / 10000;

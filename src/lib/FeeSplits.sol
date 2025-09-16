@@ -111,6 +111,6 @@ library FeeSplits {
                 transferred += splitSharesAmount;
             }
         }
-        pendingSharesToSplitStorage[nodeOperatorId] -= pendingSharesToSplit;
+        pendingSharesToSplitStorage[nodeOperatorId] -= claimableShares;
     }
 }
