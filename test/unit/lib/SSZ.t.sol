@@ -286,7 +286,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function testFuzz_PengingConsolidation_memory(
+    function testFuzz_PendingConsolidation_memory(
         PendingConsolidation memory c
     ) public view brutalizeMemory {
         SSZ.hashTreeRoot(c);

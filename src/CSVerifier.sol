@@ -97,7 +97,7 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
     /// @dev Staking module contract.
     ICSModule public immutable MODULE;
 
-    /// @dev Placeholder for slahing penalty value in ValidatorWithdrawalInfo.
+    /// @dev Placeholder for slashing penalty value in ValidatorWithdrawalInfo.
     uint256 internal constant NO_SLASHING_PENALTY = 0;
 
     /// @dev The previous and current forks can be essentially the same.
