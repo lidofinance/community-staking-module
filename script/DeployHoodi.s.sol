@@ -55,7 +55,7 @@ contract DeployHoodi is DeployBase {
         config.legacyEaBondCurve.push([1, 1.5 ether]);
         config.legacyEaBondCurve.push([2, 1.3 ether]);
 
-        config.minBondLockPeriod = 0;
+        config.minBondLockPeriod = 1 days;
         config.maxBondLockPeriod = 365 days;
         config.bondLockPeriod = 8 weeks;
         config

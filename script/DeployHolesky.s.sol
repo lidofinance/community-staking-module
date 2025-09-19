@@ -73,7 +73,7 @@ contract DeployHolesky is DeployBase {
         config.extraBondCurves.push(bondCurve2);
         config.extraBondCurves.push(bondCurve3);
 
-        config.minBondLockPeriod = 0;
+        config.minBondLockPeriod = 1 days;
         config.maxBondLockPeriod = 365 days;
         config.bondLockPeriod = 8 weeks;
         config
