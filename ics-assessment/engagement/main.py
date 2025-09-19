@@ -30,7 +30,7 @@ REQUIRED_ARAGON_VOTES = 2
 
 # TODO update dates
 HIGH_SIGNAL_START_DATE = datetime(2025, 7, 1)  # YYYY, MM, DD
-HIGH_SIGNAL_END_DATE = datetime(2025, 9, 3)  # YYYY, MM, DD
+HIGH_SIGNAL_END_DATE = datetime(2025, 10, 1)  # YYYY, MM, DD
 
 current_dir = Path(__file__).parent.resolve()
 
@@ -219,7 +219,10 @@ def high_signal(addresses: set[str], score: float | None = None) -> int:
                 continue
             response.raise_for_status()
             response = response.json()
-            address_score = response.get("totalScores", 0)[0]["totalScore"]
+            total_scores = response.get("totalScores", 0)
+            address_score = 0
+            if total_scores:
+                address_score = response.get("totalScores", 0)[0]["totalScore"]
 
             high_signal_score = max(address_score, high_signal_score)
             print(f"    Found High-signal score {address_score} for address {address}")
