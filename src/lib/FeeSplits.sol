@@ -87,17 +87,16 @@ library FeeSplits {
         if (feeSplits.length == 0 || distributed == 0) {
             return 0;
         }
-        uint256 claimableShares = getClaimableBondShares(nodeOperatorId);
+
         pendingSharesToSplitStorage[nodeOperatorId] += distributed;
+
+        uint256 claimableShares = getClaimableBondShares(nodeOperatorId);
         if (claimableShares == 0) {
             return 0;
         }
         uint256 pendingSharesToSplit = pendingSharesToSplitStorage[
             nodeOperatorId
         ];
-        if (pendingSharesToSplit == 0) {
-            return 0;
-        }
         // NOTE: Value to split through fee splits should not exceed `claimableShares`.
         claimableShares = pendingSharesToSplit > claimableShares
             ? claimableShares
@@ -111,6 +110,7 @@ library FeeSplits {
                 transferred += splitSharesAmount;
             }
         }
+
         pendingSharesToSplitStorage[nodeOperatorId] -= claimableShares;
     }
 }
