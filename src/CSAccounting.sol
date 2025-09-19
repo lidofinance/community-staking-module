@@ -366,6 +366,7 @@ contract CSAccounting is
     function removeBondReserve(
         uint256 nodeOperatorId
     ) external whenResumed whenBondReserveIsEnabled {
+        // Allow for permissionless call if there are no active and depositable keys. In this case, the bond reserve is useless 
         if (MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) > 0) {
             _checkAndGetEligibleNodeOperatorProperties(nodeOperatorId);
         }
