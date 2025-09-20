@@ -9,12 +9,14 @@ import { ICSBondLock } from "./ICSBondLock.sol";
 import { ICSFeeDistributor } from "./ICSFeeDistributor.sol";
 import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 import { ICSModule } from "./ICSModule.sol";
+import { IBondReserve } from "./IBondReserve.sol";
 
 interface ICSAccounting is
     ICSBondCore,
     ICSBondCurve,
     ICSBondLock,
-    IAssetRecovererLib
+    IAssetRecovererLib,
+    IBondReserve
 {
     struct PermitInput {
         uint256 value;
@@ -24,11 +26,18 @@ interface ICSAccounting is
         bytes32 s;
     }
 
+    struct FeeSplit {
+        address recipient;
+        uint256 share; // in basis points
+    }
+
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event ChargePenaltyRecipientSet(address chargePenaltyRecipient);
 
     error SenderIsNotModule();
     error SenderIsNotEligible();
+    error BondReserveFeatureDisabled();
+    error MinReserveTimeHasNotPassed();
     error ZeroModuleAddress();
     error ZeroAdminAddress();
     error ZeroFeeDistributorAddress();
@@ -77,6 +86,18 @@ interface ICSAccounting is
     /// @param period Period in seconds to retain bond lock
     function setBondLockPeriod(uint256 period) external;
 
+    /// @notice Set min cooldown for additional bond reserve removal
+    function setBondReserveMinPeriod(uint256 period) external;
+
+    /// @notice Set fee splits for the given Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param feeSplits Array of FeeSplit structs defining recipients and their shares in basis points
+    ///                  Total shares must be <= 10_000 (100%). Remainder goes to the Node Operator's bond
+    function setFeeSplits(
+        uint256 nodeOperatorId,
+        FeeSplit[] calldata feeSplits
+    ) external;
+
     /// @notice Add a new bond curve
     /// @param bondCurve Bond curve definition to add
     /// @return id Id of the added curve
@@ -122,6 +143,13 @@ interface ICSAccounting is
         uint256 nodeOperatorId,
         uint256 additionalKeys
     ) external view returns (uint256);
+
+    /// @notice Set fee splits for the given Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Array of FeeSplit structs defining recipients and their shares in basis points
+    function getFeeSplits(
+        uint256 nodeOperatorId
+    ) external view returns (FeeSplit[] memory);
 
     /// @notice Get the number of the unbonded keys
     /// @param nodeOperatorId ID of the Node Operator
@@ -177,6 +205,15 @@ interface ICSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external view returns (uint256);
+
+    /// @notice Check if the bond reserve can be removed for the given Node Operator
+    /// @dev Bond reserve can be removed if a sufficient time has passed or if
+    ///      the Node Operator has no active or depositable keys
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Can the bond reserve be removed
+    function canRemoveBondReserve(
+        uint256 nodeOperatorId
+    ) external view returns (bool);
 
     /// @notice Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
     /// @dev Called by CSM exclusively. CSM should check node operator existence and update depositable validators count
@@ -324,14 +361,22 @@ interface ICSAccounting is
     ///      Method call can result in the remaining bond being lower than the locked bond.
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to penalize in ETH (stETH)
-    function penalize(uint256 nodeOperatorId, uint256 amount) external;
+    /// @return fullyBurned True if the bond was fully burned, false otherwise
+    function penalize(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external returns (bool fullyBurned);
 
     /// @notice Charge fee from bond by transferring stETH shares of the given Node Operator to the charge recipient
     /// @dev Charge confiscation has a priority over the locked bond.
     ///      Method call can result in the remaining bond being lower than the locked bond.
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to charge in ETH (stETH)
-    function chargeFee(uint256 nodeOperatorId, uint256 amount) external;
+    /// @return fullyCharged True if the bond was fully charged, false otherwise
+    function chargeFee(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external returns (bool fullyCharged);
 
     /// @notice Pull fees from CSFeeDistributor to the Node Operator's bond
     /// @dev Permissionless method. Can be called before penalty application to ensure that rewards are also penalized
@@ -343,6 +388,18 @@ interface ICSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external;
+
+    /// @notice Increase bond reserve value (requires excess bond >= amount)
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param newAmount Amount to set as additional bond reserve
+    function increaseBondReserve(
+        uint256 nodeOperatorId,
+        uint256 newAmount
+    ) external;
+
+    /// @notice Remove additional bond reserve; allowed after cooldown or earlier if no active/depositable keys
+    /// @param nodeOperatorId ID of the Node Operator
+    function removeBondReserve(uint256 nodeOperatorId) external;
 
     /// @notice Service method to update allowance to Burner in case it has changed
     function renewBurnerAllowance() external;
