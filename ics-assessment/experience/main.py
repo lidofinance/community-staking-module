@@ -178,7 +178,7 @@ def _request_performance_report(report_file, retries=3, delay=2):
 
 def _check_csm_performance_logs(addresses: set[str], no_owners_file_name, perf_reports, network_name) -> bool:
     """
-    Returns True if any address is a node operator with all validators above the threshold in all logs.
+    Returns True if any address is a node operator with all validators above the threshold in any logs.
     """
     with open(current_dir / no_owners_file_name, 'r') as f:
         node_operators = json.load(f)
@@ -192,12 +192,12 @@ def _check_csm_performance_logs(addresses: set[str], no_owners_file_name, perf_r
         return False
     print(f"    Found node operator IDs for given addresses on {network_name}:", ", ".join(found_ids))
 
+    # If any operator id for the addresses is eligible, continue
+    eligible = False
     for report in perf_reports:
         data = _request_performance_report(report)
         threshold = data.get('threshold', 0)
         operators = data.get('operators', {})
-        # If any operator id for the addresses is eligible in this log, continue
-        eligible_in_log = False
         for no_id in found_ids:
             no = operators.get(no_id)
             if not no:
@@ -216,11 +216,11 @@ def _check_csm_performance_logs(addresses: set[str], no_owners_file_name, perf_r
                 report_data = datetime.fromtimestamp(data['blockstamp']['block_timestamp'])
                 report_block = data['blockstamp']['block_number']
                 print(f"    {network_name} Node Operator {no_id} is eligible in performance report {report} at {report_data} (block {report_block}).")
-                eligible_in_log = True
+                eligible = True
                 break
-        if not eligible_in_log:
-            return False
-    return True
+            else:
+                print(f"    {network_name} Node Operator {no_id} found in report {report} but does not meet performance threshold.")
+    return eligible
 
 
 def main(addresses: set[str]):
