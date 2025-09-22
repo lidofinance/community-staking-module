@@ -59,11 +59,12 @@ def eth_staker_score(addresses: set[str]) -> int:
 
 def stake_cat_score(addresses: set[str]) -> int:
     """
-    Returns the score for StakeCat solo-staker list (mainnet or gnosis) if any address is present, otherwise 0.
+    Returns the score for StakeCat solo-staker list (mainnet, gnosis, rp) if any address is present, otherwise 0.
     """
-    if is_addresses_in_csv(addresses, "stake-cat-solo-B.csv"):
-        return scores["stake-cat"]
-    if is_addresses_in_csv(addresses, "stake-cat-gnosischain.csv"):
+    is_b = is_addresses_in_csv(addresses, "stake-cat-solo-B.csv")
+    is_gnosis = is_addresses_in_csv(addresses, "stake-cat-gnosischain.csv")
+    is_rp = is_addresses_in_csv(addresses, "stake-cat-rocketpool-solo-stakers.csv")
+    if any([is_b, is_gnosis, is_rp]):
         return scores["stake-cat"]
     return 0
 
