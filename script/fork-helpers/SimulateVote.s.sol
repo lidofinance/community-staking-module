@@ -84,156 +84,158 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             deploymentConfigContent
         );
         DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        //
+        // TODO: uncomment and change when v2 -> v3 upgrade flow is ready
+        //
+        //     ICSBondCurve.BondCurveIntervalInput[][]
+        //         memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](
+        //             2 + deployParams.extraBondCurves.length
+        //         );
+        //     bondCurves[0] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
+        //         deployParams.defaultBondCurve
+        //     );
+        //     bondCurves[1] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
+        //         deployParams.legacyEaBondCurve
+        //     );
+        //     if (deployParams.extraBondCurves.length > 0) {
+        //         for (uint256 i = 0; i < deployParams.extraBondCurves.length; i++) {
+        //             bondCurves[i + 2] = CommonScriptUtils
+        //                 .arraysToBondCurveIntervalsInputs(
+        //                     deployParams.extraBondCurves[i]
+        //                 );
+        //         }
+        //     }
 
-        ICSBondCurve.BondCurveIntervalInput[][]
-            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](
-                2 + deployParams.extraBondCurves.length
-            );
-        bondCurves[0] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
-            deployParams.defaultBondCurve
-        );
-        bondCurves[1] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
-            deployParams.legacyEaBondCurve
-        );
-        if (deployParams.extraBondCurves.length > 0) {
-            for (uint256 i = 0; i < deployParams.extraBondCurves.length; i++) {
-                bondCurves[i + 2] = CommonScriptUtils
-                    .arraysToBondCurveIntervalsInputs(
-                        deployParams.extraBondCurves[i]
-                    );
-            }
-        }
+        //     ICSBondCurve.BondCurveIntervalInput[]
+        //         memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils
+        //             .arraysToBondCurveIntervalsInputs(
+        //                 deployParams.identifiedCommunityStakersGateBondCurve
+        //             );
 
-        ICSBondCurve.BondCurveIntervalInput[]
-            memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils
-                .arraysToBondCurveIntervalsInputs(
-                    deployParams.identifiedCommunityStakersGateBondCurve
-                );
+        //     address admin = _prepareAdmin(deploymentConfig.csm);
 
-        address admin = _prepareAdmin(deploymentConfig.csm);
+        //     OssifiableProxy csmProxy = OssifiableProxy(
+        //         payable(deploymentConfig.csm)
+        //     );
+        //     vm.startBroadcast(_prepareProxyAdmin(address(csmProxy)));
+        //     {
+        //         csmProxy.proxy__upgradeTo(deploymentConfig.csmImpl);
+        //         CSModule(deploymentConfig.csm).finalizeUpgradeV2();
+        //     }
+        //     vm.stopBroadcast();
+        //     OssifiableProxy accountingProxy = OssifiableProxy(
+        //         payable(deploymentConfig.accounting)
+        //     );
+        //     vm.startBroadcast(_prepareProxyAdmin(address(accountingProxy)));
+        //     {
+        //         accountingProxy.proxy__upgradeTo(deploymentConfig.accountingImpl);
+        //         CSAccounting(deploymentConfig.accounting).finalizeUpgradeV3(
+        //             deployParams.bondReserveMinPeriod
+        //         );
+        //     }
+        //     vm.stopBroadcast();
 
-        OssifiableProxy csmProxy = OssifiableProxy(
-            payable(deploymentConfig.csm)
-        );
-        vm.startBroadcast(_prepareProxyAdmin(address(csmProxy)));
-        {
-            csmProxy.proxy__upgradeTo(deploymentConfig.csmImpl);
-            CSModule(deploymentConfig.csm).finalizeUpgradeV2();
-        }
-        vm.stopBroadcast();
-        OssifiableProxy accountingProxy = OssifiableProxy(
-            payable(deploymentConfig.accounting)
-        );
-        vm.startBroadcast(_prepareProxyAdmin(address(accountingProxy)));
-        {
-            accountingProxy.proxy__upgradeTo(deploymentConfig.accountingImpl);
-            CSAccounting(deploymentConfig.accounting).finalizeUpgradeV2(
-                bondCurves
-            );
-        }
-        vm.stopBroadcast();
+        //     OssifiableProxy oracleProxy = OssifiableProxy(
+        //         payable(deploymentConfig.oracle)
+        //     );
+        //     vm.startBroadcast(_prepareProxyAdmin(address(oracleProxy)));
+        //     {
+        //         oracleProxy.proxy__upgradeTo(deploymentConfig.oracleImpl);
+        //         CSFeeOracle(deploymentConfig.oracle).finalizeUpgradeV2({
+        //             consensusVersion: 3
+        //         });
+        //     }
+        //     vm.stopBroadcast();
 
-        OssifiableProxy oracleProxy = OssifiableProxy(
-            payable(deploymentConfig.oracle)
-        );
-        vm.startBroadcast(_prepareProxyAdmin(address(oracleProxy)));
-        {
-            oracleProxy.proxy__upgradeTo(deploymentConfig.oracleImpl);
-            CSFeeOracle(deploymentConfig.oracle).finalizeUpgradeV2({
-                consensusVersion: 3
-            });
-        }
-        vm.stopBroadcast();
+        //     OssifiableProxy feeDistributorProxy = OssifiableProxy(
+        //         payable(deploymentConfig.feeDistributor)
+        //     );
+        //     vm.startBroadcast(_prepareProxyAdmin(address(feeDistributorProxy)));
+        //     {
+        //         feeDistributorProxy.proxy__upgradeTo(
+        //             deploymentConfig.feeDistributorImpl
+        //         );
+        //         CSFeeDistributor(deploymentConfig.feeDistributor).finalizeUpgradeV2(
+        //             admin
+        //         );
+        //     }
+        //     vm.stopBroadcast();
 
-        OssifiableProxy feeDistributorProxy = OssifiableProxy(
-            payable(deploymentConfig.feeDistributor)
-        );
-        vm.startBroadcast(_prepareProxyAdmin(address(feeDistributorProxy)));
-        {
-            feeDistributorProxy.proxy__upgradeTo(
-                deploymentConfig.feeDistributorImpl
-            );
-            CSFeeDistributor(deploymentConfig.feeDistributor).finalizeUpgradeV2(
-                admin
-            );
-        }
-        vm.stopBroadcast();
+        //     csm = CSModule(deploymentConfig.csm);
+        //     accounting = CSAccounting(deploymentConfig.accounting);
+        //     oracle = CSFeeOracle(deploymentConfig.oracle);
 
-        csm = CSModule(deploymentConfig.csm);
-        accounting = CSAccounting(deploymentConfig.accounting);
-        oracle = CSFeeOracle(deploymentConfig.oracle);
+        //     vm.startBroadcast(admin);
 
-        vm.startBroadcast(admin);
+        //     accounting.revokeRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
+        //     csm.grantRole(
+        //         csm.CREATE_NODE_OPERATOR_ROLE(),
+        //         deploymentConfig.permissionlessGate
+        //     );
+        //     csm.grantRole(
+        //         csm.CREATE_NODE_OPERATOR_ROLE(),
+        //         deploymentConfig.vettedGate
+        //     );
+        //     accounting.grantRole(
+        //         accounting.SET_BOND_CURVE_ROLE(),
+        //         deploymentConfig.vettedGate
+        //     );
 
-        accounting.revokeRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
-        csm.grantRole(
-            csm.CREATE_NODE_OPERATOR_ROLE(),
-            deploymentConfig.permissionlessGate
-        );
-        csm.grantRole(
-            csm.CREATE_NODE_OPERATOR_ROLE(),
-            deploymentConfig.vettedGate
-        );
-        accounting.grantRole(
-            accounting.SET_BOND_CURVE_ROLE(),
-            deploymentConfig.vettedGate
-        );
+        //     accounting.grantRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
 
-        accounting.grantRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
+        //     accounting.addBondCurve(identifiedCommunityStakersGateBondCurve);
 
-        accounting.addBondCurve(identifiedCommunityStakersGateBondCurve);
+        //     accounting.revokeRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
 
-        accounting.revokeRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
+        //     csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
+        //     csm.grantRole(
+        //         csm.VERIFIER_ROLE(),
+        //         address(deploymentConfig.verifierV2)
+        //     );
 
-        csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
-        csm.grantRole(
-            csm.VERIFIER_ROLE(),
-            address(deploymentConfig.verifierV2)
-        );
+        //     csm.revokeRole(csm.PAUSE_ROLE(), address(deploymentConfig.gateSeal));
+        //     accounting.revokeRole(
+        //         accounting.PAUSE_ROLE(),
+        //         address(deploymentConfig.gateSeal)
+        //     );
+        //     oracle.revokeRole(
+        //         oracle.PAUSE_ROLE(),
+        //         address(deploymentConfig.gateSeal)
+        //     );
 
-        csm.revokeRole(csm.PAUSE_ROLE(), address(deploymentConfig.gateSeal));
-        accounting.revokeRole(
-            accounting.PAUSE_ROLE(),
-            address(deploymentConfig.gateSeal)
-        );
-        oracle.revokeRole(
-            oracle.PAUSE_ROLE(),
-            address(deploymentConfig.gateSeal)
-        );
+        //     csm.grantRole(csm.PAUSE_ROLE(), address(deploymentConfig.gateSealV2));
+        //     accounting.grantRole(
+        //         accounting.PAUSE_ROLE(),
+        //         address(deploymentConfig.gateSealV2)
+        //     );
+        //     oracle.grantRole(
+        //         oracle.PAUSE_ROLE(),
+        //         address(deploymentConfig.gateSealV2)
+        //     );
 
-        csm.grantRole(csm.PAUSE_ROLE(), address(deploymentConfig.gateSealV2));
-        accounting.grantRole(
-            accounting.PAUSE_ROLE(),
-            address(deploymentConfig.gateSealV2)
-        );
-        oracle.grantRole(
-            oracle.PAUSE_ROLE(),
-            address(deploymentConfig.gateSealV2)
-        );
+        //     csm.grantRole(csm.PAUSE_ROLE(), deployParams.resealManager);
+        //     csm.grantRole(csm.RESUME_ROLE(), deployParams.resealManager);
+        //     accounting.grantRole(
+        //         accounting.PAUSE_ROLE(),
+        //         deployParams.resealManager
+        //     );
+        //     accounting.grantRole(
+        //         accounting.RESUME_ROLE(),
+        //         deployParams.resealManager
+        //     );
+        //     oracle.grantRole(oracle.PAUSE_ROLE(), deployParams.resealManager);
+        //     oracle.grantRole(oracle.RESUME_ROLE(), deployParams.resealManager);
 
-        csm.grantRole(csm.PAUSE_ROLE(), deployParams.resealManager);
-        csm.grantRole(csm.RESUME_ROLE(), deployParams.resealManager);
-        accounting.grantRole(
-            accounting.PAUSE_ROLE(),
-            deployParams.resealManager
-        );
-        accounting.grantRole(
-            accounting.RESUME_ROLE(),
-            deployParams.resealManager
-        );
-        oracle.grantRole(oracle.PAUSE_ROLE(), deployParams.resealManager);
-        oracle.grantRole(oracle.RESUME_ROLE(), deployParams.resealManager);
+        //     accounting.revokeRole(keccak256("RESET_BOND_CURVE_ROLE"), address(csm));
+        //     address csmCommittee = accounting.getRoleMember(
+        //         keccak256("RESET_BOND_CURVE_ROLE"),
+        //         0
+        //     );
+        //     accounting.revokeRole(
+        //         keccak256("RESET_BOND_CURVE_ROLE"),
+        //         address(csmCommittee)
+        //     );
 
-        accounting.revokeRole(keccak256("RESET_BOND_CURVE_ROLE"), address(csm));
-        address csmCommittee = accounting.getRoleMember(
-            keccak256("RESET_BOND_CURVE_ROLE"),
-            0
-        );
-        accounting.revokeRole(
-            keccak256("RESET_BOND_CURVE_ROLE"),
-            address(csmCommittee)
-        );
-
-        vm.stopBroadcast();
+        //     vm.stopBroadcast();
     }
 }

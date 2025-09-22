@@ -293,11 +293,13 @@ interface ICSModule is
         uint256 amount
     ) external;
 
-    /// @notice Settle locked bond for the given Node Operators
+    /// @notice Settles locked bond and sets the target limit to 0 or the given Node Operators
     /// @dev SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE role is expected to be assigned to Easy Track
     /// @param nodeOperatorIds IDs of the Node Operators
+    /// @param maxAmounts Maximum amounts to settle for each Node Operator
     function settleELRewardsStealingPenalty(
-        uint256[] memory nodeOperatorIds
+        uint256[] memory nodeOperatorIds,
+        uint256[] memory maxAmounts
     ) external;
 
     /// @notice Propose a new manager address for the Node Operator

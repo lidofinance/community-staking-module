@@ -37,7 +37,7 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertCSMKeys(CSModule csm) public {
+    function assertModuleKeys(CSModule csm) public {
         if (skipInvariants()) {
             return;
         }
@@ -126,7 +126,7 @@ contract InvariantAsserts is Test {
 
     mapping(uint256 => uint256) batchKeys;
 
-    function assertCSMEnqueuedCount(CSModule csm) public {
+    function assertModuleEnqueuedCount(CSModule csm) public {
         if (skipInvariants()) {
             return;
         }
@@ -158,7 +158,7 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertCSMUnusedStorageSlots(CSModule csm) public {
+    function assertModuleUnusedStorageSlots(CSModule csm) public {
         if (skipInvariants()) {
             return;
         }
@@ -218,9 +218,14 @@ contract InvariantAsserts is Test {
         if (skipInvariants()) {
             return;
         }
+        //
+        // TODO: Re-enable after v2 upgrade.
+        //       Currently tests perform `v1 -> v3` upgrade and `finalizeUpgradeV3` doesn't contain `_feeDistributorOld` nullifying.
+        //       It will be nullified during the v2 upgrade.
+        //
         // _feeDistributorOld
-        bytes32 value = vm.load(address(accounting), bytes32(uint256(0)));
-        assertEq(value, bytes32(0), "assert _feeDistributorOld is empty");
+        // bytes32 value = vm.load(address(accounting), bytes32(uint256(0)));
+        // assertEq(value, bytes32(0), "assert _feeDistributorOld is empty");
     }
 
     function assertFeeDistributorClaimableShares(

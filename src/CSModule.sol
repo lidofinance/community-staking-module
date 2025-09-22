@@ -92,7 +92,7 @@ contract CSModule is
     bool internal _publicRelease;
 
     uint256 private _nonce;
-    mapping(uint256 => NodeOperator) private _nodeOperators;
+    mapping(uint256 => NodeOperator) internal _nodeOperators;
     /// @dev see _keyPointer function for details of noKeyIndexPacked structure
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
     /// @dev DEPRECATED! No writes expected after CSM v2
@@ -421,38 +421,8 @@ contract CSModule is
         uint256 targetLimitMode,
         uint256 targetLimit
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        if (targetLimitMode > FORCED_TARGET_LIMIT_MODE_ID) {
-            revert InvalidInput();
-        }
-        if (targetLimit > type(uint32).max) {
-            revert InvalidInput();
-        }
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        _setTargetLimit(nodeOperatorId, targetLimitMode, targetLimit);
 
-        if (targetLimitMode == 0) {
-            targetLimit = 0;
-        }
-
-        // NOTE: Bytecode saving trick; increased gas cost in rare cases is fine.
-        // if (
-        //     no.targetLimitMode == targetLimitMode &&
-        //     no.targetLimit == targetLimit
-        // ) {
-        //     return;
-        // }
-
-        // @dev No need to safe cast due to conditions above
-        no.targetLimitMode = uint8(targetLimitMode);
-        no.targetLimit = uint32(targetLimit);
-
-        emit TargetValidatorsCountChanged(
-            nodeOperatorId,
-            targetLimitMode,
-            targetLimit
-        );
-
-        // Nonce will be updated below even if depositable count was not changed
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: false
@@ -561,8 +531,13 @@ contract CSModule is
         uint256 amountToCharge = PARAMETERS_REGISTRY.getKeyRemovalCharge(
             curveId
         ) * keysCount;
+        bool isFullyCharged = true;
+
         if (amountToCharge != 0) {
-            accounting().chargeFee(nodeOperatorId, amountToCharge);
+            isFullyCharged = accounting().chargeFee(
+                nodeOperatorId,
+                amountToCharge
+            );
             emit KeyRemovalChargeApplied(nodeOperatorId);
         }
 
@@ -573,6 +548,10 @@ contract CSModule is
         // @dev No need to safe cast due to checks in the func above
         no.totalVettedKeys = uint32(newTotalSigningKeys);
         emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
+
+        if (!isFullyCharged) {
+            _onUncompensatedPenalty(nodeOperatorId);
+        }
 
         // Nonce is updated below due to keys state change
         _updateDepositableValidatorsCount({
@@ -684,25 +663,32 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function settleELRewardsStealingPenalty(
-        uint256[] calldata nodeOperatorIds
+        uint256[] calldata nodeOperatorIds,
+        uint256[] calldata maxAmounts
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
+        if (nodeOperatorIds.length != maxAmounts.length) {
+            revert InvalidInput();
+        }
         ICSAccounting _accounting = accounting();
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
 
-            // Settled amount might be zero either if the lock expired, or the bond is zero so we
-            // need to check if the penalty was applied.
-            bool applied = _accounting.settleLockedBondETH(nodeOperatorId);
-            if (applied) {
-                emit ELRewardsStealingPenaltySettled(nodeOperatorId);
-
-                // Nonce should be updated if depositableValidators change
-                _updateDepositableValidatorsCount({
-                    nodeOperatorId: nodeOperatorId,
-                    incrementNonceIfUpdated: true
-                });
+            uint256 locked = _accounting.getActualLockedBond(nodeOperatorId);
+            if (locked == 0 || locked > maxAmounts[i]) {
+                continue; // skip this NO if the locked bond is greater than the max amount or there is no locked bond
             }
+
+            _accounting.settleLockedBondETH(nodeOperatorId);
+            emit ELRewardsStealingPenaltySettled(nodeOperatorId);
+
+            _onUncompensatedPenalty(nodeOperatorId);
+
+            // Nonce should be updated if depositableValidators change
+            _updateDepositableValidatorsCount({
+                nodeOperatorId: nodeOperatorId,
+                incrementNonceIfUpdated: true
+            });
         }
     }
 
@@ -789,6 +775,8 @@ contract CSModule is
             }
 
             ICSAccounting _accounting = accounting();
+            bool isFullyBurned = true;
+            bool isFullyCharged = true;
 
             // The withdrawal request fee is taken only if the penalty is applied if no penalty, the
             // fee has been paid by the node operator on the withdrawal trigger, or it is the DAO
@@ -798,7 +786,7 @@ contract CSModule is
                 chargeWithdrawalRequestFee &&
                 exitPenaltyInfo.withdrawalRequestFee.value != 0
             ) {
-                _accounting.chargeFee(
+                isFullyCharged = _accounting.chargeFee(
                     withdrawalInfo.nodeOperatorId,
                     exitPenaltyInfo.withdrawalRequestFee.value
                 );
@@ -810,7 +798,14 @@ contract CSModule is
                 }
             }
             if (penaltySum > 0) {
-                _accounting.penalize(withdrawalInfo.nodeOperatorId, penaltySum);
+                isFullyBurned = _accounting.penalize(
+                    withdrawalInfo.nodeOperatorId,
+                    penaltySum
+                );
+            }
+
+            if (!isFullyCharged || !isFullyBurned) {
+                _onUncompensatedPenalty(withdrawalInfo.nodeOperatorId);
             }
 
             // Nonce will be updated below even if depositable count was not changed
@@ -880,6 +875,7 @@ contract CSModule is
         bytes calldata /* depositCalldata */
     )
         external
+        virtual
         onlyRole(STAKING_ROUTER_ROLE)
         returns (bytes memory publicKeys, bytes memory signatures)
     {
@@ -1336,6 +1332,10 @@ contract CSModule is
         }
     }
 
+    function _onUncompensatedPenalty(uint256 nodeOperatorId) internal {
+        _setTargetLimit(nodeOperatorId, FORCED_TARGET_LIMIT_MODE_ID, 0);
+    }
+
     function _addKeysAndUpdateDepositableValidatorsCount(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -1556,6 +1556,44 @@ contract CSModule is
             OPERATORS_CREATED_IN_TX_MAP_TSLOT
         );
         map.set(nodeOperatorId, 0);
+    }
+
+    function _setTargetLimit(
+        uint256 nodeOperatorId,
+        uint256 targetLimitMode,
+        uint256 targetLimit
+    ) internal {
+        if (targetLimitMode > FORCED_TARGET_LIMIT_MODE_ID) {
+            revert InvalidInput();
+        }
+        if (targetLimit > type(uint32).max) {
+            revert InvalidInput();
+        }
+        _onlyExistingNodeOperator(nodeOperatorId);
+
+        if (targetLimitMode == 0) {
+            targetLimit = 0;
+        }
+
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        // NOTE: Bytecode saving trick; increased gas cost in rare cases is fine.
+        // if (
+        //     no.targetLimitMode == targetLimitMode &&
+        //     no.targetLimit == targetLimit
+        // ) {
+        //     return;
+        // }
+
+        // @dev No need to safe cast due to conditions above
+        no.targetLimitMode = uint8(targetLimitMode);
+        no.targetLimit = uint32(targetLimit);
+
+        emit TargetValidatorsCountChanged(
+            nodeOperatorId,
+            targetLimitMode,
+            targetLimit
+        );
     }
 
     function _getOperatorCreator(
