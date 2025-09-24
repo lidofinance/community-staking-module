@@ -653,26 +653,18 @@ contract CSAccounting is
             cumulativeFeeShares,
             rewardsProof
         );
-        // NOTE: Increase the bond shares first to respect the invariant:
-        //       any feature amount to transfer from bond should be bounded by `claimable`.
-        CSBondCore._increaseBond(nodeOperatorId, distributed);
         // @dev If there are fee splits, distribute the shares accordingly.
         //      At low amounts, due to rounding, it is possible that some split recipients
         //      will not receive any shares. The remainder stays in the bond.
-        uint256 transferredSplitShares = FeeSplits.splitAndTransferFees({
+        uint256 remainder = FeeSplits.splitAndTransferFees({
             feeSplitsStorage: _feeSplits,
             pendingSharesToSplitStorage: _pendingSharesToSplit,
             lido: LIDO,
             nodeOperatorId: nodeOperatorId,
             distributed: distributed,
-            getClaimableBondShares: this.getClaimableBondShares
+            getBondSummaryShares: this.getBondSummaryShares
         });
-        if (transferredSplitShares != 0) {
-            CSBondCore._unsafeReduceBond(
-                nodeOperatorId,
-                transferredSplitShares
-            );
-        }
+        CSBondCore._increaseBond(nodeOperatorId, remainder);
     }
 
     function _unwrapStETHPermitIfRequired(

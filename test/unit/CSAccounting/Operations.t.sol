@@ -990,6 +990,7 @@ contract PullFeeRewardsTest is BaseTest {
         accounting.setFeeSplits(0, 0, new bytes32[](0), splits);
 
         mock_getNodeOperatorsCount(1);
+        mock_getNodeOperatorNonWithdrawnKeys(0);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         uint256 totalBondSharesBefore = accounting.totalBondShares();
@@ -1183,10 +1184,10 @@ contract PullFeeRewardsTest is BaseTest {
             secondFeeShares) / 2;
 
         uint256 recipientSharesAfter = stETH.sharesOf(splits[0].recipient);
-        assertEq(recipientSharesAfter, expectedTransferred);
+        assertEq(recipientSharesAfter, expectedTransferred, "recipient shares");
 
         uint256 claimableAfter = accounting.getClaimableBondShares(0);
-        assertEq(claimableAfter, expectedTransferred);
+        assertEq(claimableAfter, expectedTransferred, "claimable mismatch");
 
         uint256 pendingAfter = accounting.getPendingSharesToSplit(0);
         assertEq(pendingAfter, 0);
@@ -1219,7 +1220,7 @@ contract PullFeeRewardsTest is BaseTest {
         accounting.pullFeeRewards(0, feeShares, new bytes32[](0));
 
         assertEq(stETH.sharesOf(splits[0].recipient), sharesBefore);
-        assertEq(accounting.getBondShares(0), bondSharesBefore + feeShares);
+        assertEq(accounting.getBondShares(0), bondSharesBefore);
         assertEq(accounting.getPendingSharesToSplit(0), feeShares);
     }
 }
