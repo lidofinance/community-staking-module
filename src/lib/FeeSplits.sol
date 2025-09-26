@@ -34,40 +34,45 @@ library FeeSplits {
         bytes32[] calldata rewardsProof,
         ICSAccounting.FeeSplit[] calldata feeSplits
     ) external {
-        if (feeSplits.length > MAX_FEE_SPLITS) {
+        uint256 len = feeSplits.length;
+        if (len > MAX_FEE_SPLITS) {
             revert IFeeSplits.TooManySplits();
         }
-        uint256 feesToDistribute = feeDistributor.getFeesToDistribute(
-            nodeOperatorId,
-            cumulativeFeeShares,
-            rewardsProof
-        );
+
+        if (pendingSharesToSplitStorage[nodeOperatorId] > 0) {
+            revert IFeeSplits.PendingOrUndistributedSharesExist();
+        }
+
         if (
-            pendingSharesToSplitStorage[nodeOperatorId] > 0 ||
-            feesToDistribute > 0
+            feeDistributor.getFeesToDistribute(
+                nodeOperatorId,
+                cumulativeFeeShares,
+                rewardsProof
+            ) != 0
         ) {
             revert IFeeSplits.PendingOrUndistributedSharesExist();
         }
 
         uint256 totalShare = 0;
-        for (uint256 i = 0; i < feeSplits.length; i++) {
-            totalShare += feeSplits[i].share;
+        for (uint256 i = 0; i < len; ++i) {
+            ICSAccounting.FeeSplit calldata fs = feeSplits[i];
+            if (fs.recipient == address(0)) {
+                revert IFeeSplits.ZeroSplitRecipient();
+            }
+            if (fs.share == 0) {
+                revert IFeeSplits.ZeroSplitShare();
+            }
+            totalShare += fs.share;
         }
         // totalShare might be lower than MAX_BP. The remainder goes to the Node Operator's bond
         if (totalShare > MAX_BP) {
             revert IFeeSplits.TooManySplitShares();
         }
 
+        ICSAccounting.FeeSplit[] storage dst = feeSplitsStorage[nodeOperatorId];
         delete feeSplitsStorage[nodeOperatorId];
-        for (uint256 i = 0; i < feeSplits.length; i++) {
-            if (feeSplits[i].recipient == address(0)) {
-                revert IFeeSplits.ZeroSplitRecipient();
-            }
-            if (feeSplits[i].share == 0) {
-                revert IFeeSplits.ZeroSplitShare();
-            }
-
-            feeSplitsStorage[nodeOperatorId].push(feeSplits[i]);
+        for (uint256 i = 0; i < len; i++) {
+            dst.push(feeSplits[i]);
         }
 
         emit IFeeSplits.FeeSplitsSet(nodeOperatorId, feeSplits);
