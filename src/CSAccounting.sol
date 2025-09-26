@@ -664,7 +664,9 @@ contract CSAccounting is
             distributed: distributed,
             getBondSummaryShares: this.getBondSummaryShares
         });
-        CSBondCore._increaseBond(nodeOperatorId, remainder);
+        if (remainder != 0) {
+            CSBondCore._increaseBond(nodeOperatorId, remainder);
+        }
     }
 
     function _unwrapStETHPermitIfRequired(
