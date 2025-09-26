@@ -17,6 +17,36 @@ library BondCurves {
     uint256 public constant MIN_CURVE_LENGTH = 1;
     uint256 public constant MAX_CURVE_LENGTH = 100;
 
+    /// @dev Add a new bond curve to the array
+    function addBondCurve(
+        CSBondCurve.CSBondCurveStorage storage bondCurvesStorage,
+        ICSBondCurve.BondCurveIntervalInput[] calldata intervals
+    ) external returns (uint256 curveId) {
+        _check(intervals);
+        curveId = bondCurvesStorage.bondCurves.length;
+        ICSBondCurve.BondCurve storage bondCurve = bondCurvesStorage
+            .bondCurves
+            .push();
+        _addIntervals(bondCurve, intervals);
+    }
+
+    /// @dev Update existing bond curve
+    function updateBondCurve(
+        CSBondCurve.CSBondCurveStorage storage bondCurvesStorage,
+        uint256 curveId,
+        ICSBondCurve.BondCurveIntervalInput[] calldata intervals
+    ) external {
+        unchecked {
+            if (curveId > bondCurvesStorage.bondCurves.length - 1) {
+                revert ICSBondCurve.InvalidBondCurveId();
+            }
+        }
+
+        _check(intervals);
+        delete bondCurvesStorage.bondCurves[curveId];
+        _addIntervals(bondCurvesStorage.bondCurves[curveId], intervals);
+    }
+
     function getBondAmountByKeysCount(
         CSBondCurve.CSBondCurveStorage storage bondCurvesStorage,
         uint256 keys,
@@ -96,36 +126,6 @@ library BondCurves {
                 (amount - interval.minBond) /
                 interval.trend;
         }
-    }
-
-    /// @dev Add a new bond curve to the array
-    function addBondCurve(
-        CSBondCurve.CSBondCurveStorage storage bondCurvesStorage,
-        ICSBondCurve.BondCurveIntervalInput[] calldata intervals
-    ) external returns (uint256 curveId) {
-        _check(intervals);
-        curveId = bondCurvesStorage.bondCurves.length;
-        ICSBondCurve.BondCurve storage bondCurve = bondCurvesStorage
-            .bondCurves
-            .push();
-        _addIntervals(bondCurve, intervals);
-    }
-
-    /// @dev Update existing bond curve
-    function updateBondCurve(
-        CSBondCurve.CSBondCurveStorage storage bondCurvesStorage,
-        uint256 curveId,
-        ICSBondCurve.BondCurveIntervalInput[] calldata intervals
-    ) external {
-        unchecked {
-            if (curveId > bondCurvesStorage.bondCurves.length - 1) {
-                revert ICSBondCurve.InvalidBondCurveId();
-            }
-        }
-
-        _check(intervals);
-        delete bondCurvesStorage.bondCurves[curveId];
-        _addIntervals(bondCurvesStorage.bondCurves[curveId], intervals);
     }
 
     function _addIntervals(

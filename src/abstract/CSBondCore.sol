@@ -254,16 +254,6 @@ abstract contract CSBondCore is ICSBondCore {
         );
     }
 
-    /// @dev Unsafe reduce bond shares (stETH) (possible underflow). Safety checks should be done outside
-    function _unsafeReduceBond(
-        uint256 nodeOperatorId,
-        uint256 shares
-    ) internal {
-        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        $.bondShares[nodeOperatorId] -= shares;
-        $.totalBondShares -= shares;
-    }
-
     /// @dev Must be overridden in case of additional restrictions on a claimable bond amount
     function _getClaimableBondShares(
         uint256 nodeOperatorId
@@ -287,6 +277,13 @@ abstract contract CSBondCore is ICSBondCore {
         }
 
         return LIDO.getPooledEthByShares(shares);
+    }
+
+    /// @dev Unsafe reduce bond shares (stETH) (possible underflow). Safety checks should be done outside
+    function _unsafeReduceBond(uint256 nodeOperatorId, uint256 shares) private {
+        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
+        $.bondShares[nodeOperatorId] -= shares;
+        $.totalBondShares -= shares;
     }
 
     /// @dev Safe reduce bond shares (stETH). The maximum shares to reduce is the current bond shares
