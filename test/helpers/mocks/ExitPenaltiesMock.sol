@@ -19,8 +19,6 @@ contract ExitPenaltiesMock is IExitPenalties, ExitTypes {
         return address(0);
     }
 
-    function processTriggeredExit(uint256, bytes calldata, uint256, uint256) external {}
-
     function processStrikesReport(uint256 nodeOperatorId, bytes calldata publicKey) external {}
 
     function mock_setDelayedExitPenaltyInfo(ExitPenaltyInfo memory _penaltyInfo) external {

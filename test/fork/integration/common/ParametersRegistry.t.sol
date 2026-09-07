@@ -133,14 +133,6 @@ abstract contract ParametersRegistryTestBase is ModuleTypeBase {
             newFee,
             "Max EL withdrawal request fee should be updated"
         );
-
-        _grantStakingRouterRole();
-        bytes memory pubkey = module.getSigningKeys(defaultNoId, 0, 1);
-        module.onValidatorExitTriggered(defaultNoId, pubkey, newFee + 0.01 ether, exitPenalties.STRIKES_EXIT_TYPE_ID());
-
-        ExitPenaltyInfo memory penaltyInfo = _getExitPenaltyInfo(pubkey);
-        assertTrue(penaltyInfo.elWithdrawalRequestFee.isValue, "EL withdrawal fee should be recorded");
-        assertEq(penaltyInfo.elWithdrawalRequestFee.value, newFee, "EL withdrawal fee should be capped by max value");
     }
 
     function _assertSetQueueConfig() internal {

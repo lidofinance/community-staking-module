@@ -395,7 +395,12 @@ abstract contract BaseModule is
     ) external {
         _checkStakingRouterRole();
         _onlyExistingNodeOperator(nodeOperatorId);
-        _exitPenalties().processTriggeredExit(nodeOperatorId, publicKey, elWithdrawalRequestFeePaid, exitType);
+        emit ValidatorExitTriggered({
+            nodeOperatorId: nodeOperatorId,
+            exitType: exitType,
+            pubkey: publicKey,
+            withdrawalRequestPaidFee: elWithdrawalRequestFeePaid
+        });
     }
 
     /// @inheritdoc IBaseModule
@@ -842,11 +847,6 @@ abstract contract BaseModule is
     /// @dev This function is used to get the accounting contract from immutables to save bytecode.
     function _accounting() internal view returns (IAccounting) {
         return ACCOUNTING;
-    }
-
-    /// @dev This function is used to get the exit penalties contract from immutables to save bytecode.
-    function _exitPenalties() internal view returns (IExitPenalties) {
-        return EXIT_PENALTIES;
     }
 
     /// @dev This function is used to get the parameters registry contract from immutables to save bytecode.

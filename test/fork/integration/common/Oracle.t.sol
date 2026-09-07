@@ -219,8 +219,6 @@ abstract contract OracleTestBase is ModuleTypeBase {
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties.getExitPenaltyInfo(nodeOperatorId, key);
         assertEq(exitPenaltyInfo.strikesPenalty.value, penalty);
-        assertTrue(exitPenaltyInfo.elWithdrawalRequestFee.isValue);
-        assertEq(exitPenaltyInfo.elWithdrawalRequestFee.value, expectedWithdrawalFee);
         assertEq(refundRecipient.balance, initialBalance - expectedWithdrawalFee);
     }
 
