@@ -4,7 +4,6 @@
 pragma solidity 0.8.33;
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import { ExitTypes } from "./abstract/ExitTypes.sol";
 
@@ -25,11 +24,6 @@ contract ExitPenalties is IExitPenalties, ExitTypes {
 
     mapping(bytes32 keyPointer => ExitPenaltyInfo info) private _exitPenaltyInfo;
 
-    modifier onlyModule() {
-        _onlyModule();
-        _;
-    }
-
     modifier onlyStrikes() {
         _onlyStrikes();
         _;
@@ -43,34 +37,6 @@ contract ExitPenalties is IExitPenalties, ExitTypes {
         PARAMETERS_REGISTRY = MODULE.PARAMETERS_REGISTRY();
         ACCOUNTING = MODULE.ACCOUNTING();
         STRIKES = strikes;
-    }
-
-    /// @inheritdoc IExitPenalties
-    function processTriggeredExit(
-        uint256 nodeOperatorId,
-        bytes calldata publicKey,
-        uint256 elWithdrawalRequestFeePaid,
-        uint256 exitType
-    ) external onlyModule {
-        if (exitType == VOLUNTARY_EXIT_TYPE_ID) return;
-
-        ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[KeyPointerLib.keyPointer(nodeOperatorId, publicKey)];
-        // don't update the fee if it was already set to prevent hypothetical manipulations
-        //    with double reporting to get lower/higher fee.
-        if (exitPenaltyInfo.elWithdrawalRequestFee.isValue) return;
-        uint256 curveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
-        uint256 maxFee = PARAMETERS_REGISTRY.getMaxElWithdrawalRequestFee(curveId);
-
-        uint256 fee = Math.min(elWithdrawalRequestFeePaid, maxFee);
-
-        exitPenaltyInfo.elWithdrawalRequestFee = MarkedUint248(fee.toUint248(), true);
-        emit TriggeredExitFeeRecorded({
-            nodeOperatorId: nodeOperatorId,
-            exitType: exitType,
-            pubkey: publicKey,
-            withdrawalRequestPaidFee: elWithdrawalRequestFeePaid,
-            withdrawalRequestRecordedFee: fee
-        });
     }
 
     /// @inheritdoc IExitPenalties
@@ -90,10 +56,6 @@ contract ExitPenalties is IExitPenalties, ExitTypes {
         bytes calldata publicKey
     ) external view returns (ExitPenaltyInfo memory) {
         return _exitPenaltyInfo[KeyPointerLib.keyPointer(nodeOperatorId, publicKey)];
-    }
-
-    function _onlyModule() internal view {
-        if (msg.sender != address(MODULE)) revert SenderIsNotModule();
     }
 
     function _onlyStrikes() internal view {

@@ -7,7 +7,6 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import { IBaseModule, NodeOperator, WithdrawnValidatorInfo } from "../interfaces/IBaseModule.sol";
 import { ExitPenaltyInfo } from "../interfaces/IExitPenalties.sol";
-import { IAccounting } from "../interfaces/IAccounting.sol";
 import { ModuleLinearStorage } from "../abstract/ModuleLinearStorage.sol";
 
 import { KeyPointerLib } from "./KeyPointerLib.sol";
@@ -113,19 +112,9 @@ library WithdrawnValidatorLib {
             _clamp(validatorInfo.exitBalance, minExpectedBalance, ValidatorBalanceLimits.MAX_EFFECTIVE_BALANCE)
         );
         uint256 penaltySum;
-        uint256 feeSum;
 
         if (penaltyInfo.strikesPenalty.isValue) {
             penaltySum = _scalePenaltyByMultiplier(penaltyInfo.strikesPenalty.value, penaltyMultiplier);
-        }
-
-        // The EL withdrawal request fee is taken when the validator exited due to strikes. Otherwise, the fee has
-        // already been paid by the node operator upon withdrawal trigger, or it is a DAO decision to withdraw the
-        // validator.
-        if (penaltyInfo.strikesPenalty.isValue && penaltyInfo.elWithdrawalRequestFee.value != 0) {
-            // EL withdrawal request fee is not scaled because sending a withdrawal request for a validator does
-            // not depend on the size of a validator.
-            feeSum += penaltyInfo.elWithdrawalRequestFee.value;
         }
 
         if (validatorInfo.isSlashed && validatorInfo.slashingPenalty > 0) {
@@ -139,19 +128,9 @@ library WithdrawnValidatorLib {
             penaltySum += minExpectedBalance - validatorInfo.exitBalance;
         }
 
-        IAccounting accounting = IBaseModule(address(this)).ACCOUNTING();
-
-        bool penaltyCovered = true;
-
-        // Confiscate penalties first to prioritize compensations for the stETH holders.
         if (penaltySum > 0) {
-            penaltyCovered = accounting.penalize(validatorInfo.nodeOperatorId, penaltySum);
+            IBaseModule(address(this)).ACCOUNTING().penalize(validatorInfo.nodeOperatorId, penaltySum);
         }
-
-        // Charge fees second to avoid charging fees if the penalty is not covered,
-        // as the fees are meant to cover the costs of processing the withdrawal incurred by the protocol maintainers.
-        // stETH holders should have first priority to be compensated, so the fees are charged only if the penalty is covered.
-        if (feeSum > 0 && penaltyCovered) accounting.chargeFee(validatorInfo.nodeOperatorId, feeSum);
     }
 
     /// @dev Acts as the numerator to calculate the scaled penalty.

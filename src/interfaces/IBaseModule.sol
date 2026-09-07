@@ -81,6 +81,12 @@ interface IBaseModule is IStakingModule, IAccessControlEnumerable, IAssetRecover
         uint256 slashingPenalty,
         bytes pubkey
     );
+    event ValidatorExitTriggered(
+        uint256 indexed nodeOperatorId,
+        uint256 indexed exitType,
+        bytes pubkey,
+        uint256 withdrawalRequestPaidFee
+    );
     event NodeOperatorBalanceUpdated(uint256 indexed operatorId, uint256 balanceWei);
     event ValidatorSlashingReported(uint256 indexed nodeOperatorId, uint256 keyIndex, bytes pubkey);
     event UnresolvedSlashedValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 count);
