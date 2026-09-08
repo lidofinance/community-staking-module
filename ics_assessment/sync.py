@@ -18,6 +18,9 @@ from ics_assessment.config import (
 )
 
 
+DEFAULT_LOG_CHUNK_SIZE = 10_000
+
+
 TRANSFER_EVENT_ABI = [
     {
         "type": "event",
@@ -116,7 +119,9 @@ def _fetch_logs(
                     )
             raise
 
-    if chunk_size is None or (to_block - from_block + 1) <= chunk_size:
+    if chunk_size is None:
+        chunk_size = DEFAULT_LOG_CHUNK_SIZE
+    if (to_block - from_block + 1) <= chunk_size:
         print(f"[sync] {label}: fetching {_format_block_range(from_block, to_block)}")
         logs = run_fetch(from_block, to_block)
         print(f"[sync] {label}: fetched {len(logs)} log(s) for {_format_block_range(from_block, to_block)}")
@@ -314,7 +319,7 @@ def run_sync(targets: list[str], chunk_size: int | None = None) -> int:
 
 def main(argv: list[str] | None = None, *, chunk_size: int | None = None) -> int:
     parser = argparse.ArgumentParser(description="Sync ICS assessment snapshot sources.")
-    parser.add_argument("--chunk-size", type=int, default=chunk_size, help="Optional log-fetch block chunk size")
+    parser.add_argument("--chunk-size", type=int, default=chunk_size, help="Log-fetch block chunk size (default: 10000)")
     parser.add_argument("targets", nargs="*", help="Sync target(s) or 'all'")
     args = parser.parse_args(argv)
     return run_sync(args.targets, chunk_size=args.chunk_size)

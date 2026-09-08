@@ -91,7 +91,7 @@ async def _sync_node_operator_owners_one(
             decode_tuples=True,
         )
 
-        node_operators: dict[int, str] = {}
+        node_operators: dict[int, set[str]] = {}
         count = await contract.functions.getNodeOperatorsCount().call(
             block_identifier=reference_block
         )
@@ -117,12 +117,11 @@ async def _sync_node_operator_owners_one(
                 node_operator = await contract.functions.getNodeOperator(i).call(
                     block_identifier=reference_block
                 )
-                owner = (
-                    node_operator.managerAddress
-                    if node_operator.extendedManagerPermissions
-                    else node_operator.rewardAddress
-                )
-                node_operators[i] = owner.lower()
+                # Either management role can identify an applicant's operator.
+                node_operators[i] = {
+                    node_operator.managerAddress.lower(),
+                    node_operator.rewardAddress.lower(),
+                }
                 async with progress_lock:
                     processed += 1
                     if processed % 100 == 0 or processed == count:
@@ -163,7 +162,8 @@ async def _sync_node_operator_owners_one(
             ) as file:
                 temp_path = Path(file.name)
                 json.dump(
-                    dict(sorted(node_operators.items(), key=lambda item: item[0])),
+                    {operator_id: sorted(addresses)
+                     for operator_id, addresses in sorted(node_operators.items())},
                     file,
                     indent=2,
                 )
