@@ -386,23 +386,6 @@ abstract contract BaseModule is
         _reportWithdrawnValidators(validatorInfos, false);
     }
 
-    /// @inheritdoc IStakingModule
-    function onValidatorExitTriggered(
-        uint256 nodeOperatorId,
-        bytes calldata publicKey,
-        uint256 elWithdrawalRequestFeePaid,
-        uint256 exitType
-    ) external {
-        _checkStakingRouterRole();
-        _onlyExistingNodeOperator(nodeOperatorId);
-        emit ValidatorExitTriggered({
-            nodeOperatorId: nodeOperatorId,
-            exitType: exitType,
-            pubkey: publicKey,
-            withdrawalRequestPaidFee: elWithdrawalRequestFeePaid
-        });
-    }
-
     /// @inheritdoc IBaseModule
     function updateDepositInfo(uint256 nodeOperatorId) external {
         _updateDepositInfo(nodeOperatorId);

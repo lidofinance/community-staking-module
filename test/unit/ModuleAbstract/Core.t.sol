@@ -840,29 +840,6 @@ abstract contract ModuleOnRewardsMinted is ModuleFixtures {
     }
 }
 
-abstract contract ModuleOnValidatorExitTriggered is ModuleFixtures {
-    function test_onValidatorExitTriggered() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        bytes memory publicKey = randomBytes(48);
-        uint256 paidFee = 0.1 ether;
-        uint256 exitType = 1;
-
-        expectNoCall(address(exitPenalties), "");
-        vm.expectEmit(address(module));
-        emit IBaseModule.ValidatorExitTriggered(noId, exitType, publicKey, paidFee);
-        vm.prank(stakingRouter);
-        module.onValidatorExitTriggered(noId, publicKey, paidFee, exitType);
-    }
-
-    function test_onValidatorExitTriggered_RevertWhen_noNodeOperator() public {
-        bytes memory publicKey = randomBytes(48);
-
-        vm.expectRevert(IBaseModule.NodeOperatorDoesNotExist.selector);
-        vm.prank(stakingRouter);
-        module.onValidatorExitTriggered(0, publicKey, 0.1 ether, 1);
-    }
-}
-
 abstract contract ModuleRecoverERC20 is ModuleFixtures {
     function test_recoverERC20() public assertInvariants {
         vm.startPrank(admin);

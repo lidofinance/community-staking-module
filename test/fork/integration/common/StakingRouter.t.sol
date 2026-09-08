@@ -67,6 +67,8 @@ abstract contract StakingRouterIntegrationTestBase is ModuleTypeBase {
     function test_stakingModuleIdIsUnsetOrMatchesModule() public {
         uint256 ejectorModuleId = ejector.stakingModuleId();
         if (ejectorModuleId == 0) {
+            _skipOnLegacyRouter();
+
             (uint256 noId, uint256 keyIndex) = integrationHelpers.getDepositedNodeOperatorWithSequentialActiveKeys(
                 nextAddress(),
                 1
