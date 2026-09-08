@@ -34,6 +34,9 @@ abstract contract EjectionTestBase is ModuleTypeBase {
     }
 
     function test_voluntaryEject() public {
+        uint256 moduleId = findModule();
+        _skipOnLegacyRouter();
+
         nodeOperatorId = integrationHelpers.getDepositedNodeOperator(nextAddress(), KEYS_COUNT);
 
         uint256 initialBalance = 1 ether;
@@ -78,7 +81,6 @@ abstract contract EjectionTestBase is ModuleTypeBase {
         vm.stopSnapshotGas();
 
         vm.assertEq(operatorOwner.balance, initialBalance - expectedFee * KEYS_COUNT);
-        uint256 moduleId = findModule();
         assertEq(ejector.stakingModuleId(), moduleId);
         IStakingRouter.StakingModule memory moduleInfo = stakingRouter.getStakingModule(moduleId);
         assertEq(moduleInfo.stakingModuleAddress, address(module));

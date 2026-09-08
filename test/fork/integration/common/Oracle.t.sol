@@ -165,6 +165,8 @@ abstract contract OracleTestBase is ModuleTypeBase {
     }
 
     function test_reportStrikes() public assertInvariants {
+        _skipOnLegacyRouter();
+
         uint256 distributed = 0;
         bytes32 feeTreeRootBefore = feeDistributor.treeRoot();
         string memory feeTreeCidBefore = feeDistributor.treeCid();
