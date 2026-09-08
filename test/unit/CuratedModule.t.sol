@@ -2227,8 +2227,6 @@ contract CuratedMisc is ModuleMisc, CuratedCommon {
     }
 }
 
-contract CuratedOnValidatorExitTriggered is ModuleOnValidatorExitTriggered, CuratedCommon {}
-
 contract CuratedCreateNodeOperators is ModuleCreateNodeOperators, CuratedCommon {}
 
 contract CuratedChangeNodeOperatorAddresses is ModuleChangeNodeOperatorAddresses, CuratedCommon {}

@@ -2398,8 +2398,6 @@ contract CSMMisc is ModuleMisc, CSMCommon {
     }
 }
 
-contract CSMOnValidatorExitTriggered is ModuleOnValidatorExitTriggered, CSMCommon {}
-
 contract CSMCreateNodeOperators is ModuleCreateNodeOperators, CSMCommon {}
 
 contract CSMBatchDepositInfoUpdate is ModuleBatchDepositInfoUpdate, CSMCommon {}

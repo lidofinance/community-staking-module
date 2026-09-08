@@ -17,21 +17,6 @@ interface IStakingModule {
     /// @dev Event to be emitted when a signing key is removed from the StakingModule
     event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
 
-    /// @notice Handles the triggerable exit event for a validator belonging to a specific node operator.
-    /// @dev This function is called by the StakingRouter when a validator is exited using the triggerable
-    ///      exit request on the Execution Layer (EL).
-    /// @param _nodeOperatorId The ID of the node operator.
-    /// @param _publicKey The public key of the validator being reported.
-    /// @param _withdrawalRequestPaidFee Fee amount paid to send a withdrawal request on the Execution Layer (EL).
-    /// @param _exitType The type of exit being performed.
-    ///        This parameter may be interpreted differently across various staking modules, depending on their specific implementation.
-    function onValidatorExitTriggered(
-        uint256 _nodeOperatorId,
-        bytes calldata _publicKey,
-        uint256 _withdrawalRequestPaidFee,
-        uint256 _exitType
-    ) external;
-
     /// @notice Returns the type of the staking module
     /// @return Module type
     function getType() external view returns (bytes32);

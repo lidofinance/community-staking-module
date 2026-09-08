@@ -3,7 +3,6 @@
 
 pragma solidity 0.8.33;
 
-import { IStakingModule } from "../../../../src/interfaces/IStakingModule.sol";
 import { IStakingRouter } from "../../../../src/interfaces/IStakingRouter.sol";
 import { IWithdrawalVault } from "../../../../src/interfaces/IWithdrawalVault.sol";
 import { IEjector } from "../../../../src/interfaces/IEjector.sol";
@@ -42,7 +41,6 @@ abstract contract EjectionTestBase is ModuleTypeBase {
         vm.deal(operatorOwner, initialBalance);
         uint256 expectedFee = IWithdrawalVault(locator.withdrawalVault()).getWithdrawalRequestFee();
 
-        uint256 VOLUNTARY_EXIT_TYPE_ID = ejector.VOLUNTARY_EXIT_TYPE_ID();
         address withdrawalVault = locator.withdrawalVault();
         bytes[] memory pubkeys = new bytes[](KEYS_COUNT);
         uint256[] memory keyIds = new uint256[](KEYS_COUNT);
@@ -73,16 +71,6 @@ abstract contract EjectionTestBase is ModuleTypeBase {
         for (uint256 i = 0; i < KEYS_COUNT; i++) {
             vm.expectEmit(withdrawalVault);
             emit IWithdrawalVault.WithdrawalRequestAdded(_prepareWithdrawalRequestData(pubkeys[i]));
-            vm.expectCall(
-                address(module),
-                abi.encodeWithSelector(
-                    IStakingModule.onValidatorExitTriggered.selector,
-                    nodeOperatorId,
-                    pubkeys[i],
-                    expectedFee,
-                    VOLUNTARY_EXIT_TYPE_ID
-                )
-            );
         }
         vm.prank(operatorOwner);
         vm.startSnapshotGas("ejector.voluntaryEject");
