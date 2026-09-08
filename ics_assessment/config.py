@@ -26,7 +26,10 @@ HOODI_RPC_URL = os.getenv("HOODI_RPC_URL")
 ARBITRUM_RPC_URL = os.getenv("ARBITRUM_RPC_URL")
 MAINNET_ARCHIVE_RPC_URL = os.getenv("MAINNET_ARCHIVE_RPC_URL", MAINNET_RPC_URL or "")
 HOODI_ARCHIVE_RPC_URL = os.getenv("HOODI_ARCHIVE_RPC_URL", HOODI_RPC_URL or "")
-GNOSIS_RPC_URL = "https://rpc.gnosis.gateway.fm"
+GNOSIS_RPC_URL = os.getenv("GNOSIS_RPC_URL", "https://rpc.gnosis.gateway.fm")
+IPFS_GATEWAY_URL = os.getenv(
+    "IPFS_GATEWAY_URL", "https://gateway.pinata.cloud/ipfs"
+).rstrip("/")
 
 
 # Category scoring policy.

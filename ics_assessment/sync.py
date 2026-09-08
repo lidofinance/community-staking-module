@@ -143,9 +143,16 @@ def _fetch_logs(
     return logs
 
 
-def get_event_logs(event, from_block: int, to_block: int, label: str = "event logs"):
+def get_event_logs(
+    event,
+    from_block: int,
+    to_block: int,
+    label: str = "event logs",
+    argument_filters: dict | None = None,
+):
+    extra = {"argument_filters": argument_filters} if argument_filters else {}
     return _fetch_logs(
-        lambda start, end: event.get_logs(from_block=start, to_block=end),
+        lambda start, end: event.get_logs(from_block=start, to_block=end, **extra),
         from_block,
         to_block,
         label,

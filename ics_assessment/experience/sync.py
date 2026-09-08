@@ -17,6 +17,7 @@ from ics_assessment.config import (
     HOODI_FEE_DISTRIBUTOR_ADDRESS,
     HOODI_FEE_DISTRIBUTOR_FROM_BLOCK,
     HOODI_RPC_URL,
+    IPFS_GATEWAY_URL,
     MAINNET_ARCHIVE_RPC_URL,
     MAINNET_CUTOFF_BLOCK,
     MAINNET_FEE_DISTRIBUTOR_ADDRESS,
@@ -216,7 +217,7 @@ def _fetch_cids_via_getlogs(w3: Web3, address: str, from_block: int, to_block: i
 
 
 def request_performance_report(cid: str) -> dict | list[dict]:
-    url = f"https://ipfs.io/ipfs/{cid}"
+    url = f"{IPFS_GATEWAY_URL}/{cid}"
     last_exc: Exception | None = None
     for _ in range(3):
         try:
