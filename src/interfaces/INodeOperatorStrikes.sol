@@ -41,12 +41,16 @@ interface INodeOperatorStrikes is IStepwiseWeightBoost {
     error ZeroLifetime();
     error LifetimeTooLong();
     error InvalidDescription();
+    error MaxActiveStrikesReached();
 
     /// @notice Role allowed to issue and remove strikes.
     function STRIKES_COMMITTEE_ROLE() external view returns (bytes32);
 
     /// @notice Maximum byte length of a strike description.
     function MAX_DESCRIPTION_LENGTH() external view returns (uint256);
+
+    /// @notice Maximum non-removed strikes per operator, including expired strikes.
+    function MAX_ACTIVE_STRIKES() external view returns (uint256);
 
     /// @notice Initialize the provider.
     /// @param admin Address to receive DEFAULT_ADMIN_ROLE.
