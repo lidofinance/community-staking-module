@@ -46,9 +46,8 @@ struct DeployCSM0x02Params {
     address[] oracleMembers;
     uint256 hashConsensusQuorum;
     // Verifier
-    IVerifier.GIndices verifierGIndices;
     uint256 verifierFirstSupportedSlot;
-    uint256 verifierPivotSlot;
+    uint256 verifierGloasSlot;
     uint256 capellaSlot;
     uint256 minWithdrawalRatio;
     // Accounting
@@ -209,9 +208,8 @@ abstract contract DeployCSM0x02Base is Script {
                 withdrawalCredentials: toWC(locator.withdrawalVault(), WCType.Compounding),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
-                gindices: config.verifierGIndices,
                 firstSupportedSlot: Slot.wrap(uint64(config.verifierFirstSupportedSlot)),
-                pivotSlot: Slot.wrap(uint64(config.verifierPivotSlot)),
+                gloasSlot: Slot.wrap(uint64(config.verifierGloasSlot)),
                 capellaSlot: Slot.wrap(uint64(config.capellaSlot)),
                 minWithdrawalRatio: config.minWithdrawalRatio,
                 admin: deployer

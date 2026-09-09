@@ -18,8 +18,6 @@ import { WCType, toWC } from "src/utils/WithdrawalCredentials.sol";
 import { IVerifier } from "src/interfaces/IVerifier.sol";
 import { IBaseModule, WithdrawnValidatorInfo } from "src/interfaces/IBaseModule.sol";
 
-import { GIndices } from "script/constants/GIndices.sol";
-
 import { Utilities } from "test/helpers/Utilities.sol";
 import { Stub } from "test/helpers/mocks/Stub.sol";
 
@@ -80,20 +78,8 @@ contract VerifierTestConstructor is VerifierTestBase {
             withdrawalCredentials: withdrawalCredentials,
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0xe1c0),
-                gIWithdrawals: toGIndex(0xe1c1),
-                gIValidatorsPreGloas: toGIndex(0x560000000000),
-                gIValidators: toGIndex(0x560000000001),
-                gIHistoricalSummariesPreGloas: toGIndex(0xfff0),
-                gIHistoricalSummaries: toGIndex(0xffff),
-                gIBalancesPreGloas: toGIndex(0x160000000000),
-                gIBalances: toGIndex(0x160000000001),
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: firstSupportedSlot,
-            pivotSlot: Slot.wrap(100_501),
+            gloasSlot: Slot.wrap(100_501),
             capellaSlot: Slot.wrap(42),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -103,17 +89,8 @@ contract VerifierTestConstructor is VerifierTestBase {
         assertEq(address(verifier.MODULE()), address(module));
         assertEq(verifier.SLOTS_PER_EPOCH(), 32);
         assertEq(verifier.SLOTS_PER_HISTORICAL_ROOT(), 8192);
-        assertEq(GIndex.unwrap(verifier.GI_WITHDRAWALS_PRE_GLOAS()), 0xe1c0);
-        assertEq(GIndex.unwrap(verifier.GI_WITHDRAWALS()), 0xe1c1);
-        assertEq(GIndex.unwrap(verifier.GI_VALIDATORS_PRE_GLOAS()), 0x560000000000);
-        assertEq(GIndex.unwrap(verifier.GI_VALIDATORS()), 0x560000000001);
-        assertEq(GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_PRE_GLOAS()), 0xfff0);
-        assertEq(GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES()), 0xffff);
-        assertEq(GIndex.unwrap(verifier.GI_BLOCK_ROOT_IN_SUMMARY()), 2);
-        assertEq(GIndex.unwrap(verifier.GI_BALANCES_PRE_GLOAS()), 0x160000000000);
-        assertEq(GIndex.unwrap(verifier.GI_BALANCES()), 0x160000000001);
         assertEq(Slot.unwrap(verifier.FIRST_SUPPORTED_SLOT()), Slot.unwrap(firstSupportedSlot));
-        assertEq(Slot.unwrap(verifier.PIVOT_SLOT()), Slot.unwrap(Slot.wrap(100_501)));
+        assertEq(Slot.unwrap(verifier.GLOAS_SLOT()), Slot.unwrap(Slot.wrap(100_501)));
         assertEq(Slot.unwrap(verifier.CAPELLA_SLOT()), Slot.unwrap(Slot.wrap(42)));
         assertEq(verifier.MIN_WITHDRAWAL_RATIO(), 9000);
     }
@@ -124,46 +101,22 @@ contract VerifierTestConstructor is VerifierTestBase {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 0,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0xe1c0),
-                gIWithdrawals: toGIndex(0xe1c0),
-                gIValidatorsPreGloas: toGIndex(0x560000000000),
-                gIValidators: toGIndex(0x560000000000),
-                gIHistoricalSummariesPreGloas: toGIndex(0x3b),
-                gIHistoricalSummaries: toGIndex(0x3b),
-                gIBalancesPreGloas: toGIndex(0x260000000000),
-                gIBalances: toGIndex(0x260000000000),
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot,
+            gloasSlot: firstSupportedSlot,
             capellaSlot: firstSupportedSlot,
             minWithdrawalRatio: 9000,
             admin: admin
         });
     }
 
-    function test_constructor_RevertWhen_InvalidPivotSlot() public {
-        vm.expectRevert(IVerifier.InvalidPivotSlot.selector);
+    function test_constructor_RevertWhen_InvalidGloasSlot() public {
+        vm.expectRevert(IVerifier.InvalidGloasSlot.selector);
         verifier = new Verifier({
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0xe1c0),
-                gIWithdrawals: toGIndex(0xe1c0),
-                gIValidatorsPreGloas: toGIndex(0x560000000000),
-                gIValidators: toGIndex(0x560000000000),
-                gIHistoricalSummariesPreGloas: toGIndex(0x3b),
-                gIHistoricalSummaries: toGIndex(0x3b),
-                gIBalancesPreGloas: toGIndex(0x260000000000),
-                gIBalances: toGIndex(0x260000000000),
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: firstSupportedSlot,
-            pivotSlot: firstSupportedSlot.dec(),
+            gloasSlot: firstSupportedSlot.dec(),
             capellaSlot: firstSupportedSlot,
             minWithdrawalRatio: 9000,
             admin: admin
@@ -176,20 +129,8 @@ contract VerifierTestConstructor is VerifierTestBase {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0xe1c0),
-                gIWithdrawals: toGIndex(0xe1c0),
-                gIValidatorsPreGloas: toGIndex(0x560000000000),
-                gIValidators: toGIndex(0x560000000000),
-                gIHistoricalSummariesPreGloas: toGIndex(0x3b),
-                gIHistoricalSummaries: toGIndex(0x3b),
-                gIBalancesPreGloas: toGIndex(0x260000000000),
-                gIBalances: toGIndex(0x260000000000),
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: firstSupportedSlot,
-            pivotSlot: firstSupportedSlot,
+            gloasSlot: firstSupportedSlot,
             capellaSlot: firstSupportedSlot.inc(),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -202,20 +143,8 @@ contract VerifierTestConstructor is VerifierTestBase {
             withdrawalCredentials: someBytes32(),
             module: address(0),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0xe1c0),
-                gIWithdrawals: toGIndex(0xe1c0),
-                gIValidatorsPreGloas: toGIndex(0x560000000000),
-                gIValidators: toGIndex(0x560000000000),
-                gIHistoricalSummariesPreGloas: toGIndex(0x3b),
-                gIHistoricalSummaries: toGIndex(0x3b),
-                gIBalancesPreGloas: toGIndex(0x260000000000),
-                gIBalances: toGIndex(0x260000000000),
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot,
+            gloasSlot: firstSupportedSlot,
             capellaSlot: firstSupportedSlot,
             minWithdrawalRatio: 9000,
             admin: admin
@@ -228,20 +157,8 @@ contract VerifierTestConstructor is VerifierTestBase {
             withdrawalCredentials: bytes32(0),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0xe1c0),
-                gIWithdrawals: toGIndex(0xe1c0),
-                gIValidatorsPreGloas: toGIndex(0x560000000000),
-                gIValidators: toGIndex(0x560000000000),
-                gIHistoricalSummariesPreGloas: toGIndex(0x3b),
-                gIHistoricalSummaries: toGIndex(0x3b),
-                gIBalancesPreGloas: toGIndex(0x260000000000),
-                gIBalances: toGIndex(0x260000000000),
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot,
+            gloasSlot: firstSupportedSlot,
             capellaSlot: firstSupportedSlot,
             minWithdrawalRatio: 9000,
             admin: admin
@@ -254,20 +171,8 @@ contract VerifierTestConstructor is VerifierTestBase {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0xe1c0),
-                gIWithdrawals: toGIndex(0xe1c0),
-                gIValidatorsPreGloas: toGIndex(0x560000000000),
-                gIValidators: toGIndex(0x560000000000),
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: toGIndex(0x260000000000),
-                gIBalances: toGIndex(0x260000000000),
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot,
+            gloasSlot: firstSupportedSlot,
             capellaSlot: firstSupportedSlot,
             minWithdrawalRatio: 9000,
             admin: address(0)
@@ -280,20 +185,8 @@ contract VerifierTestConstructor is VerifierTestBase {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0xe1c0),
-                gIWithdrawals: toGIndex(0xe1c0),
-                gIValidatorsPreGloas: toGIndex(0x560000000000),
-                gIValidators: toGIndex(0x560000000000),
-                gIHistoricalSummariesPreGloas: toGIndex(0x3b),
-                gIHistoricalSummaries: toGIndex(0x3b),
-                gIBalancesPreGloas: toGIndex(0x260000000000),
-                gIBalances: toGIndex(0x260000000000),
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: firstSupportedSlot,
-            pivotSlot: firstSupportedSlot,
+            gloasSlot: firstSupportedSlot,
             capellaSlot: firstSupportedSlot,
             minWithdrawalRatio: 0,
             admin: admin
@@ -306,20 +199,8 @@ contract VerifierTestConstructor is VerifierTestBase {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0xe1c0),
-                gIWithdrawals: toGIndex(0xe1c0),
-                gIValidatorsPreGloas: toGIndex(0x560000000000),
-                gIValidators: toGIndex(0x560000000000),
-                gIHistoricalSummariesPreGloas: toGIndex(0x3b),
-                gIHistoricalSummaries: toGIndex(0x3b),
-                gIBalancesPreGloas: toGIndex(0x260000000000),
-                gIBalances: toGIndex(0x260000000000),
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: firstSupportedSlot,
-            pivotSlot: firstSupportedSlot,
+            gloasSlot: firstSupportedSlot,
             capellaSlot: firstSupportedSlot,
             minWithdrawalRatio: 10_001,
             admin: admin
@@ -350,23 +231,10 @@ contract VerifierWithdrawalTest is VerifierTestBase {
             withdrawalCredentials: fixture.data.validator.object.withdrawalCredentials,
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: GIndices.WITHDRAWALS_ELECTRA,
-                gIWithdrawals: GIndices.WITHDRAWALS_ELECTRA,
-                gIValidatorsPreGloas: GIndices.VALIDATORS_ELECTRA,
-                gIValidators: GIndices.VALIDATORS_ELECTRA,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: GIndices.BLOCK_ROOTS_ELECTRA,
-                gIBlockRoots: GIndices.BLOCK_ROOTS_ELECTRA
-            }),
             firstSupportedSlot: fixture.data.withdrawalBlock.header.slot.dec(),
-            // Route through the pre-Gloas (static-list) branch; the post-Gloas
-            // progressive-list branch is exercised by tests that override this
-            // pivot, currently skipped until fixtures are ready.
-            pivotSlot: fixture.data.withdrawalBlock.header.slot.inc(),
+            // The fixture is an Electra one, so both the withdrawal and the recent block must route through the
+            // pre-Gloas branch. The Gloas branch is exercised by the `_Fork*Gloas` tests below.
+            gloasSlot: fixture.data.recentBlock.header.slot.inc(),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -620,7 +488,7 @@ contract VerifierWithdrawalTest is VerifierTestBase {
         _processWithdrawalProof_HappyPath();
     }
 
-    function test_processWithdrawalProof_ForkBeforePivot() public {
+    function test_processWithdrawalProof_ForkBeforeGloas() public {
         {
             _loadFixture({ fork: "electra", offset: 11, amountGwei: 32e9 });
             _setMocks();
@@ -630,20 +498,8 @@ contract VerifierWithdrawalTest is VerifierTestBase {
             withdrawalCredentials: fixture.data.validator.object.withdrawalCredentials,
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: GIndices.WITHDRAWALS_ELECTRA,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: GIndices.VALIDATORS_ELECTRA,
-                gIValidators: NULL_GINDEX,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: GIndices.BLOCK_ROOTS_ELECTRA,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: fixture.data.withdrawalBlock.header.slot.dec(),
-            pivotSlot: fixture.data.recentBlock.header.slot.inc(),
+            gloasSlot: fixture.data.recentBlock.header.slot.inc(),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -652,7 +508,7 @@ contract VerifierWithdrawalTest is VerifierTestBase {
         _processWithdrawalProof_HappyPath();
     }
 
-    function test_processWithdrawalProof_ForkAtPivot() public {
+    function test_processWithdrawalProof_ForkAtGloas() public {
         {
             _loadFixture({ fork: "gloas", offset: 11, amountGwei: 32e9 });
             _setMocks();
@@ -662,20 +518,8 @@ contract VerifierWithdrawalTest is VerifierTestBase {
             withdrawalCredentials: fixture.data.validator.object.withdrawalCredentials,
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: GIndices.WITHDRAWALS_GLOAS,
-                gIValidatorsPreGloas: NULL_GINDEX,
-                gIValidators: GIndices.VALIDATORS_GLOAS,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: GIndices.BLOCK_ROOTS_GLOAS
-            }),
             firstSupportedSlot: fixture.data.withdrawalBlock.header.slot.dec(),
-            pivotSlot: fixture.data.withdrawalBlock.header.slot,
+            gloasSlot: fixture.data.withdrawalBlock.header.slot,
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -684,7 +528,7 @@ contract VerifierWithdrawalTest is VerifierTestBase {
         _processWithdrawalProof_HappyPath();
     }
 
-    function test_processWithdrawalProof_ForkAfterPivot() public {
+    function test_processWithdrawalProof_ForkAfterGloas() public {
         {
             _loadFixture({ fork: "gloas", offset: 11, amountGwei: 32e9 });
             _setMocks();
@@ -694,20 +538,8 @@ contract VerifierWithdrawalTest is VerifierTestBase {
             withdrawalCredentials: fixture.data.validator.object.withdrawalCredentials,
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: GIndices.WITHDRAWALS_GLOAS,
-                gIValidatorsPreGloas: NULL_GINDEX,
-                gIValidators: GIndices.VALIDATORS_GLOAS,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: GIndices.BLOCK_ROOTS_GLOAS
-            }),
             firstSupportedSlot: fixture.data.withdrawalBlock.header.slot.dec(),
-            pivotSlot: fixture.data.withdrawalBlock.header.slot.dec(),
+            gloasSlot: fixture.data.withdrawalBlock.header.slot.dec(),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -794,21 +626,9 @@ contract VerifierSlashingTest is VerifierTestBase {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: GIndices.VALIDATORS_ELECTRA,
-                gIValidators: GIndices.VALIDATORS_ELECTRA,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: Slot.wrap(8192),
             // Route through the pre-Gloas (static-list) branch.
-            pivotSlot: fixture.data.recentBlock.header.slot.inc(),
+            gloasSlot: fixture.data.recentBlock.header.slot.inc(),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -924,20 +744,8 @@ contract VerifierPauseTest is VerifierTestBase {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: NULL_GINDEX,
-                gIValidators: NULL_GINDEX,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
-            pivotSlot: Slot.wrap(100_500),
+            gloasSlot: Slot.wrap(100_500),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -1027,9 +835,8 @@ contract VerifierTestable is Verifier {
         bytes32 withdrawalCredentials,
         address module,
         uint64 slotsPerEpoch,
-        IVerifier.GIndices memory gindices,
         Slot firstSupportedSlot,
-        Slot pivotSlot,
+        Slot gloasSlot,
         Slot capellaSlot,
         uint256 minWithdrawalRatio,
         address admin
@@ -1038,9 +845,8 @@ contract VerifierTestable is Verifier {
             withdrawalCredentials,
             module,
             slotsPerEpoch,
-            gindices,
             firstSupportedSlot,
-            pivotSlot,
+            gloasSlot,
             capellaSlot,
             minWithdrawalRatio,
             admin
@@ -1099,32 +905,18 @@ contract VerifierGIndexTest is Test, Utilities {
         module = new Stub();
         admin = nextAddress("ADMIN");
 
-        // Pre-Gloas values are ad-hoc test fabrications; Gloas-side values are
-        // the real `BeaconState` field gindices.
         verifier = new VerifierTestable({
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0x70e),
-                gIWithdrawals: toGIndex(0xb97),
-                gIValidatorsPreGloas: toGIndex(0x2b),
-                gIValidators: toGIndex(0x166),
-                gIHistoricalSummariesPreGloas: toGIndex(0x3b),
-                gIHistoricalSummaries: toGIndex(0xb86),
-                gIBalancesPreGloas: toGIndex(0x4c),
-                gIBalances: toGIndex(0x167),
-                gIBlockRootsPreGloas: toGIndex(0x45),
-                gIBlockRoots: toGIndex(0x160)
-            }),
             firstSupportedSlot: Slot.wrap(8192),
-            pivotSlot: Slot.wrap(8192 * 13),
+            gloasSlot: Slot.wrap(8192 * 13),
             capellaSlot: Slot.wrap(8192),
             minWithdrawalRatio: 9000,
             admin: admin
         });
 
-        assertTrue(verifier.PIVOT_SLOT() > verifier.FIRST_SUPPORTED_SLOT());
+        assertTrue(verifier.GLOAS_SLOT() > verifier.FIRST_SUPPORTED_SLOT());
     }
 
     function test_getValidatorGI_BeforeForkChange() public view {
@@ -1132,7 +924,7 @@ contract VerifierGIndexTest is Test, Utilities {
 
         slots[0] = verifier.FIRST_SUPPORTED_SLOT();
         slots[1] = verifier.FIRST_SUPPORTED_SLOT().inc();
-        slots[2] = verifier.PIVOT_SLOT().dec();
+        slots[2] = verifier.GLOAS_SLOT().dec();
 
         GIndex gI;
 
@@ -1140,19 +932,19 @@ contract VerifierGIndexTest is Test, Utilities {
             Slot slot = slots[i];
 
             gI = verifier.getValidatorGI(0, slot);
-            assertEq(gI.unwrap(), 0x560000000000);
+            assertEq(gI.unwrap(), 0x960000000000);
 
             gI = verifier.getValidatorGI(1, slot);
-            assertEq(gI.unwrap(), 0x560000000001);
+            assertEq(gI.unwrap(), 0x960000000001);
 
             gI = verifier.getValidatorGI(16, slot);
-            assertEq(gI.unwrap(), 0x560000000010);
+            assertEq(gI.unwrap(), 0x960000000010);
 
             gI = verifier.getValidatorGI(17, slot);
-            assertEq(gI.unwrap(), 0x560000000011);
+            assertEq(gI.unwrap(), 0x960000000011);
 
             gI = verifier.getValidatorGI((2 ** 40) - 1, slot);
-            assertEq(gI.unwrap(), 0x56ffffffffff);
+            assertEq(gI.unwrap(), 0x96ffffffffff);
         }
     }
 
@@ -1162,8 +954,8 @@ contract VerifierGIndexTest is Test, Utilities {
     function test_getValidatorGI_AfterForkChange() public view {
         Slot[] memory slots = new Slot[](3);
 
-        slots[0] = verifier.PIVOT_SLOT();
-        slots[1] = verifier.PIVOT_SLOT().inc();
+        slots[0] = verifier.GLOAS_SLOT();
+        slots[1] = verifier.GLOAS_SLOT().inc();
         slots[2] = Slot.wrap(type(uint64).max);
 
         GIndex gI;
@@ -1193,7 +985,7 @@ contract VerifierGIndexTest is Test, Utilities {
 
         slots[0] = verifier.FIRST_SUPPORTED_SLOT();
         slots[1] = verifier.FIRST_SUPPORTED_SLOT().inc();
-        slots[2] = verifier.PIVOT_SLOT().dec();
+        slots[2] = verifier.GLOAS_SLOT().dec();
 
         GIndex gI;
 
@@ -1201,13 +993,13 @@ contract VerifierGIndexTest is Test, Utilities {
             Slot slot = slots[i];
 
             gI = verifier.getWithdrawalGI(0, slot);
-            assertEq(gI.unwrap(), 0xe1c0);
+            assertEq(gI.unwrap(), 0x161c0);
 
             gI = verifier.getWithdrawalGI(1, slot);
-            assertEq(gI.unwrap(), 0xe1c1);
+            assertEq(gI.unwrap(), 0x161c1);
 
             gI = verifier.getWithdrawalGI(15, slot);
-            assertEq(gI.unwrap(), 0xe1cf);
+            assertEq(gI.unwrap(), 0x161cf);
         }
     }
 
@@ -1217,8 +1009,8 @@ contract VerifierGIndexTest is Test, Utilities {
     function test_getWithdrawalGI_AfterForkChange() public view {
         Slot[] memory slots = new Slot[](3);
 
-        slots[0] = verifier.PIVOT_SLOT();
-        slots[1] = verifier.PIVOT_SLOT().inc();
+        slots[0] = verifier.GLOAS_SLOT();
+        slots[1] = verifier.GLOAS_SLOT().inc();
         slots[2] = Slot.wrap(type(uint64).max);
 
         GIndex gI;
@@ -1242,7 +1034,7 @@ contract VerifierGIndexTest is Test, Utilities {
 
         slots[0] = verifier.FIRST_SUPPORTED_SLOT();
         slots[1] = verifier.FIRST_SUPPORTED_SLOT().inc();
-        slots[2] = verifier.PIVOT_SLOT().dec();
+        slots[2] = verifier.GLOAS_SLOT().dec();
 
         GIndex gI;
 
@@ -1271,8 +1063,8 @@ contract VerifierGIndexTest is Test, Utilities {
     function test_getValidatorBalanceGI_AfterForkChange() public view {
         Slot[] memory slots = new Slot[](3);
 
-        slots[0] = verifier.PIVOT_SLOT();
-        slots[1] = verifier.PIVOT_SLOT().inc();
+        slots[0] = verifier.GLOAS_SLOT();
+        slots[1] = verifier.GLOAS_SLOT().inc();
         slots[2] = Slot.wrap(type(uint64).max);
 
         GIndex gI;
@@ -1297,8 +1089,8 @@ contract VerifierGIndexTest is Test, Utilities {
         }
     }
 
-    function test_getHistoricalBlockRootGI_RecentSlotBeforePivot() public view {
-        Slot recentSlot = verifier.PIVOT_SLOT().dec();
+    function test_getHistoricalBlockRootGI_RecentSlotBeforeGloas() public view {
+        Slot recentSlot = verifier.GLOAS_SLOT().dec();
         Slot targetSlot;
 
         GIndex gI;
@@ -1306,21 +1098,21 @@ contract VerifierGIndexTest is Test, Utilities {
         targetSlot = Slot.wrap(8192);
         // historicalSummaries[0].blockRoots[0]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
-        assertEq(gI.unwrap(), 0x1d8000000000);
+        assertEq(gI.unwrap(), 0x2d8000000000);
 
         targetSlot = Slot.wrap(8193);
         // historicalSummaries[0].blockRoots[1]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
-        assertEq(gI.unwrap(), 0x1d8000000001);
+        assertEq(gI.unwrap(), 0x2d8000000001);
 
         targetSlot = Slot.wrap(49042);
         // historicalSummaries[4].blockRoots[8082]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
-        assertEq(gI.unwrap(), 0x1d8000011f92);
+        assertEq(gI.unwrap(), 0x2d8000011f92);
     }
 
-    function test_getHistoricalBlockRootGI_RecentSlotAfterPivot() public view {
-        Slot recentSlot = verifier.PIVOT_SLOT().add(8192);
+    function test_getHistoricalBlockRootGI_RecentSlotAfterGloas() public view {
+        Slot recentSlot = verifier.GLOAS_SLOT().add(8192);
         Slot targetSlot;
 
         GIndex gI;
@@ -1373,8 +1165,8 @@ contract VerifierGIndexTest is Test, Utilities {
         verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
     }
 
-    function test_getBlockRootsBlockGI_RecentSlotBeforePivot() public view {
-        Slot recentSlot = verifier.PIVOT_SLOT().dec(); // 13 * 8192 - 1 = 106495
+    function test_getBlockRootsBlockGI_RecentSlotBeforeGloas() public view {
+        Slot recentSlot = verifier.GLOAS_SLOT().dec(); // 13 * 8192 - 1 = 106495
         Slot targetSlot;
 
         GIndex gI;
@@ -1400,8 +1192,8 @@ contract VerifierGIndexTest is Test, Utilities {
         assertEq(gI.unwrap(), 0x8bfff);
     }
 
-    function test_getBlockRootsBlockGI_RecentSlotAfterPivot() public view {
-        Slot recentSlot = verifier.PIVOT_SLOT().add(8192);
+    function test_getBlockRootsBlockGI_RecentSlotAfterGloas() public view {
+        Slot recentSlot = verifier.GLOAS_SLOT().add(8192);
         Slot targetSlot;
 
         GIndex gI;
@@ -1433,13 +1225,13 @@ contract VerifierGIndexTest is Test, Utilities {
         Slot targetSlot;
 
         // target == recent: the recent block's own root is not yet in its state's ring buffer.
-        recentSlot = verifier.PIVOT_SLOT().dec();
+        recentSlot = verifier.GLOAS_SLOT().dec();
         targetSlot = recentSlot;
         vm.expectRevert(IVerifier.BlockRootNotInRange.selector);
         verifier.getBlockRootsBlockGI(recentSlot, targetSlot);
 
         // target > recent.
-        recentSlot = verifier.PIVOT_SLOT();
+        recentSlot = verifier.GLOAS_SLOT();
         targetSlot = recentSlot.inc();
         vm.expectRevert(IVerifier.BlockRootNotInRange.selector);
         verifier.getBlockRootsBlockGI(recentSlot, targetSlot);
@@ -1465,28 +1257,16 @@ contract VerifierGIndexCapellaZeroTest is Test, Utilities {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: toGIndex(0x70e),
-                gIWithdrawals: toGIndex(0xb97),
-                gIValidatorsPreGloas: toGIndex(0x2b),
-                gIValidators: toGIndex(0x166),
-                gIHistoricalSummariesPreGloas: toGIndex(0x3b),
-                gIHistoricalSummaries: toGIndex(0xb86),
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: Slot.wrap(0),
-            pivotSlot: Slot.wrap(8192 * 13),
+            gloasSlot: Slot.wrap(8192 * 13),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
         });
     }
 
-    function test_getHistoricalBlockRootGI_BeforePivot() public view {
-        Slot recentSlot = verifier.PIVOT_SLOT().dec();
+    function test_getHistoricalBlockRootGI_BeforeGloas() public view {
+        Slot recentSlot = verifier.GLOAS_SLOT().dec();
         Slot targetSlot;
 
         GIndex gI;
@@ -1494,26 +1274,26 @@ contract VerifierGIndexCapellaZeroTest is Test, Utilities {
         targetSlot = Slot.wrap(8191);
         // historicalSummaries[0].blockRoots[8191]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
-        assertEq(gI.unwrap(), 0x1d8000001fff);
+        assertEq(gI.unwrap(), 0x2d8000001fff);
 
         targetSlot = Slot.wrap(8192);
         // historicalSummaries[1].blockRoots[0]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
-        assertEq(gI.unwrap(), 0x1d8000004000);
+        assertEq(gI.unwrap(), 0x2d8000004000);
 
         targetSlot = Slot.wrap(8193);
         // historicalSummaries[1].blockRoots[1]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
-        assertEq(gI.unwrap(), 0x1d8000004001);
+        assertEq(gI.unwrap(), 0x2d8000004001);
 
         targetSlot = Slot.wrap(49042);
         // historicalSummaries[5].blockRoots[8082]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
-        assertEq(gI.unwrap(), 0x1d8000015f92);
+        assertEq(gI.unwrap(), 0x2d8000015f92);
     }
 
-    function test_getHistoricalBlockRootGI_AfterPivot() public view {
-        Slot recentSlot = verifier.PIVOT_SLOT().add(8192);
+    function test_getHistoricalBlockRootGI_AfterGloas() public view {
+        Slot recentSlot = verifier.GLOAS_SLOT().add(8192);
         Slot targetSlot;
 
         GIndex gI;
@@ -1538,12 +1318,12 @@ contract VerifierGIndexCapellaZeroTest is Test, Utilities {
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
         assertEq(gI.unwrap(), 0x5c30000015f92);
 
-        targetSlot = verifier.PIVOT_SLOT().dec();
+        targetSlot = verifier.GLOAS_SLOT().dec();
         // historicalSummaries[12].blockRoots[8191]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
         assertEq(gI.unwrap(), 0x5c30000031fff);
 
-        targetSlot = verifier.PIVOT_SLOT().add(2197);
+        targetSlot = verifier.GLOAS_SLOT().add(2197);
         // historicalSummaries[13].blockRoots[2197]
         gI = verifier.getHistoricalBlockRootGI(recentSlot, targetSlot);
         assertEq(gI.unwrap(), 0x5c30000034895);
@@ -1590,20 +1370,8 @@ contract VerifierValidatorBalanceTest is Test, Utilities {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: NULL_GINDEX,
-                gIValidators: NULL_GINDEX,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: toGIndex(2),
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: Slot.wrap(8192),
-            pivotSlot: Slot.wrap(8192 * 13),
+            gloasSlot: Slot.wrap(8192 * 13),
             capellaSlot: Slot.wrap(8192),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -1611,20 +1379,27 @@ contract VerifierValidatorBalanceTest is Test, Utilities {
     }
 
     function test_validatorBalance_Index_0() public view {
-        bytes32[] memory proof = new bytes32[](3);
+        bytes32[] memory proof = new bytes32[](10);
 
         // prettier-ignore
         {
-            proof[0] = 0xe39ab07307000000000000000000000000000000000000002120b07307000000;
-            proof[1] = 0xd7b8f9581adbdd02f99ab10acdbccd05a694d6f1d98a118c8422d91c151c4aac;
-            proof[2] = 0x0a00000000000000000000000000000000000000000000000000000000000000;
+            proof[0] = 0xb42c5f292b39b0133f66676ca8dcafd4d4533b1ef2752b9e5b56718bd5e40e42;
+            proof[1] = 0x0b00000000000000000000000000000000000000000000000000000000000000;
+            proof[2] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[3] = 0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b;
+            proof[4] = 0xdb56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71;
+            proof[5] = 0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c;
+            proof[6] = 0x536d98837f2dd165a55d5eeae91485954472d56f246df256bf3cae19352a123c;
+            proof[7] = 0x9efde052aa15429fae05bad4d0b1d7c64da64d03d7a1854a588c2cb8430c0d30;
+            proof[8] = 0xd88ddfeed400a8755596b21942c1497e114c302e6118290f91e6772976041fa1;
+            proof[9] = 0x87eb0ddba57e35f6d286673802a4af5975e22506c7cf4c64bb6be5ee11527f2c;
         }
 
         uint256 balance = verifier.verifyValidatorBalance({
             validatorIndex: 0,
             balanceNode: 0x93f5317407000000dc7c7a7607000000dd7c7a76070000000aa1b07307000000,
-            stateRoot: 0xf0b08e19548a9c618b163e30c63453c721b18c6e246ac0b742464c3adb43189e,
-            stateSlot: verifier.PIVOT_SLOT(),
+            stateRoot: 0xf31e292224768bd8908f8fc9058c81962324ed9041b285ff0c42ae9bf2cdbc9e,
+            stateSlot: verifier.GLOAS_SLOT(),
             proof: proof
         });
 
@@ -1632,20 +1407,27 @@ contract VerifierValidatorBalanceTest is Test, Utilities {
     }
 
     function test_validatorBalance_Index_1() public view {
-        bytes32[] memory proof = new bytes32[](3);
+        bytes32[] memory proof = new bytes32[](10);
 
         // prettier-ignore
         {
-            proof[0] = 0xe39ab07307000000000000000000000000000000000000002120b07307000000;
-            proof[1] = 0xd7b8f9581adbdd02f99ab10acdbccd05a694d6f1d98a118c8422d91c151c4aac;
-            proof[2] = 0x0a00000000000000000000000000000000000000000000000000000000000000;
+            proof[0] = 0xb42c5f292b39b0133f66676ca8dcafd4d4533b1ef2752b9e5b56718bd5e40e42;
+            proof[1] = 0x0b00000000000000000000000000000000000000000000000000000000000000;
+            proof[2] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[3] = 0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b;
+            proof[4] = 0xdb56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71;
+            proof[5] = 0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c;
+            proof[6] = 0x536d98837f2dd165a55d5eeae91485954472d56f246df256bf3cae19352a123c;
+            proof[7] = 0x9efde052aa15429fae05bad4d0b1d7c64da64d03d7a1854a588c2cb8430c0d30;
+            proof[8] = 0xd88ddfeed400a8755596b21942c1497e114c302e6118290f91e6772976041fa1;
+            proof[9] = 0x87eb0ddba57e35f6d286673802a4af5975e22506c7cf4c64bb6be5ee11527f2c;
         }
 
         uint256 balance = verifier.verifyValidatorBalance({
             validatorIndex: 1,
             balanceNode: 0x93f5317407000000dc7c7a7607000000dd7c7a76070000000aa1b07307000000,
-            stateRoot: 0xf0b08e19548a9c618b163e30c63453c721b18c6e246ac0b742464c3adb43189e,
-            stateSlot: verifier.PIVOT_SLOT(),
+            stateRoot: 0xf31e292224768bd8908f8fc9058c81962324ed9041b285ff0c42ae9bf2cdbc9e,
+            stateSlot: verifier.GLOAS_SLOT(),
             proof: proof
         });
 
@@ -1653,23 +1435,30 @@ contract VerifierValidatorBalanceTest is Test, Utilities {
     }
 
     function test_validatorBalance_Index_7() public view {
-        bytes32[] memory proof = new bytes32[](6);
+        bytes32[] memory proof = new bytes32[](13);
 
         // prettier-ignore
         {
-            proof[0] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[0] = 0x0a51b073070000001cb8b07307000000ffffffffffffffff0000000000000000;
             proof[1] = 0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b;
-            proof[2] = 0xdb56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71;
-            proof[3] = 0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c;
-            proof[4] = 0x536d98837f2dd165a55d5eeae91485954472d56f246df256bf3cae19352a123c;
-            proof[5] = 0x9efde052aa15429fae05bad4d0b1d7c64da64d03d7a1854a588c2cb8430c0d30;
+            proof[2] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[3] = 0x93f5317407000000dc7c7a7607000000dd7c7a76070000000aa1b07307000000;
+            proof[4] = 0x0b00000000000000000000000000000000000000000000000000000000000000;
+            proof[5] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[6] = 0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b;
+            proof[7] = 0xdb56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71;
+            proof[8] = 0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c;
+            proof[9] = 0x536d98837f2dd165a55d5eeae91485954472d56f246df256bf3cae19352a123c;
+            proof[10] = 0x9efde052aa15429fae05bad4d0b1d7c64da64d03d7a1854a588c2cb8430c0d30;
+            proof[11] = 0xd88ddfeed400a8755596b21942c1497e114c302e6118290f91e6772976041fa1;
+            proof[12] = 0x87eb0ddba57e35f6d286673802a4af5975e22506c7cf4c64bb6be5ee11527f2c;
         }
 
         uint256 balance = verifier.verifyValidatorBalance({
             validatorIndex: 7,
             balanceNode: 0xe39ab07307000000000000000000000000000000000000002120b07307000000,
-            stateRoot: 0x74c31584d144ea7d84cb5e479e73997e8aed9673665a8bfd4b9c605caa5bed17,
-            stateSlot: verifier.PIVOT_SLOT(),
+            stateRoot: 0xf31e292224768bd8908f8fc9058c81962324ed9041b285ff0c42ae9bf2cdbc9e,
+            stateSlot: verifier.GLOAS_SLOT(),
             proof: proof
         });
 
@@ -1677,23 +1466,30 @@ contract VerifierValidatorBalanceTest is Test, Utilities {
     }
 
     function test_validatorBalance_ZeroBalance() public view {
-        bytes32[] memory proof = new bytes32[](6);
+        bytes32[] memory proof = new bytes32[](13);
 
         // prettier-ignore
         {
-            proof[0] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[0] = 0x0a51b073070000001cb8b07307000000ffffffffffffffff0000000000000000;
             proof[1] = 0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b;
-            proof[2] = 0xdb56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71;
-            proof[3] = 0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c;
-            proof[4] = 0x536d98837f2dd165a55d5eeae91485954472d56f246df256bf3cae19352a123c;
-            proof[5] = 0x9efde052aa15429fae05bad4d0b1d7c64da64d03d7a1854a588c2cb8430c0d30;
+            proof[2] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[3] = 0x93f5317407000000dc7c7a7607000000dd7c7a76070000000aa1b07307000000;
+            proof[4] = 0x0b00000000000000000000000000000000000000000000000000000000000000;
+            proof[5] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[6] = 0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b;
+            proof[7] = 0xdb56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71;
+            proof[8] = 0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c;
+            proof[9] = 0x536d98837f2dd165a55d5eeae91485954472d56f246df256bf3cae19352a123c;
+            proof[10] = 0x9efde052aa15429fae05bad4d0b1d7c64da64d03d7a1854a588c2cb8430c0d30;
+            proof[11] = 0xd88ddfeed400a8755596b21942c1497e114c302e6118290f91e6772976041fa1;
+            proof[12] = 0x87eb0ddba57e35f6d286673802a4af5975e22506c7cf4c64bb6be5ee11527f2c;
         }
 
         uint256 balance = verifier.verifyValidatorBalance({
             validatorIndex: 5,
             balanceNode: 0xe39ab07307000000000000000000000000000000000000002120b07307000000,
-            stateRoot: 0x74c31584d144ea7d84cb5e479e73997e8aed9673665a8bfd4b9c605caa5bed17,
-            stateSlot: verifier.PIVOT_SLOT(),
+            stateRoot: 0xf31e292224768bd8908f8fc9058c81962324ed9041b285ff0c42ae9bf2cdbc9e,
+            stateSlot: verifier.GLOAS_SLOT(),
             proof: proof
         });
 
@@ -1701,23 +1497,30 @@ contract VerifierValidatorBalanceTest is Test, Utilities {
     }
 
     function test_validatorBalance_MaxBalance() public view {
-        bytes32[] memory proof = new bytes32[](6);
+        bytes32[] memory proof = new bytes32[](13);
 
         // prettier-ignore
         {
-            proof[0] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[0] = 0xe39ab07307000000000000000000000000000000000000002120b07307000000;
             proof[1] = 0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b;
-            proof[2] = 0xdb56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71;
-            proof[3] = 0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c;
-            proof[4] = 0x536d98837f2dd165a55d5eeae91485954472d56f246df256bf3cae19352a123c;
-            proof[5] = 0x9efde052aa15429fae05bad4d0b1d7c64da64d03d7a1854a588c2cb8430c0d30;
+            proof[2] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[3] = 0x93f5317407000000dc7c7a7607000000dd7c7a76070000000aa1b07307000000;
+            proof[4] = 0x0b00000000000000000000000000000000000000000000000000000000000000;
+            proof[5] = 0x0000000000000000000000000000000000000000000000000000000000000000;
+            proof[6] = 0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b;
+            proof[7] = 0xdb56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71;
+            proof[8] = 0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c;
+            proof[9] = 0x536d98837f2dd165a55d5eeae91485954472d56f246df256bf3cae19352a123c;
+            proof[10] = 0x9efde052aa15429fae05bad4d0b1d7c64da64d03d7a1854a588c2cb8430c0d30;
+            proof[11] = 0xd88ddfeed400a8755596b21942c1497e114c302e6118290f91e6772976041fa1;
+            proof[12] = 0x87eb0ddba57e35f6d286673802a4af5975e22506c7cf4c64bb6be5ee11527f2c;
         }
 
         uint256 balance = verifier.verifyValidatorBalance({
             validatorIndex: 10,
             balanceNode: 0x0a51b073070000001cb8b07307000000ffffffffffffffff0000000000000000,
-            stateRoot: 0x3e0e68c19d0844990c62b60c962b1225af8592826f5f0e3bb106bdc205e9094a,
-            stateSlot: verifier.PIVOT_SLOT(),
+            stateRoot: 0xf31e292224768bd8908f8fc9058c81962324ed9041b285ff0c42ae9bf2cdbc9e,
+            stateSlot: verifier.GLOAS_SLOT(),
             proof: proof
         });
 
@@ -1731,7 +1534,7 @@ contract VerifierValidatorBalanceTest is Test, Utilities {
             (, balance) = verifier.getValidatorBalanceNodeInfo(
                 0x0000000000000000000000000000000000000000000000000000000000000000,
                 0,
-                verifier.PIVOT_SLOT()
+                verifier.GLOAS_SLOT()
             );
             assertEq(balance, 0);
         }
@@ -1739,35 +1542,35 @@ contract VerifierValidatorBalanceTest is Test, Utilities {
         (, balance) = verifier.getValidatorBalanceNodeInfo(
             0x1112131415161718ffffffffffffffffffffffffffffffffffffffffffffffff,
             0,
-            verifier.PIVOT_SLOT()
+            verifier.GLOAS_SLOT()
         );
         assertEq(balance, 0x1817161514131211);
 
         (, balance) = verifier.getValidatorBalanceNodeInfo(
             0xffffffffffffffff1112131415161718ffffffffffffffffffffffffffffffff,
             1,
-            verifier.PIVOT_SLOT()
+            verifier.GLOAS_SLOT()
         );
         assertEq(balance, 0x1817161514131211);
 
         (, balance) = verifier.getValidatorBalanceNodeInfo(
             0xffffffffffffffffffffffffffffffff1112131415161718ffffffffffffffff,
             2,
-            verifier.PIVOT_SLOT()
+            verifier.GLOAS_SLOT()
         );
         assertEq(balance, 0x1817161514131211);
 
         (, balance) = verifier.getValidatorBalanceNodeInfo(
             0xffffffffffffffffffffffffffffffffffffffffffffffff1112131415161718,
             3,
-            verifier.PIVOT_SLOT()
+            verifier.GLOAS_SLOT()
         );
         assertEq(balance, 0x1817161514131211);
 
         (, balance) = verifier.getValidatorBalanceNodeInfo(
             0x1112131415161718ffffffffffffffffffffffffffffffffffffffffffffffff,
             4,
-            verifier.PIVOT_SLOT()
+            verifier.GLOAS_SLOT()
         );
         assertEq(balance, 0x1817161514131211);
     }
@@ -1793,20 +1596,8 @@ contract VerifierBalanceProofTest is VerifierTestBase {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: NULL_GINDEX,
-                gIValidators: GIndices.VALIDATORS_GLOAS,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: GIndices.BALANCES_GLOAS,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: GIndices.BLOCK_ROOTS_GLOAS
-            }),
             firstSupportedSlot: fixture.data.balanceBlock.header.slot.dec(),
-            pivotSlot: fixture.data.balanceBlock.header.slot.dec(),
+            gloasSlot: fixture.data.balanceBlock.header.slot.dec(),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -1855,20 +1646,8 @@ contract VerifierBalanceProofTest is VerifierTestBase {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: NULL_GINDEX,
-                gIValidators: NULL_GINDEX,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: Slot.wrap(0),
-            pivotSlot: Slot.wrap(0),
+            gloasSlot: Slot.wrap(0),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -1924,26 +1703,14 @@ contract VerifierBalanceProofTest is VerifierTestBase {
         verifier.processBalanceProof(fixture.data);
     }
 
-    function test_processBalanceProof_ForkBeforePivot() public {
+    function test_processBalanceProof_ForkBeforeGloas() public {
         _loadFixture("electra");
         verifier = new Verifier({
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: GIndices.VALIDATORS_ELECTRA,
-                gIValidators: NULL_GINDEX,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: GIndices.BALANCES_ELECTRA,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: GIndices.BLOCK_ROOTS_ELECTRA,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: fixture.data.balanceBlock.header.slot.dec(),
-            pivotSlot: fixture.data.recentBlock.header.slot.inc(),
+            gloasSlot: fixture.data.recentBlock.header.slot.inc(),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -1954,26 +1721,14 @@ contract VerifierBalanceProofTest is VerifierTestBase {
         verifier.processBalanceProof(fixture.data);
     }
 
-    function test_processBalanceProof_ForkAtPivot() public {
+    function test_processBalanceProof_ForkAtGloas() public {
         _loadFixture("gloas");
         verifier = new Verifier({
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: NULL_GINDEX,
-                gIValidators: GIndices.VALIDATORS_GLOAS,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: GIndices.BALANCES_GLOAS,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: GIndices.BLOCK_ROOTS_GLOAS
-            }),
             firstSupportedSlot: fixture.data.balanceBlock.header.slot.dec(),
-            pivotSlot: fixture.data.balanceBlock.header.slot,
+            gloasSlot: fixture.data.balanceBlock.header.slot,
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -1984,26 +1739,14 @@ contract VerifierBalanceProofTest is VerifierTestBase {
         verifier.processBalanceProof(fixture.data);
     }
 
-    function test_processBalanceProof_ForkAfterPivot() public {
+    function test_processBalanceProof_ForkAfterGloas() public {
         _loadFixture("gloas");
         verifier = new Verifier({
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: NULL_GINDEX,
-                gIValidators: GIndices.VALIDATORS_GLOAS,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: GIndices.BALANCES_GLOAS,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: GIndices.BLOCK_ROOTS_GLOAS
-            }),
             firstSupportedSlot: fixture.data.balanceBlock.header.slot.dec(),
-            pivotSlot: fixture.data.balanceBlock.header.slot.dec(),
+            gloasSlot: fixture.data.balanceBlock.header.slot.dec(),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -2066,20 +1809,8 @@ contract VerifierParentBlockRootTest is Test, Utilities {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: NULL_GINDEX,
-                gIValidators: NULL_GINDEX,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: NULL_GINDEX,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: Slot.wrap(8192),
-            pivotSlot: Slot.wrap(8192 * 13),
+            gloasSlot: Slot.wrap(8192 * 13),
             capellaSlot: Slot.wrap(8192),
             minWithdrawalRatio: 9000,
             admin: admin

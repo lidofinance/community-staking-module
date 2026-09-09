@@ -133,9 +133,8 @@ contract DeploymentHelpers is Asserts {
         uint256 consensusVersion;
         address[] oracleMembers;
         uint256 hashConsensusQuorum;
-        IVerifier.GIndices verifierGIndices;
         uint256 verifierFirstSupportedSlot;
-        uint256 verifierPivotSlot;
+        uint256 verifierGloasSlot;
         uint256 capellaSlot;
         uint256 minWithdrawalRatio;
         uint256[2][] defaultBondCurve;
@@ -460,9 +459,8 @@ contract DeploymentHelpers is Asserts {
         dst.hashConsensusQuorum = src.hashConsensusQuorum;
 
         // Verifier
-        dst.verifierGIndices = src.verifierGIndices;
         dst.verifierFirstSupportedSlot = src.verifierFirstSupportedSlot;
-        dst.verifierPivotSlot = src.verifierPivotSlot;
+        dst.verifierGloasSlot = src.verifierGloasSlot;
         dst.capellaSlot = src.capellaSlot;
         dst.minWithdrawalRatio = src.minWithdrawalRatio;
 
@@ -574,9 +572,8 @@ contract DeploymentHelpers is Asserts {
         params.consensusVersion = decoded.consensusVersion;
         params.oracleMembers = decoded.oracleMembers;
         params.hashConsensusQuorum = decoded.hashConsensusQuorum;
-        params.verifierGIndices = decoded.verifierGIndices;
         params.verifierFirstSupportedSlot = decoded.verifierFirstSupportedSlot;
-        params.verifierPivotSlot = decoded.verifierPivotSlot;
+        params.verifierGloasSlot = decoded.verifierGloasSlot;
         params.capellaSlot = decoded.capellaSlot;
         params.minWithdrawalRatio = decoded.minWithdrawalRatio;
         params.defaultBondCurve = decoded.defaultBondCurve;
@@ -626,9 +623,8 @@ contract DeploymentHelpers is Asserts {
         params.consensusVersion = decoded.consensusVersion;
         params.oracleMembers = decoded.oracleMembers;
         params.hashConsensusQuorum = decoded.hashConsensusQuorum;
-        params.verifierGIndices = decoded.verifierGIndices;
         params.verifierFirstSupportedSlot = decoded.verifierFirstSupportedSlot;
-        params.verifierPivotSlot = decoded.verifierPivotSlot;
+        params.verifierGloasSlot = decoded.verifierGloasSlot;
         params.capellaSlot = decoded.capellaSlot;
         params.minWithdrawalRatio = decoded.minWithdrawalRatio;
         params.defaultBondCurve = decoded.defaultBondCurve;
@@ -678,9 +674,8 @@ contract DeploymentHelpers is Asserts {
         params.consensusVersion = decoded.consensusVersion;
         params.oracleMembers = decoded.oracleMembers;
         params.hashConsensusQuorum = decoded.hashConsensusQuorum;
-        params.verifierGIndices = decoded.verifierGIndices;
         params.verifierFirstSupportedSlot = decoded.verifierFirstSupportedSlot;
-        params.verifierPivotSlot = decoded.verifierPivotSlot;
+        params.verifierGloasSlot = decoded.verifierGloasSlot;
         params.capellaSlot = decoded.capellaSlot;
         params.minWithdrawalRatio = decoded.minWithdrawalRatio;
         params.defaultBondCurve = decoded.defaultBondCurve;
