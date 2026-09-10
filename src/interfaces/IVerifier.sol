@@ -9,19 +9,6 @@ import { GIndex } from "../lib/GIndex.sol";
 import { IBaseModule } from "./IBaseModule.sol";
 
 interface IVerifier {
-    struct GIndices {
-        GIndex gIWithdrawalsPreGloas;
-        GIndex gIWithdrawals;
-        GIndex gIValidatorsPreGloas;
-        GIndex gIValidators;
-        GIndex gIHistoricalSummariesPreGloas;
-        GIndex gIHistoricalSummaries;
-        GIndex gIBalancesPreGloas;
-        GIndex gIBalances;
-        GIndex gIBlockRootsPreGloas;
-        GIndex gIBlockRoots;
-    }
-
     struct RecentHeaderWitness {
         BeaconBlockHeader header; // Header of a block which root is a root at rootsTimestamp.
         uint64 rootsTimestamp; // To be passed to the EIP-4788 block roots contract.
@@ -99,7 +86,7 @@ interface IVerifier {
     error ZeroModuleAddress();
     error ZeroWithdrawalCredentials();
     error ZeroAdminAddress();
-    error InvalidPivotSlot();
+    error InvalidGloasSlot();
     error InvalidCapellaSlot();
     error InvalidMinWithdrawalRatio();
     error HistoricalSummaryDoesNotExist();
@@ -131,7 +118,7 @@ interface IVerifier {
 
     function FIRST_SUPPORTED_SLOT() external view returns (Slot);
 
-    function PIVOT_SLOT() external view returns (Slot);
+    function GLOAS_SLOT() external view returns (Slot);
 
     function CAPELLA_SLOT() external view returns (Slot);
 

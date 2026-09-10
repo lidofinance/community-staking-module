@@ -8,6 +8,7 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensio
 import { BeaconBlockHeader, Slot, Validator, Withdrawal } from "./lib/Types.sol";
 import { PausableWithRoles } from "./abstract/PausableWithRoles.sol";
 import { GIndex, staticListNodeGIndex, vectorNodeGIndex, progressiveListNodeGIndex } from "./lib/GIndex.sol";
+import { GIndices } from "./lib/GIndices.sol";
 import { SSZ } from "./lib/SSZ.sol";
 
 import { IVerifier } from "./interfaces/IVerifier.sol";
@@ -48,45 +49,46 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
     /// @dev See https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters
     uint64 public constant SLOTS_PER_HISTORICAL_ROOT = 8192;
 
-    /// @dev This index is relative to a state like: `BeaconState.latest_execution_payload_header.withdrawals`.
-    GIndex public immutable GI_WITHDRAWALS_PRE_GLOAS;
+    /// @dev Pre-Gloas: `BeaconState.latest_execution_payload_header.withdrawals_root`, the withdrawals list root.
+    GIndex public constant GI_WITHDRAWALS_PRE_GLOAS = GIndices.WITHDRAWALS_ELECTRA;
 
-    /// @dev This index is relative to a state like: `BeaconState.latest_execution_payload_header.withdrawals`.
-    GIndex public immutable GI_WITHDRAWALS;
+    /// @dev Gloas: `BeaconState.payload_expected_withdrawals`, the withdrawals list itself.
+    GIndex public constant GI_WITHDRAWALS = GIndices.WITHDRAWALS_GLOAS;
 
-    /// @dev This index is relative to a state like: `BeaconState.validators`.
-    GIndex public immutable GI_VALIDATORS_PRE_GLOAS;
+    /// @dev Pre-Gloas: `BeaconState.validators`.
+    GIndex public constant GI_VALIDATORS_PRE_GLOAS = GIndices.VALIDATORS_ELECTRA;
 
-    /// @dev This index is relative to a state like: `BeaconState.validators`.
-    GIndex public immutable GI_VALIDATORS;
+    /// @dev Gloas: `BeaconState.validators`.
+    GIndex public constant GI_VALIDATORS = GIndices.VALIDATORS_GLOAS;
 
-    /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
-    GIndex public immutable GI_HISTORICAL_SUMMARIES_PRE_GLOAS;
+    /// @dev Pre-Gloas: `BeaconState.balances`.
+    GIndex public constant GI_BALANCES_PRE_GLOAS = GIndices.BALANCES_ELECTRA;
 
-    /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
-    GIndex public immutable GI_HISTORICAL_SUMMARIES;
+    /// @dev Gloas: `BeaconState.balances`.
+    GIndex public constant GI_BALANCES = GIndices.BALANCES_GLOAS;
 
-    /// @dev This index is relative to HistoricalSummary like: HistoricalSummary.blockRoots[0].
-    ///      Considered constant across forks.
-    GIndex public constant GI_BLOCK_ROOT_IN_SUMMARY = GIndex.wrap(2);
+    /// @dev Pre-Gloas: `BeaconState.block_roots`.
+    GIndex public constant GI_BLOCK_ROOTS_PRE_GLOAS = GIndices.BLOCK_ROOTS_ELECTRA;
 
-    /// @dev This index is relative to a state like: `BeaconState.balances`.
-    GIndex public immutable GI_BALANCES_PRE_GLOAS;
+    /// @dev Gloas: `BeaconState.block_roots`.
+    GIndex public constant GI_BLOCK_ROOTS = GIndices.BLOCK_ROOTS_GLOAS;
 
-    /// @dev This index is relative to a state like: `BeaconState.balances`.
-    GIndex public immutable GI_BALANCES;
+    /// @dev Pre-Gloas: `BeaconState.historical_summaries`.
+    GIndex public constant GI_HISTORICAL_SUMMARIES_PRE_GLOAS = GIndices.HISTORICAL_SUMMARIES_ELECTRA;
 
-    /// @dev This index is relative to a state like: `BeaconState.block_roots`.
-    GIndex public immutable GI_BLOCK_ROOTS_PRE_GLOAS;
+    /// @dev Gloas: `BeaconState.historical_summaries`.
+    GIndex public constant GI_HISTORICAL_SUMMARIES = GIndices.HISTORICAL_SUMMARIES_GLOAS;
 
-    /// @dev This index is relative to a state like: `BeaconState.block_roots`.
-    GIndex public immutable GI_BLOCK_ROOTS;
+    /// @dev `HistoricalSummary.block_summary_root`, the root of the block roots vector.
+    GIndex public constant GI_BLOCK_ROOT_IN_SUMMARY = GIndices.BLOCK_ROOT_IN_SUMMARY;
 
     /// @dev The very first slot the verifier is supposed to accept proofs for.
     Slot public immutable FIRST_SUPPORTED_SLOT;
 
-    /// @dev The first slot of the currently compatible fork.
-    Slot public immutable PIVOT_SLOT;
+    /// @dev The first slot of the Gloas fork. Slots below it are proven against the pre-Gloas state layout,
+    ///      and slots at or above it against the Gloas one. Set it to `type(uint64).max` if the fork is not
+    ///      scheduled yet, or to `FIRST_SUPPORTED_SLOT` to serve the Gloas layout only.
+    Slot public immutable GLOAS_SLOT;
 
     /// @dev Historical summaries started accumulating from the slot of Capella fork.
     Slot public immutable CAPELLA_SLOT;
@@ -97,14 +99,13 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
     /// @dev Staking module contract.
     IBaseModule public immutable MODULE;
 
-    /// @dev The previous and current forks can be essentially the same.
+    /// @dev The verifier serves the pre-Gloas and Gloas state layouts only, @see `GLOAS_SLOT`.
     constructor(
         bytes32 withdrawalCredentials,
         address module,
         uint64 slotsPerEpoch,
-        GIndices memory gindices,
         Slot firstSupportedSlot,
-        Slot pivotSlot,
+        Slot gloasSlot,
         Slot capellaSlot,
         uint256 minWithdrawalRatio,
         address admin
@@ -113,7 +114,7 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
         if (module == address(0)) revert ZeroModuleAddress();
         if (admin == address(0)) revert ZeroAdminAddress();
         if (slotsPerEpoch == 0) revert InvalidChainConfig();
-        if (firstSupportedSlot > pivotSlot) revert InvalidPivotSlot();
+        if (firstSupportedSlot > gloasSlot) revert InvalidGloasSlot();
         if (capellaSlot > firstSupportedSlot) revert InvalidCapellaSlot();
         if (minWithdrawalRatio == 0 || minWithdrawalRatio > MAX_BP) revert InvalidMinWithdrawalRatio();
 
@@ -123,23 +124,8 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
 
         SLOTS_PER_EPOCH = slotsPerEpoch;
 
-        GI_WITHDRAWALS_PRE_GLOAS = gindices.gIWithdrawalsPreGloas;
-        GI_WITHDRAWALS = gindices.gIWithdrawals;
-
-        GI_VALIDATORS_PRE_GLOAS = gindices.gIValidatorsPreGloas;
-        GI_VALIDATORS = gindices.gIValidators;
-
-        GI_HISTORICAL_SUMMARIES_PRE_GLOAS = gindices.gIHistoricalSummariesPreGloas;
-        GI_HISTORICAL_SUMMARIES = gindices.gIHistoricalSummaries;
-
-        GI_BALANCES_PRE_GLOAS = gindices.gIBalancesPreGloas;
-        GI_BALANCES = gindices.gIBalances;
-
-        GI_BLOCK_ROOTS_PRE_GLOAS = gindices.gIBlockRootsPreGloas;
-        GI_BLOCK_ROOTS = gindices.gIBlockRoots;
-
         FIRST_SUPPORTED_SLOT = firstSupportedSlot;
-        PIVOT_SLOT = pivotSlot;
+        GLOAS_SLOT = gloasSlot;
         CAPELLA_SLOT = capellaSlot;
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -439,7 +425,7 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
     }
 
     function _getValidatorGI(uint256 offset, Slot stateSlot) internal view returns (GIndex gI) {
-        if (stateSlot < PIVOT_SLOT) {
+        if (stateSlot < GLOAS_SLOT) {
             gI = GI_VALIDATORS_PRE_GLOAS;
             gI = gI.concat(staticListNodeGIndex(offset, 40)); // log2(VALIDATOR_REGISTRY_LIMIT)
         } else {
@@ -449,7 +435,7 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
     }
 
     function _getWithdrawalGI(uint256 offset, Slot stateSlot) internal view returns (GIndex gI) {
-        if (stateSlot < PIVOT_SLOT) {
+        if (stateSlot < GLOAS_SLOT) {
             gI = GI_WITHDRAWALS_PRE_GLOAS;
             gI = gI.concat(staticListNodeGIndex(offset, 4)); // log2(MAX_WITHDRAWALS_PER_PAYLOAD)
         } else {
@@ -459,7 +445,7 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
     }
 
     function _getValidatorBalanceGI(uint256 offset, Slot stateSlot) internal view returns (GIndex gI) {
-        if (stateSlot < PIVOT_SLOT) {
+        if (stateSlot < GLOAS_SLOT) {
             gI = GI_BALANCES_PRE_GLOAS;
             gI = gI.concat(staticListNodeGIndex(offset, 38)); // log2(VALIDATOR_REGISTRY_LIMIT / 4), 4 balances per node
         } else {
@@ -478,7 +464,7 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
 
         uint64 rootIndex = targetSlot.unwrap() % SLOTS_PER_HISTORICAL_ROOT;
 
-        if (recentSlot < PIVOT_SLOT) {
+        if (recentSlot < GLOAS_SLOT) {
             gI = GI_BLOCK_ROOTS_PRE_GLOAS;
         } else {
             gI = GI_BLOCK_ROOTS;
@@ -494,7 +480,7 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
         Slot summaryCreatedAtSlot = Slot.wrap(targetSlot.unwrap() - rootIndex + SLOTS_PER_HISTORICAL_ROOT);
         if (summaryCreatedAtSlot > recentSlot) revert HistoricalSummaryDoesNotExist();
 
-        if (recentSlot < PIVOT_SLOT) {
+        if (recentSlot < GLOAS_SLOT) {
             gI = GI_HISTORICAL_SUMMARIES_PRE_GLOAS;
         } else {
             gI = GI_HISTORICAL_SUMMARIES;

@@ -48,9 +48,11 @@ struct DeployParams {
     address[] oracleMembers;
     uint256 hashConsensusQuorum;
     // Verifier
-    IVerifier.GIndices verifierGIndices;
+    /// @dev Reserves the slots of the removed per-fork gindices to keep the deployment artifacts written before
+    ///      the indices became constants decodable. @see `verifierGloasSlot` for the same reason it is the last
+    ///      field of the struct.
+    uint256[4] __legacyGIndices;
     uint256 verifierFirstSupportedSlot;
-    uint256 verifierPivotSlot;
     uint256 capellaSlot;
     uint256 minWithdrawalRatio;
     // Accounting
@@ -131,6 +133,9 @@ struct DeployParams {
     address resealManager;
     // Testnet stuff
     address secondAdminAddress;
+    /// @dev The field is the last one on purpose: the deployment artifacts written before the Gloas support
+    ///      have no value for it, and only a trailing field keeps the rest of such an artifact decodable.
+    uint256 verifierGloasSlot;
 }
 
 abstract contract DeployBase is Script {
@@ -251,9 +256,8 @@ abstract contract DeployBase is Script {
                 withdrawalCredentials: toWC(locator.withdrawalVault(), WCType.Eth1),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
-                gindices: config.verifierGIndices,
                 firstSupportedSlot: Slot.wrap(uint64(config.verifierFirstSupportedSlot)),
-                pivotSlot: Slot.wrap(uint64(config.verifierPivotSlot)),
+                gloasSlot: Slot.wrap(uint64(config.verifierGloasSlot)),
                 capellaSlot: Slot.wrap(uint64(config.capellaSlot)),
                 minWithdrawalRatio: config.minWithdrawalRatio,
                 admin: deployer

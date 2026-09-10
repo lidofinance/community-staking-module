@@ -14,7 +14,6 @@ import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
 import { IBondCurve } from "../../../src/interfaces/IBondCurve.sol";
 import { IParametersRegistry } from "../../../src/interfaces/IParametersRegistry.sol";
 import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
-import { GIndex } from "../../../src/lib/GIndex.sol";
 import { Slot } from "../../../src/lib/Types.sol";
 import { WCType, toWC } from "../../../src/utils/WithdrawalCredentials.sol";
 import { Versioned } from "../../../src/lib/utils/Versioned.sol";
@@ -348,36 +347,8 @@ contract VerifierDeploymentTest is DeploymentBaseTest {
         assertEq(verifier.WITHDRAWAL_CREDENTIALS(), toWC(locator.withdrawalVault(), wcType));
         assertEq(address(verifier.MODULE()), address(module));
         assertEq(verifier.SLOTS_PER_EPOCH(), deployParams.slotsPerEpoch);
-        assertEq(
-            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_PRE_GLOAS()),
-            GIndex.unwrap(deployParams.verifierGIndices.gIHistoricalSummariesPreGloas)
-        );
-        assertEq(
-            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES()),
-            GIndex.unwrap(deployParams.verifierGIndices.gIHistoricalSummaries)
-        );
-        assertEq(
-            GIndex.unwrap(verifier.GI_WITHDRAWALS_PRE_GLOAS()),
-            GIndex.unwrap(deployParams.verifierGIndices.gIWithdrawalsPreGloas)
-        );
-        assertEq(GIndex.unwrap(verifier.GI_WITHDRAWALS()), GIndex.unwrap(deployParams.verifierGIndices.gIWithdrawals));
-        assertEq(
-            GIndex.unwrap(verifier.GI_VALIDATORS_PRE_GLOAS()),
-            GIndex.unwrap(deployParams.verifierGIndices.gIValidatorsPreGloas)
-        );
-        assertEq(GIndex.unwrap(verifier.GI_VALIDATORS()), GIndex.unwrap(deployParams.verifierGIndices.gIValidators));
-        assertEq(
-            GIndex.unwrap(verifier.GI_BALANCES_PRE_GLOAS()),
-            GIndex.unwrap(deployParams.verifierGIndices.gIBalancesPreGloas)
-        );
-        assertEq(GIndex.unwrap(verifier.GI_BALANCES()), GIndex.unwrap(deployParams.verifierGIndices.gIBalances));
-        assertEq(
-            GIndex.unwrap(verifier.GI_BLOCK_ROOTS_PRE_GLOAS()),
-            GIndex.unwrap(deployParams.verifierGIndices.gIBlockRootsPreGloas)
-        );
-        assertEq(GIndex.unwrap(verifier.GI_BLOCK_ROOTS()), GIndex.unwrap(deployParams.verifierGIndices.gIBlockRoots));
         assertEq(Slot.unwrap(verifier.FIRST_SUPPORTED_SLOT()), deployParams.verifierFirstSupportedSlot);
-        assertEq(Slot.unwrap(verifier.PIVOT_SLOT()), deployParams.verifierPivotSlot);
+        assertEq(Slot.unwrap(verifier.GLOAS_SLOT()), deployParams.verifierGloasSlot);
         assertEq(Slot.unwrap(verifier.CAPELLA_SLOT()), deployParams.capellaSlot);
     }
 

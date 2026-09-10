@@ -4,7 +4,6 @@
 pragma solidity 0.8.33;
 
 import { DeployCSM0x02Base } from "./DeployCSM0x02Base.s.sol";
-import { GIndices } from "../constants/GIndices.sol";
 
 contract DeployCSM0x02Hoodi is DeployCSM0x02Base {
     constructor() DeployCSM0x02Base("hoodi", 560048) {
@@ -35,9 +34,8 @@ contract DeployCSM0x02Hoodi is DeployCSM0x02Base {
         config.hashConsensusQuorum = 6;
 
         // Verifier
-        config.verifierGIndices = GIndices.electraToGloas();
         config.verifierFirstSupportedSlot = 2048 * config.slotsPerEpoch; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L41
-        config.verifierPivotSlot = type(uint64).max;
+        config.verifierGloasSlot = type(uint64).max;
         config.capellaSlot = 0; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L33
         config.minWithdrawalRatio = 9900;
 

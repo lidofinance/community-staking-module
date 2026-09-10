@@ -110,9 +110,8 @@ abstract contract DeployCSMImplementationsBase is DeployBase {
                 withdrawalCredentials: toWC(locator.withdrawalVault(), WCType.Eth1),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
-                gindices: config.verifierGIndices,
                 firstSupportedSlot: Slot.wrap(uint64(config.verifierFirstSupportedSlot)),
-                pivotSlot: Slot.wrap(uint64(config.verifierPivotSlot)),
+                gloasSlot: Slot.wrap(uint64(config.verifierGloasSlot)),
                 capellaSlot: Slot.wrap(uint64(config.capellaSlot)),
                 minWithdrawalRatio: config.minWithdrawalRatio,
                 admin: deployer

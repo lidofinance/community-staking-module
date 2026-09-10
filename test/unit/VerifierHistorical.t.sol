@@ -12,8 +12,6 @@ import { Verifier } from "src/Verifier.sol";
 import { Slot } from "src/lib/Types.sol";
 import { SSZ } from "src/lib/SSZ.sol";
 
-import { GIndices } from "script/constants/GIndices.sol";
-
 import { Utilities } from "test/helpers/Utilities.sol";
 import { Stub } from "test/helpers/mocks/Stub.sol";
 
@@ -93,20 +91,8 @@ contract VerifierWithdrawalHistoricalTest is VerifierHistoricalBase {
             withdrawalCredentials: fixture.data.validator.object.withdrawalCredentials,
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: GIndices.WITHDRAWALS_GLOAS,
-                gIValidatorsPreGloas: NULL_GINDEX,
-                gIValidators: GIndices.VALIDATORS_GLOAS,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: GIndices.HISTORICAL_SUMMARIES_GLOAS,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: fixture.data.withdrawalBlock.header.slot,
-            pivotSlot: fixture.data.withdrawalBlock.header.slot,
+            gloasSlot: fixture.data.withdrawalBlock.header.slot,
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: nextAddress("ADMIN")
@@ -236,27 +222,15 @@ contract VerifierWithdrawalCrossForkHistoricalTest is VerifierHistoricalBase {
         module = new Stub();
     }
 
-    function test_processHistoricalWithdrawalProof_AfterPivot() public {
+    function test_processHistoricalWithdrawalProof_AfterGloas() public {
         _loadFixture("electra");
 
         verifier = new Verifier({
             withdrawalCredentials: fixture.data.validator.object.withdrawalCredentials,
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: GIndices.WITHDRAWALS_ELECTRA,
-                gIWithdrawals: GIndices.WITHDRAWALS_GLOAS,
-                gIValidatorsPreGloas: GIndices.VALIDATORS_ELECTRA,
-                gIValidators: GIndices.VALIDATORS_GLOAS,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: GIndices.HISTORICAL_SUMMARIES_GLOAS,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: fixture.data.withdrawalBlock.header.slot,
-            pivotSlot: fixture.data.recentBlock.header.slot.dec(),
+            gloasSlot: fixture.data.recentBlock.header.slot.dec(),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: nextAddress("ADMIN")
@@ -281,27 +255,15 @@ contract VerifierWithdrawalCrossForkHistoricalTest is VerifierHistoricalBase {
         verifier.processHistoricalWithdrawalProof(fixture.data);
     }
 
-    function test_processHistoricalWithdrawalProof_AtPivot() public {
+    function test_processHistoricalWithdrawalProof_AtGloas() public {
         _loadFixture("electra");
 
         verifier = new Verifier({
             withdrawalCredentials: fixture.data.validator.object.withdrawalCredentials,
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: GIndices.WITHDRAWALS_ELECTRA,
-                gIWithdrawals: GIndices.WITHDRAWALS_GLOAS,
-                gIValidatorsPreGloas: GIndices.VALIDATORS_ELECTRA,
-                gIValidators: GIndices.VALIDATORS_GLOAS,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: GIndices.HISTORICAL_SUMMARIES_GLOAS,
-                gIBalancesPreGloas: NULL_GINDEX,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: fixture.data.withdrawalBlock.header.slot,
-            pivotSlot: fixture.data.recentBlock.header.slot,
+            gloasSlot: fixture.data.recentBlock.header.slot,
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: nextAddress("ADMIN")
@@ -349,20 +311,8 @@ contract VerifierCrossForkHistoricalBalanceTest is Test, Utilities {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: GIndices.VALIDATORS_ELECTRA,
-                gIValidators: NULL_GINDEX,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: GIndices.HISTORICAL_SUMMARIES_GLOAS,
-                gIBalancesPreGloas: GIndices.BALANCES_ELECTRA,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: fixture.data.historicalBlock.header.slot,
-            pivotSlot: fixture.data.recentBlock.header.slot.dec(),
+            gloasSlot: fixture.data.recentBlock.header.slot.dec(),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -411,7 +361,7 @@ contract VerifierCrossForkHistoricalBalanceTest is Test, Utilities {
     function ffi_interface(Fixture memory) external {}
 }
 
-contract VerifierCrossForkHistoricalBalanceAtPivotSlotTest is Test, Utilities {
+contract VerifierCrossForkHistoricalBalanceAtGloasSlotTest is Test, Utilities {
     struct Fixture {
         bytes32 blockRoot;
         IVerifier.ProcessHistoricalBalanceProofInput data;
@@ -433,20 +383,8 @@ contract VerifierCrossForkHistoricalBalanceAtPivotSlotTest is Test, Utilities {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: GIndices.VALIDATORS_ELECTRA,
-                gIValidators: NULL_GINDEX,
-                gIHistoricalSummariesPreGloas: NULL_GINDEX,
-                gIHistoricalSummaries: GIndices.HISTORICAL_SUMMARIES_GLOAS,
-                gIBalancesPreGloas: GIndices.BALANCES_ELECTRA,
-                gIBalances: NULL_GINDEX,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: fixture.data.historicalBlock.header.slot,
-            pivotSlot: fixture.data.recentBlock.header.slot,
+            gloasSlot: fixture.data.recentBlock.header.slot,
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
@@ -517,20 +455,8 @@ contract VerifierHistoricalBalanceTest is Test, Utilities {
             withdrawalCredentials: someBytes32(),
             module: address(module),
             slotsPerEpoch: 32,
-            gindices: IVerifier.GIndices({
-                gIWithdrawalsPreGloas: NULL_GINDEX,
-                gIWithdrawals: NULL_GINDEX,
-                gIValidatorsPreGloas: GIndices.VALIDATORS_ELECTRA,
-                gIValidators: GIndices.VALIDATORS_GLOAS,
-                gIHistoricalSummariesPreGloas: GIndices.HISTORICAL_SUMMARIES_ELECTRA,
-                gIHistoricalSummaries: GIndices.HISTORICAL_SUMMARIES_GLOAS,
-                gIBalancesPreGloas: GIndices.BALANCES_ELECTRA,
-                gIBalances: GIndices.BALANCES_GLOAS,
-                gIBlockRootsPreGloas: NULL_GINDEX,
-                gIBlockRoots: NULL_GINDEX
-            }),
             firstSupportedSlot: Slot.wrap(8192),
-            pivotSlot: Slot.wrap(8192),
+            gloasSlot: Slot.wrap(8192),
             capellaSlot: Slot.wrap(0),
             minWithdrawalRatio: 9000,
             admin: admin
