@@ -338,11 +338,11 @@ update-gate-tree selector root cid:
 set-gate-addrs selector +addresses:
     #!/usr/bin/env bash
     set -euo pipefail
-    out=$(printf '%s\n' {{addresses}} | npx --yes csm-test-tree /dev/stdin)
+    out=$(node script/make-gate-tree.mjs {{addresses}})
     root=$(echo "$out" | awk '/^Root:/ {print $2; exit}')
     cid=$(echo "$out"  | awk '/^CID:/  {print $2; exit}')
     if [[ -z "$root" || -z "$cid" ]]; then
-      echo "error: failed to parse csm-test-tree output (CID missing? check PINATA_API_KEY/SECRET):" >&2
+      echo "error: failed to parse make-gate-tree output (IPFS node at IPFS_API_URL up?):" >&2
       echo "$out" >&2; exit 1
     fi
     echo "Generated tree:"
