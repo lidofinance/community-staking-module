@@ -31,6 +31,8 @@ contract NodeOperatorStrikes is INodeOperatorStrikes, StepwiseWeightBoost {
 
     uint256 public constant MAX_DESCRIPTION_LENGTH = 1024;
 
+    uint256 public constant MAX_ACTIVE_STRIKES = 48;
+
     // keccak256(abi.encode(uint256(keccak256("NodeOperatorStrikes")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant NODE_OPERATOR_STRIKES_STORAGE_LOCATION =
         0x510f8e4bbf34090117edc1d950679ffb8abd223dc216175d997628968b892400;
@@ -59,6 +61,7 @@ contract NodeOperatorStrikes is INodeOperatorStrikes, StepwiseWeightBoost {
 
         OperatorStrikes storage rec = _storage().operatorStrikes[input.nodeOperatorId];
         uint256 previousCount = rec.activeIds.length;
+        if (previousCount >= MAX_ACTIVE_STRIKES) revert MaxActiveStrikesReached();
         strikeId = ++rec.lastId;
         rec.activeIds.push(strikeId);
         rec.strikes[strikeId] = Strike({

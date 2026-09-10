@@ -181,6 +181,47 @@ contract NodeOperatorStrikesIssueTest is NodeOperatorStrikesBaseTest {
         assertEq(strikes.getActiveStrikesCount(NO_ID), 3);
     }
 
+    function test_issueStrike_AllowsCapPerOperator() public {
+        uint256 cap = strikes.MAX_ACTIVE_STRIKES();
+        assertEq(cap, 48);
+        for (uint256 i; i < cap; ++i) assertEq(_issue(NO_ID), i + 1);
+        assertEq(strikes.getActiveStrikesCount(NO_ID), cap);
+        assertEq(_issue(NO_ID + 1), 1);
+    }
+
+    function test_issueStrike_AfterRemovalAtCap() public {
+        uint256 cap = strikes.MAX_ACTIVE_STRIKES();
+        for (uint256 i; i < cap; ++i) _issue(NO_ID);
+
+        vm.prank(committee);
+        strikes.removeStrike(NO_ID, 1);
+
+        assertEq(_issue(NO_ID), cap + 1);
+        assertEq(strikes.getActiveStrikesCount(NO_ID), cap);
+    }
+
+    function test_issueStrike_AfterExpiredRemovalAtCap() public {
+        uint256 cap = strikes.MAX_ACTIVE_STRIKES();
+        for (uint256 i; i < cap; ++i) _issue(NO_ID);
+        vm.warp(block.timestamp + LIFETIME);
+
+        vm.prank(stranger);
+        strikes.removeExpiredStrikes(NO_ID);
+
+        assertEq(strikes.getActiveStrikesCount(NO_ID), 0);
+        assertEq(_issue(NO_ID), cap + 1);
+    }
+
+    function test_issueStrike_RevertWhen_AtCap(bool expired) public {
+        uint256 cap = strikes.MAX_ACTIVE_STRIKES();
+        for (uint256 i; i < cap; ++i) _issue(NO_ID);
+        if (expired) vm.warp(block.timestamp + LIFETIME);
+
+        vm.expectRevert(INodeOperatorStrikes.MaxActiveStrikesReached.selector);
+        vm.prank(committee);
+        strikes.issueStrike(_input(NO_ID, CATEGORY, LIFETIME));
+    }
+
     function test_issueStrike_RevertWhen_NotCommittee() public {
         expectRoleRevert(stranger, strikes.STRIKES_COMMITTEE_ROLE());
         vm.prank(stranger);
