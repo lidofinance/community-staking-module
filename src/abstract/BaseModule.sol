@@ -377,9 +377,6 @@ abstract contract BaseModule is
     /// @inheritdoc IBaseModule
     function switchAutomatedPenaltiesMode(uint256 slashingPenalty) external {
         _checkRole(DEFAULT_ADMIN_ROLE);
-        if (slashingPenalty != 0 && _baseStorage().automatedSlashingPenalty != 0) {
-            revert MethodCallIsNotAllowed();
-        }
         // Prevent overflow when scaling the penalty.
         if (slashingPenalty > type(uint128).max || slashingPenalty % WithdrawnValidatorLib.PENALTY_QUOTIENT != 0) {
             revert InvalidAmount();

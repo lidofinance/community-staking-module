@@ -819,8 +819,6 @@ abstract contract ModuleReportWithdrawnValidators is ModuleFixtures {
         module.switchAutomatedPenaltiesMode(1 ether);
         assertEq(module.automatedSlashingPenalty(), 1 ether);
 
-        module.switchAutomatedPenaltiesMode(0);
-
         vm.expectEmit(address(module));
         emit IBaseModule.AutomatedPenaltiesModeSet(2 ether);
         module.switchAutomatedPenaltiesMode(2 ether);
@@ -897,16 +895,6 @@ abstract contract ModuleReportWithdrawnValidators is ModuleFixtures {
         assertEq(module.getTotalModuleStake(), 0);
         assertEq(module.getNodeOperator(noId).totalWithdrawnKeys, 1);
         assertEq(module.getNonce(), nonce + 1);
-    }
-
-    function test_switchAutomatedPenaltiesMode_RevertWhen_AlreadyEnabled() public {
-        module.switchAutomatedPenaltiesMode(1 ether);
-
-        vm.expectRevert(IBaseModule.MethodCallIsNotAllowed.selector);
-        module.switchAutomatedPenaltiesMode(1 ether);
-
-        vm.expectRevert(IBaseModule.MethodCallIsNotAllowed.selector);
-        module.switchAutomatedPenaltiesMode(2 ether);
     }
 
     function test_switchAutomatedPenaltiesMode_RevertWhen_PenaltyExceedsMax() public {

@@ -432,8 +432,8 @@ interface IBaseModule is IStakingModule, IAccessControlEnumerable, IAssetRecover
     function reportValidatorSlashing(uint256 nodeOperatorId, uint256 keyIndex) external;
 
     /// @notice Switch the automated penalties mode. See `reportValidatorSlashing`.
-    /// @dev A multiple of 1 ETH enables the mode, zero disables it; changing it requires disabling first. A module
-    ///      tolerating any performance by default starts issuing strikes along with the mode.
+    /// @dev A multiple of 1 ETH enables the mode, zero disables it. A module tolerating any performance by default
+    ///      starts issuing strikes along with the mode.
     /// @param slashingPenalty Penalty amount per 32 ETH of the slashed key balance
     function switchAutomatedPenaltiesMode(uint256 slashingPenalty) external;
 
