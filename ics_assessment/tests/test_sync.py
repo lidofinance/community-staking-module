@@ -79,6 +79,34 @@ def test_expand_targets_all_dedupes():
     assert targets == mod.JOB_ORDER
 
 
+def test_sync_all_runs_supported_sources_without_gitpoap(monkeypatch):
+    mod = _load_module()
+    called = []
+    monkeypatch.setattr(mod, "_ensure_required_rpcs", lambda target: None)
+    for target in mod.JOBS:
+        monkeypatch.setitem(mod.JOBS, target, lambda target=target: called.append(target))
+
+    assert mod.main(["all"]) == 0
+    assert called == [
+        "aragon",
+        "snapshot",
+        "galxe",
+        "protocol-guild",
+        "obol-techne",
+        "ssv-verified",
+        "node-owners",
+        "mainnet-performance",
+        "hoodi-eligible",
+        "circles",
+    ]
+
+
+def test_sync_rejects_gitpoap_target():
+    mod = _load_module()
+    with pytest.raises(SystemExit, match="^Unknown sync target: gitpoap$"):
+        mod.main(["gitpoap"])
+
+
 def test_sync_snapshot_writes_votes(monkeypatch, tmp_path):
     mod = _load_module()
     monkeypatch.setattr(mod.engagement_jobs, "SNAPSHOT_VOTERS_PATH", tmp_path / "snapshot_voters.csv")
@@ -166,31 +194,6 @@ def test_sync_galxe_writes_points(monkeypatch, tmp_path):
     assert rows == [
         {"Address": "0xabc", "Points": "11"},
         {"Address": "0xdef", "Points": "7"},
-    ]
-
-
-def test_sync_gitpoap_writes_holders(monkeypatch, tmp_path):
-    mod = _load_module()
-    monkeypatch.setattr(mod.engagement_jobs, "GITPOAP_EVENTS_PATH", tmp_path / "gitpoap_events.csv")
-    monkeypatch.setattr(mod.engagement_jobs, "GITPOAP_HOLDERS_PATH", tmp_path / "gitpoap_holders.csv")
-    mod.engagement_jobs.GITPOAP_EVENTS_PATH.write_text("ID,Name\n1,evt1\n2,evt2\n")
-
-    class FakeSession:
-        def mount(self, *args, **kwargs):
-            return None
-
-        def get(self, url):
-            if url.endswith("/1/addresses"):
-                return DummyResp(200, {"addresses": ["0xabc"]})
-            return DummyResp(200, {"addresses": ["0xdef"]})
-
-    monkeypatch.setattr(mod.engagement_jobs.requests, "Session", FakeSession)
-    mod.engagement_jobs.sync_gitpoap()
-
-    rows = list(csv.DictReader(mod.engagement_jobs.GITPOAP_HOLDERS_PATH.open()))
-    assert rows == [
-        {"Address": "0xabc", "EventID": "1", "EventName": "evt1"},
-        {"Address": "0xdef", "EventID": "2", "EventName": "evt2"},
     ]
 
 
