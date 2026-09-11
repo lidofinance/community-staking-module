@@ -88,7 +88,6 @@ REQUIRED_SNAPSHOT_VP = 100
 GALXE_API_URL = "https://graphigo.prd.galaxy.eco/query"
 GALXE_SPACE_ID = 22849
 
-GITPOAP_API_URL = "https://public-api.gitpoap.io/v1"
 SSV_OPERATORS_API_URL = (
     "https://api.ssv.network/api/v4/mainnet/operators"
     "?type=verified_operator&page=1&perPage=1000"
@@ -134,7 +133,6 @@ ARAGON_VOTERS_PATH = ENGAGEMENT_DATA_DIR / "aragon_voters.csv"
 SNAPSHOT_VOTERS_PATH = ENGAGEMENT_DATA_DIR / "snapshot_voters.csv"
 GALXE_LOYALTY_POINTS_PATH = ENGAGEMENT_DATA_DIR / "galxe_loyalty_points.csv"
 GITPOAP_HOLDERS_PATH = ENGAGEMENT_DATA_DIR / "gitpoap_holders.csv"
-GITPOAP_EVENTS_PATH = ENGAGEMENT_DATA_DIR / "gitpoap_events.csv"
 PROTOCOL_GUILD_PATH = ENGAGEMENT_DATA_DIR / "protocol_guild.csv"
 
 NODE_OPERATOR_OWNERS_MAINNET_PATH = EXPERIENCE_DATA_DIR / "node_operator_owners_mainnet.json"

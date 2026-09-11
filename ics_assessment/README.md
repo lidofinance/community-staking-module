@@ -62,6 +62,9 @@ export HOODI_ARCHIVE_RPC_URL=...
 python main.py sync all
 ```
 
+GitPOAP scoring uses the existing `engagement/data/gitpoap_holders.csv` snapshot;
+sync does not refresh it.
+
 One may wish to commit updated artifacts before committing the final assessment results.
 
 ### 3. Run Assessments
@@ -115,7 +118,7 @@ Examples:
 python main.py sync all
 
 # Sync selective sources
-python main.py sync snapshot galxe gitpoap
+python main.py sync snapshot galxe
 
 # Sync with a custom chunk size
 python main.py sync --chunk-size 50000 aragon
@@ -129,7 +132,6 @@ Supported sync targets:
 - `aragon`
 - `snapshot`
 - `galxe`
-- `gitpoap`
 - `protocol-guild`
 - `obol-techne`
 - `ssv-verified`
@@ -300,13 +302,13 @@ Static curated snapshots:
 - SSV verified operators (Experience and Humanity)
 - SDVTM participants
 - Holesky eligible addresses
+- GitPOAP holders (`engagement/data/gitpoap_holders.csv`)
 
 On-chain synced artifacts:
 
 - Aragon voters
 - Snapshot voters
 - Galxe loyalty points
-- GitPOAP holders
 - Protocol Guild holders
 - Obol Techne holders
 - Circles members
