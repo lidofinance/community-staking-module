@@ -21,6 +21,7 @@ import { IOneShotCurveSetup } from "../../src/interfaces/IOneShotCurveSetup.sol"
 import { OssifiableProxy } from "../../src/lib/proxy/OssifiableProxy.sol";
 
 import { JsonObj, Json } from "../utils/Json.sol";
+import { JsonBindings } from "../utils/JsonBindings.sol";
 import { CommonScriptUtils } from "../utils/Common.sol";
 import { Slot } from "../../src/lib/Types.sol";
 import { WCType, toWC } from "../../src/utils/WithdrawalCredentials.sol";
@@ -180,7 +181,7 @@ abstract contract DeployCSMImplementationsBase is DeployBase {
             deployJson.set("VettedGateImpl", address(vettedGateImpl));
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
             deployJson.set("CircuitBreaker", config.circuitBreaker);
-            deployJson.set("DeployParams", abi.encode(config));
+            deployJson.str = JsonBindings.serialize(config, deployJson.ref, "DeployParams");
             deployJson.set("git-ref", gitRef);
             if (!vm.exists(artifactDir)) {
                 vm.createDir(artifactDir, true);

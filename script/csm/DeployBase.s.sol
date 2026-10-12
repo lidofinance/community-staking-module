@@ -25,6 +25,7 @@ import { IParametersRegistry } from "../../src/interfaces/IParametersRegistry.so
 import { IBondCurve } from "../../src/interfaces/IBondCurve.sol";
 
 import { JsonObj, Json } from "../utils/Json.sol";
+import { JsonBindings } from "../utils/JsonBindings.sol";
 import { Dummy } from "../utils/Dummy.sol";
 import { CommonScriptUtils } from "../utils/Common.sol";
 import { Slot } from "../../src/lib/Types.sol";
@@ -604,7 +605,7 @@ abstract contract DeployBase is Script {
             deployJson.set("VettedGateImpl", address(vettedGateImpl));
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
             deployJson.set("CircuitBreaker", circuitBreaker);
-            deployJson.set("DeployParams", abi.encode(config));
+            deployJson.str = JsonBindings.serialize(config, deployJson.ref, "DeployParams");
             deployJson.set("git-ref", gitRef);
             if (!vm.exists(artifactDir)) {
                 vm.createDir(artifactDir, true);
