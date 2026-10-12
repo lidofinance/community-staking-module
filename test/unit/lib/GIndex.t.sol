@@ -6,7 +6,7 @@ import { Test } from "forge-std/Test.sol";
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
-import { GIndex, toGIndex, IndexOutOfRange, fls, ceilLog2, staticListNodeGIndex, vectorNodeGIndex, progressiveListNodeGIndex } from "src/lib/GIndex.sol";
+import { GIndex, toGIndex, IndexOutOfRange, MAX_PROGRESSIVE_LIST_INDEX, fls, ceilLog2, staticListNodeGIndex, vectorNodeGIndex, progressiveListNodeGIndex } from "src/lib/GIndex.sol";
 
 // Wrap the library internal methods to make an actual call to them.
 // Supposed to be used with `expectRevert` cheatcode.
@@ -35,7 +35,6 @@ contract Library {
 contract GIndexTest is Test {
     using Strings for uint256;
 
-    uint256 internal constant LARGEST_PROGRESSIVE_LIST_IDX = ((4 ** 84 - 1) * 4) / 3;
     uint256 internal constant MAX_VECTOR_LENGTH = 1 << 255;
 
     GIndex internal ZERO = toGIndex(0);
@@ -234,7 +233,7 @@ contract GIndexTest is Test {
         assertEq(progressiveListNodeGIndex(12345678).unwrap(), 0x5ffe670bf9);
         assertEq(progressiveListNodeGIndex((1 << 40) - 1).unwrap(), 0x5ffffeaaaaaaaaaa);
         assertEq(
-            progressiveListNodeGIndex(((4 ** 84 - 1) * 4) / 3).unwrap(),
+            progressiveListNodeGIndex(MAX_PROGRESSIVE_LIST_INDEX).unwrap(),
             0x5ffffffffffffffffffffeffffffffffffffffffffffffffffffffffffffffff
         );
     }
@@ -316,6 +315,17 @@ contract GIndexTest is Test {
 
     function test_progressiveListNodeGIndex_RevertsWhenIndexTooLarge() public {
         vm.expectRevert(IndexOutOfRange.selector);
-        lib.progressiveListNodeGIndex(LARGEST_PROGRESSIVE_LIST_IDX + 1);
+        lib.progressiveListNodeGIndex(MAX_PROGRESSIVE_LIST_INDEX + 1);
+
+        // Would overflow `i * 3 + 1` without the bound check.
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.progressiveListNodeGIndex(type(uint256).max);
+    }
+
+    function testFuzz_progressiveListNodeGIndex_RevertsWhenIndexTooLarge(uint256 i) public {
+        i = bound(i, MAX_PROGRESSIVE_LIST_INDEX + 1, type(uint256).max);
+
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.progressiveListNodeGIndex(i);
     }
 }
