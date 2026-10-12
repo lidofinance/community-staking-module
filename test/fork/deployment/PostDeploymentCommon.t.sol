@@ -15,7 +15,7 @@ import { IBondCurve } from "../../../src/interfaces/IBondCurve.sol";
 import { IParametersRegistry } from "../../../src/interfaces/IParametersRegistry.sol";
 import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
 import { Slot } from "../../../src/lib/Types.sol";
-import { WCType, toWC } from "../../../src/utils/WithdrawalCredentials.sol";
+import { WCType, toWC } from "../../../script/utils/WithdrawalCredentials.sol";
 import { Versioned } from "../../../src/lib/utils/Versioned.sol";
 
 contract DeploymentBaseTest is Test, Utilities, DeploymentFixtures {

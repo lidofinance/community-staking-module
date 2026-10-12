@@ -31,7 +31,7 @@ import { JsonBindings } from "../utils/JsonBindings.sol";
 import { Dummy } from "../utils/Dummy.sol";
 import { CommonScriptUtils } from "../utils/Common.sol";
 import { Slot } from "../../src/lib/Types.sol";
-import { WCType, toWC } from "../../src/utils/WithdrawalCredentials.sol";
+import { WCType, toWC } from "../utils/WithdrawalCredentials.sol";
 
 struct GateCurveParams {
     IParametersRegistry.MarkedUint248 generalDelayedPenaltyAdditionalFine;
