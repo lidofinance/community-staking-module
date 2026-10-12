@@ -345,6 +345,7 @@ contract VerifierDeploymentTest is DeploymentBaseTest {
     function test_immutables() public view {
         WCType wcType = moduleType == ModuleType.Community ? WCType.Eth1 : WCType.Compounding;
         assertEq(verifier.WITHDRAWAL_CREDENTIALS(), toWC(locator.withdrawalVault(), wcType));
+        assertEq(verifier.WITHDRAWAL_ADDRESS(), locator.withdrawalVault());
         assertEq(address(verifier.MODULE()), address(module));
         assertEq(verifier.SLOTS_PER_EPOCH(), deployParams.slotsPerEpoch);
         assertEq(Slot.unwrap(verifier.FIRST_SUPPORTED_SLOT()), deployParams.verifierFirstSupportedSlot);
