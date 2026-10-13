@@ -96,6 +96,9 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
     /// @dev Withdrawal credentials validators are supposed to have.
     bytes32 public immutable WITHDRAWAL_CREDENTIALS;
 
+    /// @dev Withdrawal address encoded in the configured withdrawal credentials.
+    address public immutable WITHDRAWAL_ADDRESS;
+
     /// @dev Staking module contract.
     IBaseModule public immutable MODULE;
 
@@ -119,6 +122,7 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
         if (minWithdrawalRatio == 0 || minWithdrawalRatio > MAX_BP) revert InvalidMinWithdrawalRatio();
 
         WITHDRAWAL_CREDENTIALS = withdrawalCredentials;
+        WITHDRAWAL_ADDRESS = address(uint160(uint256(withdrawalCredentials)));
         MODULE = IBaseModule(module);
         MIN_WITHDRAWAL_RATIO = minWithdrawalRatio;
 
@@ -328,7 +332,7 @@ contract Verifier is IVerifier, AccessControlEnumerable, PausableWithRoles {
         if (validator.object.withdrawalCredentials != WITHDRAWAL_CREDENTIALS) {
             revert InvalidWithdrawalCredentials();
         }
-        if (withdrawal.object.withdrawalAddress != address(uint160(uint256(WITHDRAWAL_CREDENTIALS)))) {
+        if (withdrawal.object.withdrawalAddress != WITHDRAWAL_ADDRESS) {
             revert InvalidWithdrawalAddress();
         }
 

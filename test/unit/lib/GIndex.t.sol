@@ -6,7 +6,7 @@ import { Test } from "forge-std/Test.sol";
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
-import { GIndex, toGIndex, IndexOutOfRange, fls, ceilLog2, staticListNodeGIndex, vectorNodeGIndex, progressiveListNodeGIndex } from "src/lib/GIndex.sol";
+import { GIndex, toGIndex, IndexOutOfRange, MAX_PROGRESSIVE_LIST_INDEX, fls, ceilLog2, staticListNodeGIndex, vectorNodeGIndex, progressiveListNodeGIndex } from "src/lib/GIndex.sol";
 
 // Wrap the library internal methods to make an actual call to them.
 // Supposed to be used with `expectRevert` cheatcode.
@@ -35,7 +35,7 @@ contract Library {
 contract GIndexTest is Test {
     using Strings for uint256;
 
-    uint256 internal constant LARGEST_PROGRESSIVE_LIST_IDX = ((4 ** 84 - 1) * 4) / 3;
+    uint256 internal constant MAX_VECTOR_LENGTH = 1 << 255;
 
     GIndex internal ZERO = toGIndex(0);
     GIndex internal ROOT = toGIndex(1);
@@ -195,18 +195,29 @@ contract GIndexTest is Test {
     }
 
     function test_vectorNodeGIndex() public pure {
+        assertEq(vectorNodeGIndex(0, 1).unwrap(), 1);
+        assertEq(vectorNodeGIndex(0, 2).unwrap(), 2);
+        assertEq(vectorNodeGIndex(1, 2).unwrap(), 3);
+        assertEq(vectorNodeGIndex(0, 3).unwrap(), 4);
+        assertEq(vectorNodeGIndex(2, 3).unwrap(), 6);
         assertEq(vectorNodeGIndex(0, 6).unwrap(), 8);
         assertEq(vectorNodeGIndex(5, 6).unwrap(), 13);
         assertEq(vectorNodeGIndex(0, 8192).unwrap(), 8192);
         assertEq(vectorNodeGIndex(4096, 8192).unwrap(), 12288);
         assertEq(vectorNodeGIndex(8191, 8192).unwrap(), 16383);
+        assertEq(vectorNodeGIndex(0, MAX_VECTOR_LENGTH).unwrap(), MAX_VECTOR_LENGTH);
+        assertEq(vectorNodeGIndex(MAX_VECTOR_LENGTH - 1, MAX_VECTOR_LENGTH).unwrap(), type(uint256).max);
     }
 
-    function testFuzz_vectorNodeGIndex(uint256 i, uint256 length) public pure {
-        length = (length >> 1) + 1;
-        i %= length;
+    function testFuzz_vectorNodeGIndex(uint256 i, uint256 length, uint8 depth) public pure {
+        uint256 root = 1 << depth;
+        // Choose the depth first to cover small trees without using ceilLog2 as the oracle.
+        length = bound(length, (root >> 1) + 1, root);
+        i = bound(i, 0, length - 1);
 
-        assertEq(vectorNodeGIndex(i, length).unwrap(), (1 << ceilLog2(length)) + i);
+        assertEq(vectorNodeGIndex(i, length).unwrap(), root | i);
+        assertEq(vectorNodeGIndex(0, length).unwrap(), root);
+        assertEq(vectorNodeGIndex(length - 1, length).unwrap(), root | (length - 1));
     }
 
     function test_progressiveListNodeGIndex() public {
@@ -222,7 +233,7 @@ contract GIndexTest is Test {
         assertEq(progressiveListNodeGIndex(12345678).unwrap(), 0x5ffe670bf9);
         assertEq(progressiveListNodeGIndex((1 << 40) - 1).unwrap(), 0x5ffffeaaaaaaaaaa);
         assertEq(
-            progressiveListNodeGIndex(((4 ** 84 - 1) * 4) / 3).unwrap(),
+            progressiveListNodeGIndex(MAX_PROGRESSIVE_LIST_INDEX).unwrap(),
             0x5ffffffffffffffffffffeffffffffffffffffffffffffffffffffffffffffff
         );
     }
@@ -255,7 +266,15 @@ contract GIndexTest is Test {
 
     function test_vectorNodeGIndex_RevertsWhenDepthDoesNotFit() public {
         vm.expectRevert(IndexOutOfRange.selector);
-        lib.vectorNodeGIndex(0, (1 << 255) + 1);
+        lib.vectorNodeGIndex(0, MAX_VECTOR_LENGTH + 1);
+    }
+
+    function testFuzz_vectorNodeGIndex_RevertsWhenDepthDoesNotFit(uint256 i, uint256 length) public {
+        length = bound(length, MAX_VECTOR_LENGTH + 1, type(uint256).max);
+        i = bound(i, 0, length - 1);
+
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.vectorNodeGIndex(i, length);
     }
 
     function test_vectorNodeGIndex_RevertsWhenLengthIsZero() public {
@@ -263,13 +282,50 @@ contract GIndexTest is Test {
         lib.vectorNodeGIndex(0, 0);
     }
 
+    function testFuzz_vectorNodeGIndex_RevertsWhenLengthIsZero(uint256 i) public {
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.vectorNodeGIndex(i, 0);
+    }
+
     function test_vectorNodeGIndex_RevertsWhenIndexIsTooLarge() public {
         vm.expectRevert(IndexOutOfRange.selector);
         lib.vectorNodeGIndex(6, 6);
     }
 
+    function testFuzz_vectorNodeGIndex_RevertsWhenIndexIsTooLarge(uint256 i, uint256 length) public {
+        length = bound(length, 1, MAX_VECTOR_LENGTH);
+        i = bound(i, length, type(uint256).max);
+
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.vectorNodeGIndex(length, length);
+
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.vectorNodeGIndex(i, length);
+    }
+
+    function testFuzz_vectorNodeGIndex_RevertsWhenIndexIsPadding(uint256 i, uint256 length, uint8 depth) public {
+        depth = uint8(bound(depth, 2, type(uint8).max));
+        uint256 root = 1 << depth;
+        length = bound(length, (root >> 1) + 1, root - 1);
+        i = bound(i, length, root - 1);
+
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.vectorNodeGIndex(i, length);
+    }
+
     function test_progressiveListNodeGIndex_RevertsWhenIndexTooLarge() public {
         vm.expectRevert(IndexOutOfRange.selector);
-        lib.progressiveListNodeGIndex(LARGEST_PROGRESSIVE_LIST_IDX + 1);
+        lib.progressiveListNodeGIndex(MAX_PROGRESSIVE_LIST_INDEX + 1);
+
+        // Would overflow `i * 3 + 1` without the bound check.
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.progressiveListNodeGIndex(type(uint256).max);
+    }
+
+    function testFuzz_progressiveListNodeGIndex_RevertsWhenIndexTooLarge(uint256 i) public {
+        i = bound(i, MAX_PROGRESSIVE_LIST_INDEX + 1, type(uint256).max);
+
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.progressiveListNodeGIndex(i);
     }
 }

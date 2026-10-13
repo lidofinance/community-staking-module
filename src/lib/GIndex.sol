@@ -11,6 +11,9 @@ error IndexOutOfRange();
 
 uint256 constant GINDEX_BIT_SIZE = 256;
 
+/// @dev Largest index of a ProgressiveList node whose gindex fits into `GINDEX_BIT_SIZE` bits.
+uint256 constant MAX_PROGRESSIVE_LIST_INDEX = (4 ** 85 - 4) / 3;
+
 function unwrap(GIndex self) pure returns (uint256) {
     return GIndex.unwrap(self);
 }
@@ -90,6 +93,8 @@ function vectorNodeGIndex(uint256 i, uint256 length) pure returns (GIndex gI) {
 /// @param i Index of a node in the ProgressiveList[type].
 /// @return gI Generalized index of the ith node in the ProgressiveList[type].
 function progressiveListNodeGIndex(uint256 i) pure returns (GIndex gI) {
+    if (i > MAX_PROGRESSIVE_LIST_INDEX) revert IndexOutOfRange();
+
     // Sizes of chunks are powers of 4: 4^0 + 4^1 + 4^2 ... 4^n.
     // We can use geometric series formula to get which chunk `k` will store the item with index `i`:
     // sum(1..k) = (4^k - 1)/(4 - 1) = (4^k - 1)/3, so
@@ -97,10 +102,9 @@ function progressiveListNodeGIndex(uint256 i) pure returns (GIndex gI) {
     // 4^k <= i * 3 + 1 < 4^(k+1), and
     // 2^2*k <= i * 3 + 1 < 2^2(k+1), so
     // min k = log2(i * 3 + 1) / 2;
-    uint256 k = fls(i * 3 + 1) >> 1;
-
+    uint256 k;
     unchecked {
-        if (3 * k + 3 > GINDEX_BIT_SIZE) revert IndexOutOfRange();
+        k = fls(i * 3 + 1) >> 1;
     }
 
     assembly ("memory-safe") {

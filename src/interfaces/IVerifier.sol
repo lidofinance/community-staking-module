@@ -124,6 +124,9 @@ interface IVerifier {
 
     function WITHDRAWAL_CREDENTIALS() external view returns (bytes32);
 
+    /// @notice Withdrawal address encoded in the configured withdrawal credentials.
+    function WITHDRAWAL_ADDRESS() external view returns (address);
+
     function MIN_WITHDRAWAL_RATIO() external view returns (uint256);
 
     function MODULE() external view returns (IBaseModule);

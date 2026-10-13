@@ -13,7 +13,7 @@ import { toGIndex } from "src/lib/GIndex.sol";
 import { BeaconBlockHeader, Slot } from "src/lib/Types.sol";
 import { GIndex } from "src/lib/GIndex.sol";
 import { SSZ } from "src/lib/SSZ.sol";
-import { WCType, toWC } from "src/utils/WithdrawalCredentials.sol";
+import { WCType, toWC } from "script/utils/WithdrawalCredentials.sol";
 
 import { IVerifier } from "src/interfaces/IVerifier.sol";
 import { IBaseModule, WithdrawnValidatorInfo } from "src/interfaces/IBaseModule.sol";
@@ -72,7 +72,8 @@ contract VerifierTestConstructor is VerifierTestBase {
     }
 
     function test_constructor_HappyPath() public {
-        bytes32 withdrawalCredentials = someBytes32();
+        address withdrawalAddress = nextAddress("WITHDRAWAL_ADDRESS");
+        bytes32 withdrawalCredentials = toWC(withdrawalAddress, WCType.Compounding);
 
         verifier = new Verifier({
             withdrawalCredentials: withdrawalCredentials,
@@ -86,6 +87,7 @@ contract VerifierTestConstructor is VerifierTestBase {
         });
 
         assertEq(verifier.WITHDRAWAL_CREDENTIALS(), withdrawalCredentials);
+        assertEq(verifier.WITHDRAWAL_ADDRESS(), withdrawalAddress);
         assertEq(address(verifier.MODULE()), address(module));
         assertEq(verifier.SLOTS_PER_EPOCH(), 32);
         assertEq(verifier.SLOTS_PER_HISTORICAL_ROOT(), 8192);

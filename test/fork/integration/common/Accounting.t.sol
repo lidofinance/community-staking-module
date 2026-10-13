@@ -3,6 +3,8 @@
 
 pragma solidity 0.8.33;
 
+import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+
 import { NodeOperator } from "src/interfaces/IBaseModule.sol";
 import { IAccounting } from "src/interfaces/IAccounting.sol";
 
@@ -41,6 +43,9 @@ abstract contract AccountingIntegrationTestBase is ModuleTypeBase, PermitHelper 
 
         userPrivateKey = 0xa11ce;
         user = vm.addr(userPrivateKey);
+        // TODO: Workaround, revisit. The key is public, so the account may have code on a fork, e.g. an EIP-7702
+        //       delegation.
+        vm.etch(user, "");
         nodeOperator = nextAddress("NodeOperator");
     }
 }
@@ -123,7 +128,7 @@ abstract contract DepositTestBase is AccountingIntegrationTestBase {
             user,
             address(accounting),
             32 ether,
-            vm.getNonce(user),
+            IERC20Permit(address(lido)).nonces(user),
             type(uint256).max,
             address(lido)
         );
@@ -160,7 +165,7 @@ abstract contract DepositTestBase is AccountingIntegrationTestBase {
             user,
             address(accounting),
             wstETHAmount + 10 wei,
-            vm.getNonce(user),
+            IERC20Permit(address(wstETH)).nonces(user),
             type(uint256).max,
             address(wstETH)
         );

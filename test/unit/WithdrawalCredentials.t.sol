@@ -5,7 +5,7 @@ pragma solidity 0.8.33;
 
 import { Test } from "forge-std/Test.sol";
 
-import { WCType, toWC } from "src/utils/WithdrawalCredentials.sol";
+import { WCType, toWC } from "script/utils/WithdrawalCredentials.sol";
 
 contract WithdrawalCredentialsTest is Test {
     function test_toWC() public pure {
