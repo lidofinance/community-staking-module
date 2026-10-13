@@ -4,6 +4,7 @@
 pragma solidity 0.8.33;
 
 import { DeployBase } from "./DeployBase.s.sol";
+import { WCType } from "../utils/WithdrawalCredentials.sol";
 
 contract DeployMainnet is DeployBase {
     constructor() DeployBase("mainnet", 1) {
@@ -36,6 +37,7 @@ contract DeployMainnet is DeployBase {
         // Verifier
         config.verifierFirstSupportedSlot = 364032 * config.slotsPerEpoch; // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7600.md#activation
         config.verifierGloasSlot = type(uint64).max;
+        config.verifierWcType = WCType.Eth1;
         config.capellaSlot = 194048 * config.slotsPerEpoch; // @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L50
         config.minWithdrawalRatio = 9900;
 
