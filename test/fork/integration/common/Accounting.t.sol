@@ -43,6 +43,7 @@ abstract contract AccountingIntegrationTestBase is ModuleTypeBase, PermitHelper 
 
         userPrivateKey = uint256(keccak256("csm integration test user"));
         user = vm.addr(userPrivateKey);
+        vm.etch(user, "");
         nodeOperator = nextAddress("NodeOperator");
     }
 }
