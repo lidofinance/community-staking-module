@@ -41,10 +41,8 @@ abstract contract AccountingIntegrationTestBase is ModuleTypeBase, PermitHelper 
         handleStakingLimit();
         handleBunkerMode();
 
-        userPrivateKey = 0xa11ce;
+        userPrivateKey = uint256(keccak256("csm integration test user"));
         user = vm.addr(userPrivateKey);
-        // TODO: Workaround, revisit. The key is public, so the account may have code on a fork, e.g. an EIP-7702
-        //       delegation.
         vm.etch(user, "");
         nodeOperator = nextAddress("NodeOperator");
     }
