@@ -3,20 +3,21 @@
 
 pragma solidity 0.8.33;
 
-import { Script, console } from "forge-std/Script.sol";
+import { console } from "forge-std/Script.sol";
 
 import { Verifier } from "../src/Verifier.sol";
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { WCType, toWC } from "./utils/WithdrawalCredentials.sol";
 import { JsonBindings } from "./utils/JsonBindings.sol";
+import { DeployConfirmation } from "./utils/DeployConfirmation.sol";
 
 struct GloasVerifierParams {
     address lidoLocatorAddress;
     address aragonAgent;
-    uint256 slotsPerEpoch;
-    uint256 verifierFirstSupportedSlot;
-    uint256 capellaSlot;
+    uint64 slotsPerEpoch;
+    uint64 verifierFirstSupportedSlot;
+    uint64 capellaSlot;
     uint256 minWithdrawalRatio;
     WCType verifierWcType;
     address circuitBreaker;
@@ -24,9 +25,9 @@ struct GloasVerifierParams {
     address secondAdminAddress;
 }
 
-abstract contract DeployGloasVerifierBase is Script {
+abstract contract DeployGloasVerifierBase is DeployConfirmation {
     string public chainName;
-    uint256 public gloasEpoch;
+    uint64 public verifierGloasSlot;
     address internal deployer;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
@@ -44,7 +45,7 @@ abstract contract DeployGloasVerifierBase is Script {
 
         uint256 chainId = vm.parseJsonUint(json, ".ChainId");
         if (chainId != block.chainid) revert ChainIdMismatch({ actual: block.chainid, expected: chainId });
-        if (gloasEpoch == type(uint64).max) revert GloasSlotNotSet();
+        if (verifierGloasSlot == type(uint64).max) revert GloasSlotNotSet();
 
         string memory params = vm.keyExistsJson(json, ".DeployParams") ? ".DeployParams" : ".CuratedDeployParams";
         GloasVerifierParams memory p = JsonBindings.deserializeGloasVerifierParams(json, params);
@@ -52,25 +53,26 @@ abstract contract DeployGloasVerifierBase is Script {
             json,
             vm.keyExistsJson(json, ".CSModule") ? ".CSModule" : ".CuratedModule"
         );
-        uint256 gloasSlot = gloasEpoch * p.slotsPerEpoch;
 
-        _logParams(p, module, gloasSlot);
+        _logParams(p, module);
+
+        _confirmDeploy("Deploy the Gloas Verifier with the params above?");
 
         vm.startBroadcast();
         (, deployer, ) = vm.readCallers();
         vm.label(deployer, "DEPLOYER");
 
-        Verifier verifier = _deployVerifier(p, module, gloasSlot);
+        Verifier verifier = _deployVerifier(p, module);
 
         vm.stopBroadcast();
 
         // writeJson with a key only upserts that key, leaving the rest of the artifact intact
         vm.writeJson(vm.toString(address(verifier)), path, ".VerifierGloas");
-        vm.writeJson(vm.toString(gloasSlot), path, string.concat(params, ".verifierGloasSlot"));
+        vm.writeJson(vm.toString(verifierGloasSlot), path, string.concat(params, ".verifierGloasSlot"));
         vm.writeJson(string.concat('"', gitRef, '"'), path, ".git-ref");
     }
 
-    function _logParams(GloasVerifierParams memory p, address module, uint256 gloasSlot) internal view {
+    function _logParams(GloasVerifierParams memory p, address module) internal view {
         console.log("module:", module);
         console.log("lidoLocator:", p.lidoLocatorAddress);
         console.log(
@@ -80,7 +82,7 @@ abstract contract DeployGloasVerifierBase is Script {
         console.log("slotsPerEpoch:", p.slotsPerEpoch);
         console.log("firstSupportedSlot:", p.verifierFirstSupportedSlot);
         console.log("capellaSlot:", p.capellaSlot);
-        console.log("gloasSlot:", gloasSlot);
+        console.log("gloasSlot:", verifierGloasSlot);
         console.log("minWithdrawalRatio:", p.minWithdrawalRatio);
         console.log("aragonAgent:", p.aragonAgent);
         console.log("circuitBreaker:", p.circuitBreaker);
@@ -88,18 +90,14 @@ abstract contract DeployGloasVerifierBase is Script {
         console.log("secondAdmin:", p.secondAdminAddress);
     }
 
-    function _deployVerifier(
-        GloasVerifierParams memory p,
-        address module,
-        uint256 gloasSlot
-    ) internal returns (Verifier verifier) {
+    function _deployVerifier(GloasVerifierParams memory p, address module) internal returns (Verifier verifier) {
         verifier = new Verifier({
             withdrawalCredentials: toWC(ILidoLocator(p.lidoLocatorAddress).withdrawalVault(), p.verifierWcType),
             module: module,
-            slotsPerEpoch: uint64(p.slotsPerEpoch),
-            firstSupportedSlot: Slot.wrap(uint64(p.verifierFirstSupportedSlot)),
-            gloasSlot: Slot.wrap(uint64(gloasSlot)),
-            capellaSlot: Slot.wrap(uint64(p.capellaSlot)),
+            slotsPerEpoch: p.slotsPerEpoch,
+            firstSupportedSlot: Slot.wrap(p.verifierFirstSupportedSlot),
+            gloasSlot: Slot.wrap(verifierGloasSlot),
+            capellaSlot: Slot.wrap(p.capellaSlot),
             minWithdrawalRatio: p.minWithdrawalRatio,
             admin: deployer
         });

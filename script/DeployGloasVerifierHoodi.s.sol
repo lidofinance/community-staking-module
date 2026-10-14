@@ -7,6 +7,6 @@ import { DeployGloasVerifierBase } from "./DeployGloasVerifier.s.sol";
 
 contract DeployGloasVerifierHoodi is DeployGloasVerifierBase {
     constructor() DeployGloasVerifierBase("hoodi") {
-        gloasEpoch = 132352; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L49
+        verifierGloasSlot = 4235264; // GLOAS_FORK_EPOCH = 4235264 / 32 = 132352, @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L49
     }
 }

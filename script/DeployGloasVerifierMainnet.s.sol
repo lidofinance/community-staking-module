@@ -7,8 +7,8 @@ import { DeployGloasVerifierBase } from "./DeployGloasVerifier.s.sol";
 
 contract DeployGloasVerifierMainnet is DeployGloasVerifierBase {
     constructor() DeployGloasVerifierBase("mainnet") {
-        // TODO: set to GLOAS_FORK_EPOCH once the mainnet fork is scheduled
+        // TODO: set to GLOAS_FORK_EPOCH * 32 once the mainnet fork is scheduled
         // @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml
-        gloasEpoch = type(uint64).max;
+        verifierGloasSlot = type(uint64).max;
     }
 }
