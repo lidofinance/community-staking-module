@@ -54,6 +54,7 @@ struct DeployCSM0x02Params {
     bytes32 gIFirstBalanceNode;
     uint256 verifierFirstSupportedSlot;
     uint256 verifierGloasSlot;
+    WCType verifierWcType;
     uint256 capellaSlot;
     uint256 minWithdrawalRatio;
     // Accounting
@@ -210,7 +211,7 @@ abstract contract DeployCSM0x02Base is Script {
             );
 
             verifier = new Verifier({
-                withdrawalCredentials: toWC(locator.withdrawalVault(), WCType.Compounding),
+                withdrawalCredentials: toWC(locator.withdrawalVault(), config.verifierWcType),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
                 firstSupportedSlot: Slot.wrap(uint64(config.verifierFirstSupportedSlot)),

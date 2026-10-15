@@ -4,6 +4,7 @@
 pragma solidity 0.8.33;
 
 import { DeployCSM0x02Base } from "./DeployCSM0x02Base.s.sol";
+import { WCType } from "../utils/WithdrawalCredentials.sol";
 
 contract DeployCSM0x02Hoodi is DeployCSM0x02Base {
     constructor() DeployCSM0x02Base("hoodi", 560048) {
@@ -35,7 +36,8 @@ contract DeployCSM0x02Hoodi is DeployCSM0x02Base {
 
         // Verifier
         config.verifierFirstSupportedSlot = 2048 * config.slotsPerEpoch; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L41
-        config.verifierGloasSlot = type(uint64).max;
+        config.verifierGloasSlot = 132352 * config.slotsPerEpoch; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L49
+        config.verifierWcType = WCType.Compounding;
         config.capellaSlot = 0; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L33
         config.minWithdrawalRatio = 9900;
 

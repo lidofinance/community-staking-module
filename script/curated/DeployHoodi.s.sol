@@ -4,6 +4,7 @@
 pragma solidity 0.8.33;
 
 import { DeployBase, CuratedGateConfig } from "./DeployBase.s.sol";
+import { WCType } from "../utils/WithdrawalCredentials.sol";
 
 contract DeployHoodi is DeployBase {
     constructor() DeployBase("hoodi", 560048) {
@@ -35,7 +36,8 @@ contract DeployHoodi is DeployBase {
 
         // Verifier
         config.verifierFirstSupportedSlot = 2048 * config.slotsPerEpoch; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L41
-        config.verifierGloasSlot = type(uint64).max;
+        config.verifierGloasSlot = 132352 * config.slotsPerEpoch; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L49
+        config.verifierWcType = WCType.Compounding;
         config.capellaSlot = 0; // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L33
         config.minWithdrawalRatio = 9950;
 

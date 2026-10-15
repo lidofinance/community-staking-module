@@ -7,6 +7,7 @@ import { DeployCSM0x02Base } from "./DeployCSM0x02Base.s.sol";
 import { BaseOracle } from "../../src/lib/base-oracle/BaseOracle.sol";
 import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
+import { WCType } from "../utils/WithdrawalCredentials.sol";
 
 contract DeployCSM0x02LocalDevNet is DeployCSM0x02Base {
     constructor() DeployCSM0x02Base("local-devnet", vm.envUint("DEVNET_CHAIN_ID")) {
@@ -27,6 +28,7 @@ contract DeployCSM0x02LocalDevNet is DeployCSM0x02Base {
         // Verifier
         config.verifierFirstSupportedSlot = vm.envUint("DEVNET_ELECTRA_EPOCH") * config.slotsPerEpoch;
         config.verifierGloasSlot = vm.envUint("DEVNET_GLOAS_EPOCH") * config.slotsPerEpoch;
+        config.verifierWcType = WCType.Compounding;
         config.capellaSlot = vm.envUint("DEVNET_CAPELLA_EPOCH") * config.slotsPerEpoch;
         config.minWithdrawalRatio = 9900;
 
