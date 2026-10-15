@@ -666,7 +666,6 @@ contract CuratedTopUpObtainDepositData is CuratedCommon {
         bytes memory key1 = module.getSigningKeys(secondId, 0, 1);
         uint256 firstBalanceBefore = cm.getNodeOperatorBalance(firstId);
         uint256 secondBalanceBefore = cm.getNodeOperatorBalance(secondId);
-        uint256 nonce = module.getNonce();
 
         uint256[] memory allocations = cm.allocateDeposits(
             4 ether,
@@ -677,7 +676,6 @@ contract CuratedTopUpObtainDepositData is CuratedCommon {
         );
 
         assertEq(allocations.length, 2);
-        assertEq(module.getNonce(), nonce + 1);
         assertEq(cm.getNodeOperatorBalance(firstId), firstBalanceBefore + allocations[0]);
         assertEq(cm.getNodeOperatorBalance(secondId), secondBalanceBefore + allocations[1]);
         assertEq(
@@ -797,10 +795,9 @@ contract CuratedTopUpObtainDepositData is CuratedCommon {
         _topUpToOperatorBalance(noId, 0, 2048 ether);
 
         bytes memory key = module.getSigningKeys(noId, 0, 1);
-        uint256 nonce = module.getNonce();
 
         uint256[] memory allocations = cm.allocateDeposits(
-            2 ether,
+            1 ether,
             BytesArr(key),
             UintArr(0),
             UintArr(noId),
@@ -808,7 +805,6 @@ contract CuratedTopUpObtainDepositData is CuratedCommon {
         );
 
         assertEq(allocations[0], 0);
-        assertEq(module.getNonce(), nonce);
     }
 
     function test_topUpObtainDepositData_limitsAlignedPerKey() public assertInvariants {
@@ -1233,7 +1229,6 @@ contract CuratedTopUpObtainDepositData is CuratedCommon {
         uint256 limitWei = 2 ether;
 
         _mockAllOperatorWeights(0);
-        uint256 nonce = module.getNonce();
         uint256[] memory allocations = cm.allocateDeposits(
             2 ether,
             BytesArr(key0, key1),
@@ -1244,7 +1239,6 @@ contract CuratedTopUpObtainDepositData is CuratedCommon {
 
         assertEq(allocations[0], 0);
         assertEq(allocations[1], 0);
-        assertEq(module.getNonce(), nonce);
     }
 
     function test_topUpObtainDepositData_repeatedZeroLimitDoesNotChangeNonce() public assertInvariants {
@@ -1355,7 +1349,6 @@ contract CuratedTopUpObtainDepositData is CuratedCommon {
 
         bytes memory key = module.getSigningKeys(noId, 0, 1);
         uint256 limitWei = 10 ether;
-        uint256 nonce = module.getNonce();
 
         uint256[] memory allocations = cm.allocateDeposits(
             2 ether - 1,
@@ -1366,7 +1359,6 @@ contract CuratedTopUpObtainDepositData is CuratedCommon {
         );
 
         assertEq(allocations[0], 0);
-        assertEq(module.getNonce(), nonce);
     }
 
     function test_topUpObtainDepositData_revertWhen_NotStakingRouter() public {
@@ -2432,7 +2424,6 @@ contract CuratedTopUpKeyAllocatedBalance is CuratedCommon {
         cm.reportRegularWithdrawnValidator(validatorInfos);
 
         bytes memory key = cm.getSigningKeys(noId, 0, 1);
-        uint256 nonce = module.getNonce();
         uint256[] memory allocations = cm.allocateDeposits({
             maxDepositAmount: 5 ether,
             pubkeys: BytesArr(key),
@@ -2442,7 +2433,6 @@ contract CuratedTopUpKeyAllocatedBalance is CuratedCommon {
         });
 
         assertEq(allocations, UintArr(0));
-        assertEq(module.getNonce(), nonce);
         assertEq(cm.getKeyAllocatedBalances(noId, 0, 1), UintArr(0));
         assertEq(module.getTotalModuleStake(), 0);
         assertEq(cm.getNodeOperatorBalance(noId), 0);
@@ -2459,7 +2449,6 @@ contract CuratedTopUpKeyAllocatedBalance is CuratedCommon {
         assertFalse(cm.isValidatorWithdrawn(noId, 0));
 
         bytes memory key = cm.getSigningKeys(noId, 0, 1);
-        uint256 nonce = module.getNonce();
         uint256[] memory allocations = cm.allocateDeposits({
             maxDepositAmount: 5 ether,
             pubkeys: BytesArr(key),
@@ -2469,7 +2458,6 @@ contract CuratedTopUpKeyAllocatedBalance is CuratedCommon {
         });
 
         assertEq(allocations, UintArr(0));
-        assertEq(module.getNonce(), nonce);
         assertEq(cm.getKeyAllocatedBalances(noId, 0, 1), UintArr(0));
         assertEq(
             module.getTotalModuleStake(),

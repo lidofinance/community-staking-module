@@ -463,6 +463,7 @@ library CuratedDepositAllocator {
         }
 
         for (uint256 i; i < allocatedOperatorIds.length; ++i) {
+            // Per-key limits can reduce an operator's preliminary allocation to zero.
             if (appliedIncrements[i] == 0) continue;
             StakeTracker.increaseOperatorBalance($, allocatedOperatorIds[i], appliedIncrements[i]);
             changed = true;
