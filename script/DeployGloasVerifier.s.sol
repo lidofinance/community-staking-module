@@ -3,14 +3,12 @@
 
 pragma solidity 0.8.33;
 
-import { console } from "forge-std/Script.sol";
+import { Script } from "forge-std/Script.sol";
 
 import { Verifier } from "../src/Verifier.sol";
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { WCType, toWC } from "./utils/WithdrawalCredentials.sol";
-import { JsonBindings } from "./utils/JsonBindings.sol";
-import { DeployConfirmation } from "./utils/DeployConfirmation.sol";
 
 struct GloasVerifierParams {
     address lidoLocatorAddress;
@@ -25,8 +23,11 @@ struct GloasVerifierParams {
     address secondAdminAddress;
 }
 
-abstract contract DeployGloasVerifierBase is DeployConfirmation {
+abstract contract DeployGloasVerifierBase is Script {
     string public chainName;
+    uint256 internal chainId;
+    GloasVerifierParams internal config;
+    address internal module;
     uint64 public verifierGloasSlot;
     address internal deployer;
 
@@ -35,83 +36,56 @@ abstract contract DeployGloasVerifierBase is DeployConfirmation {
     error CannotBeUsedInMainnet();
     error InvalidSecondAdmin();
 
-    constructor(string memory _chainName) {
+    constructor(string memory _chainName, uint256 _chainId) {
         chainName = _chainName;
+        chainId = _chainId;
     }
 
-    function run(string memory gitRef) external {
-        string memory path = vm.envString("DEPLOY_CONFIG");
-        string memory json = vm.readFile(path);
-
-        uint256 chainId = vm.parseJsonUint(json, ".ChainId");
+    function run(string memory gitRef, string memory paramsKey) external {
         if (chainId != block.chainid) revert ChainIdMismatch({ actual: block.chainid, expected: chainId });
         if (verifierGloasSlot == type(uint64).max) revert GloasSlotNotSet();
 
-        string memory params = vm.keyExistsJson(json, ".DeployParams") ? ".DeployParams" : ".CuratedDeployParams";
-        GloasVerifierParams memory p = JsonBindings.deserializeGloasVerifierParams(json, params);
-        address module = vm.parseJsonAddress(
-            json,
-            vm.keyExistsJson(json, ".CSModule") ? ".CSModule" : ".CuratedModule"
-        );
-
-        _logParams(p, module);
-
-        _confirmDeploy("Deploy the Gloas Verifier with the params above?");
+        string memory path = vm.envString("DEPLOY_CONFIG");
 
         vm.startBroadcast();
         (, deployer, ) = vm.readCallers();
         vm.label(deployer, "DEPLOYER");
 
-        Verifier verifier = _deployVerifier(p, module);
+        Verifier verifier = _deployVerifier();
 
         vm.stopBroadcast();
 
         // writeJson with a key only upserts that key, leaving the rest of the artifact intact
         vm.writeJson(vm.toString(address(verifier)), path, ".VerifierGloas");
-        vm.writeJson(vm.toString(verifierGloasSlot), path, string.concat(params, ".verifierGloasSlot"));
+        vm.writeJson(vm.toString(verifierGloasSlot), path, string.concat(paramsKey, ".verifierGloasSlot"));
         vm.writeJson(string.concat('"', gitRef, '"'), path, ".git-ref");
     }
 
-    function _logParams(GloasVerifierParams memory p, address module) internal view {
-        console.log("module:", module);
-        console.log("lidoLocator:", p.lidoLocatorAddress);
-        console.log(
-            "withdrawalCredentials:",
-            vm.toString(toWC(ILidoLocator(p.lidoLocatorAddress).withdrawalVault(), p.verifierWcType))
-        );
-        console.log("slotsPerEpoch:", p.slotsPerEpoch);
-        console.log("firstSupportedSlot:", p.verifierFirstSupportedSlot);
-        console.log("capellaSlot:", p.capellaSlot);
-        console.log("gloasSlot:", verifierGloasSlot);
-        console.log("minWithdrawalRatio:", p.minWithdrawalRatio);
-        console.log("aragonAgent:", p.aragonAgent);
-        console.log("circuitBreaker:", p.circuitBreaker);
-        console.log("resealManager:", p.resealManager);
-        console.log("secondAdmin:", p.secondAdminAddress);
-    }
-
-    function _deployVerifier(GloasVerifierParams memory p, address module) internal returns (Verifier verifier) {
+    function _deployVerifier() internal returns (Verifier verifier) {
         verifier = new Verifier({
-            withdrawalCredentials: toWC(ILidoLocator(p.lidoLocatorAddress).withdrawalVault(), p.verifierWcType),
+            withdrawalCredentials: toWC(
+                ILidoLocator(config.lidoLocatorAddress).withdrawalVault(),
+                config.verifierWcType
+            ),
             module: module,
-            slotsPerEpoch: p.slotsPerEpoch,
-            firstSupportedSlot: Slot.wrap(p.verifierFirstSupportedSlot),
+            slotsPerEpoch: config.slotsPerEpoch,
+            firstSupportedSlot: Slot.wrap(config.verifierFirstSupportedSlot),
             gloasSlot: Slot.wrap(verifierGloasSlot),
-            capellaSlot: Slot.wrap(p.capellaSlot),
-            minWithdrawalRatio: p.minWithdrawalRatio,
+            capellaSlot: Slot.wrap(config.capellaSlot),
+            minWithdrawalRatio: config.minWithdrawalRatio,
             admin: deployer
         });
 
-        if (p.secondAdminAddress != address(0)) {
-            if (p.secondAdminAddress == deployer) revert InvalidSecondAdmin();
+        if (config.secondAdminAddress != address(0)) {
+            if (config.secondAdminAddress == deployer) revert InvalidSecondAdmin();
             if (keccak256(abi.encodePacked(chainName)) == keccak256("mainnet")) revert CannotBeUsedInMainnet();
-            verifier.grantRole(verifier.DEFAULT_ADMIN_ROLE(), p.secondAdminAddress);
+            verifier.grantRole(verifier.DEFAULT_ADMIN_ROLE(), config.secondAdminAddress);
         }
 
-        verifier.grantRole(verifier.PAUSE_ROLE(), p.resealManager);
-        verifier.grantRole(verifier.RESUME_ROLE(), p.resealManager);
-        verifier.grantRole(verifier.PAUSE_ROLE(), p.circuitBreaker);
-        verifier.grantRole(verifier.DEFAULT_ADMIN_ROLE(), p.aragonAgent);
+        verifier.grantRole(verifier.PAUSE_ROLE(), config.resealManager);
+        verifier.grantRole(verifier.RESUME_ROLE(), config.resealManager);
+        verifier.grantRole(verifier.PAUSE_ROLE(), config.circuitBreaker);
+        verifier.grantRole(verifier.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
         verifier.revokeRole(verifier.DEFAULT_ADMIN_ROLE(), deployer);
     }
 }

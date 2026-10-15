@@ -260,7 +260,7 @@ test-gloas-verifier-local module *args:
 
     local_dir=./artifacts/local/gloas-verifier/{{lowercase(module)}}/
     local_private_key="$(just _local-private-key)"
-    SKIP_DEPLOY_PROMPT=true just _deploy-gloas-verifier {{module}} {{anvil_rpc_url}} "${local_dir}" "" --broadcast --silent --private-key="${local_private_key}" {{disable_code_size_limit}}
+    just _deploy-gloas-verifier {{module}} {{anvil_rpc_url}} "${local_dir}" "" --broadcast --silent --private-key="${local_private_key}" {{disable_code_size_limit}}
 
     export DEPLOY_CONFIG="${local_dir}$(just _gloas-verifier-config-name {{module}})"
     export RPC_URL={{anvil_rpc_url}}
@@ -442,13 +442,17 @@ _deploy-utils module_name contract_name rpc_url artifacts_dir dry-prefix *args:
         {{artifacts_dir}}/transactions.json
 
 deploy-gloas-verifier module *args:
-    SKIP_DEPLOY_PROMPT=true just _deploy-gloas-verifier {{module}} {{anvil_rpc_url}} ./artifacts/latest/{{lowercase(module)}}/ "" --broadcast {{args}}
+    just _deploy-gloas-verifier {{module}} {{anvil_rpc_url}} ./artifacts/latest/{{lowercase(module)}}/ "" --broadcast {{args}}
 
 deploy-gloas-verifier-dry module *args:
     just _deploy-gloas-verifier {{module}} $RPC_URL ./artifacts/local/{{lowercase(module)}}/ "/dry-run" {{args}}
 
 deploy-gloas-verifier-live module *args:
     just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
+    just _deploy-gloas-verifier-live-confirmed {{module}} {{args}}
+
+[confirm("You are about to broadcast a Gloas Verifier deployment transaction to the network. Are you sure?")]
+_deploy-gloas-verifier-live-confirmed module *args:
     just _assert-clean-workspace
     just _deploy-gloas-verifier {{module}} $RPC_URL ./artifacts/latest/{{lowercase(module)}}/ "" --broadcast --verify {{args}}
 
@@ -461,11 +465,12 @@ _deploy-gloas-verifier module rpc_url artifacts_dir dry-prefix *args:
     set -euo pipefail
 
     config_name="$(just _gloas-verifier-config-name {{module}})"
+    params_key={{ if lowercase(module) == "curated" { ".CuratedDeployParams" } else { ".DeployParams" } }}
     just _copy-file ./artifacts/{{chain}}/{{lowercase(module)}}/${config_name} {{artifacts_dir}}${config_name}
 
     DEPLOY_CONFIG={{artifacts_dir}}${config_name} \
-    forge script script/DeployGloasVerifier{{chain_script_suffix}}.s.sol:DeployGloasVerifier{{chain_script_suffix}} --sig="run(string)" \
-        --rpc-url {{rpc_url}} --slow {{args}} -- `git rev-parse HEAD`
+    forge script script/DeployGloasVerifier{{chain_script_suffix}}.s.sol:DeployGloasVerifier{{chain_script_suffix}}{{module}} --sig="run(string,string)" \
+        --rpc-url {{rpc_url}} --slow {{args}} -- `git rev-parse HEAD` "${params_key}"
 
     just _copy-file \
         ./broadcast/DeployGloasVerifier{{chain_script_suffix}}.s.sol/`cast chain-id --rpc-url={{rpc_url}}`{{dry-prefix}}/run-latest.json \
