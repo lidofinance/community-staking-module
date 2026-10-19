@@ -16,6 +16,20 @@ import { NodeOperatorOps } from "./lib/NodeOperatorOps.sol";
 import { StakeTracker } from "./lib/StakeTracker.sol";
 
 contract CuratedModule is ICuratedModule, BaseModule {
+    /// @custom:storage-location erc7201:CuratedModule
+    struct CuratedModuleStorage {
+        mapping(uint256 nodeOperatorId => bool) topUpAllocationEnabled;
+    }
+
+    /// @inheritdoc ICuratedModule
+    bytes32 public constant RESUME_TOP_UP_ALLOCATION_ROLE = keccak256("RESUME_TOP_UP_ALLOCATION_ROLE");
+
+    // keccak256(abi.encode(uint256(keccak256("CuratedModule")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant CURATED_MODULE_STORAGE_LOCATION =
+        0x748416948424a2a643c796b7b8213bcf41155fd3a072f0851ad0a3d6ca632500;
+
+    uint64 internal constant INITIALIZED_VERSION = 2;
+
     IMetaRegistry public immutable META_REGISTRY;
 
     constructor(
@@ -34,8 +48,39 @@ contract CuratedModule is ICuratedModule, BaseModule {
     /// @dev Initialize contract from scratch. In case of a method call frontrun, the contract instance should be discarded.
     ///      It is recommended to call this method in the same transaction as the deployment transaction
     ///      and perform extensive deployment verification before using the contract instance.
-    function initialize(address admin) external override initializer {
+    function initialize(address admin) external override reinitializer(INITIALIZED_VERSION) {
         __BaseModule_init(admin);
+    }
+
+    /// @inheritdoc ICuratedModule
+    function finalizeUpgradeV2() external reinitializer(INITIALIZED_VERSION) {
+        BaseModuleStorage storage $ = _baseStorage();
+        CuratedModuleStorage storage curated = _curatedStorage();
+        for (uint256 i; i < $.nodeOperatorsCount; ++i) {
+            NodeOperator storage no = $.nodeOperators[i];
+            if (no.totalDepositedKeys <= no.totalWithdrawnKeys) continue;
+            curated.topUpAllocationEnabled[i] = true;
+            emit TopUpAllocationPauseSet(i, false);
+        }
+
+        _incrementModuleNonce();
+    }
+
+    /// @inheritdoc ICuratedModule
+    function pauseTopUpAllocation(uint256 nodeOperatorId) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        NodeOperator storage no = _baseStorage().nodeOperators[nodeOperatorId];
+        if (msg.sender != (no.extendedManagerPermissions ? no.managerAddress : no.rewardAddress)) {
+            revert SenderIsNotEligible();
+        }
+        _setTopUpAllocationPaused(nodeOperatorId, true);
+    }
+
+    /// @inheritdoc ICuratedModule
+    function resumeTopUpAllocation(uint256 nodeOperatorId) external {
+        _checkRole(RESUME_TOP_UP_ALLOCATION_ROLE);
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _setTopUpAllocationPaused(nodeOperatorId, false);
     }
 
     /// @inheritdoc IStakingModule
@@ -150,6 +195,12 @@ contract CuratedModule is ICuratedModule, BaseModule {
     }
 
     /// @inheritdoc ICuratedModule
+    function isTopUpAllocationPaused(uint256 nodeOperatorId) external view returns (bool paused) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        return !_curatedStorage().topUpAllocationEnabled[nodeOperatorId];
+    }
+
+    /// @inheritdoc ICuratedModule
     function getOperatorWeights(
         uint256[] calldata operatorIds
     ) external view returns (uint256[] memory operatorWeights) {
@@ -202,6 +253,7 @@ contract CuratedModule is ICuratedModule, BaseModule {
 
         (allocated, operatorIds, allocations) = CuratedDepositAllocator.allocateTopUps({
             $: $,
+            curated: _curatedStorage(),
             allocationAmount: maxDepositAmount,
             operatorIds: allOperatorIds
         });
@@ -240,6 +292,7 @@ contract CuratedModule is ICuratedModule, BaseModule {
         BaseModuleStorage storage $ = _baseStorage();
         allocations = CuratedDepositAllocator.allocateAndDistributeTopUps({
             $: $,
+            curated: _curatedStorage(),
             allocationAmount: maxDepositAmount,
             operatorIds: operatorIds,
             topUpLimits: topUpLimits
@@ -270,5 +323,20 @@ contract CuratedModule is ICuratedModule, BaseModule {
         if (msg.sender != address(_accounting()) && msg.sender != address(_metaRegistry())) {
             revert SenderIsNotEligible();
         }
+    }
+
+    function _curatedStorage() internal pure returns (CuratedModuleStorage storage $) {
+        assembly ("memory-safe") {
+            // Bind the struct to CuratedModule's isolated ERC-7201 namespace.
+            $.slot := CURATED_MODULE_STORAGE_LOCATION
+        }
+    }
+
+    function _setTopUpAllocationPaused(uint256 nodeOperatorId, bool paused) private {
+        CuratedModuleStorage storage $ = _curatedStorage();
+        if ($.topUpAllocationEnabled[nodeOperatorId] == !paused) revert TopUpAllocationPauseUnchanged();
+        $.topUpAllocationEnabled[nodeOperatorId] = !paused;
+        emit TopUpAllocationPauseSet(nodeOperatorId, paused);
+        _incrementModuleNonce();
     }
 }

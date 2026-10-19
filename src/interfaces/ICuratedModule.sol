@@ -8,12 +8,43 @@ import { IStakingModuleV2 } from "./IStakingModule.sol";
 import { IMetaRegistry } from "./IMetaRegistry.sol";
 
 interface ICuratedModule is IBaseModule, IStakingModuleV2 {
+    event TopUpAllocationPauseSet(uint256 indexed nodeOperatorId, bool paused);
+
     error ZeroMetaRegistryAddress();
     error SenderIsNotMetaRegistry();
+    error TopUpAllocationPauseUnchanged();
+
+    /// @notice Role allowed to resume top-up allocation for node operators.
+    function RESUME_TOP_UP_ALLOCATION_ROLE() external view returns (bytes32);
 
     /// @notice Initializes the contract.
     /// @param admin An address to grant the DEFAULT_ADMIN_ROLE to.
     function initialize(address admin) external;
+
+    /// @notice Finalizes the upgrade from version 1 to version 2.
+    /// @dev Must be called atomically with the proxy upgrade. Fresh deployments use initialize instead.
+    ///      Enables top-up allocation for existing operators with totalDepositedKeys > totalWithdrawnKeys.
+    function finalizeUpgradeV2() external;
+
+    /// @notice Pauses top-up allocation for a node operator. Only callable by its owner.
+    /// @dev Owner is the manager with extendedManagerPermissions enabled, and the reward address otherwise.
+    ///      Excludes the operator's weight and stake from the executable top-up allocation baseline.
+    ///      Does not change initial deposits, MetaRegistry configuration, or tracked stake.
+    ///      Callable while the module is paused or its deposit info is stale.
+    ///      Operators are paused by default.
+    /// @param nodeOperatorId ID of the node operator.
+    function pauseTopUpAllocation(uint256 nodeOperatorId) external;
+
+    /// @notice Resumes top-up allocation for a node operator.
+    /// @dev Requires RESUME_TOP_UP_ALLOCATION_ROLE.
+    ///      Callable while the module is paused or its deposit info is stale, including before initial deposits.
+    /// @param nodeOperatorId ID of the node operator.
+    function resumeTopUpAllocation(uint256 nodeOperatorId) external;
+
+    /// @notice Returns whether an existing node operator is excluded from top-up allocation.
+    /// @param nodeOperatorId ID of the node operator.
+    /// @return paused Whether the operator is excluded.
+    function isTopUpAllocationPaused(uint256 nodeOperatorId) external view returns (bool paused);
 
     /// @notice Notifies the module about the weight change of a node operator.
     /// @param nodeOperatorId ID of the Node Operator
@@ -53,8 +84,8 @@ interface ICuratedModule is IBaseModule, IStakingModuleV2 {
 
     /// @notice Returns current top-up allocation targets for all operators.
     /// @dev `target = totalCurrent * operatorWeight / totalWeight` (in wei).
-    ///      Includes operators regardless of top-up capacity for informational purposes.
-    ///      Actual allocation recalculates shares only across operators with usable capacity,
+    ///      Includes operators regardless of top-up capacity or allocation pause for informational purposes.
+    ///      Actual allocation recalculates shares only across unpaused operators with usable capacity,
     ///      so real per-operator amounts may differ from the targets shown here.
     ///      Arrays are indexed by operator id; zero-weight operators have zero values.
     /// @return currentAllocations Current operator stake in wei.
