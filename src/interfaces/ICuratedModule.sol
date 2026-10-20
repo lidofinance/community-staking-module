@@ -27,22 +27,18 @@ interface ICuratedModule is IBaseModule, IStakingModuleV2 {
     ///      Enables top-up allocation for existing operators with totalDepositedKeys > totalWithdrawnKeys.
     function finalizeUpgradeV2() external;
 
+    /// @notice Enables top-up allocation for a node operator.
+    /// @param nodeOperatorId ID of the node operator.
+    function enableTopUpAllocation(uint256 nodeOperatorId) external;
+
     /// @notice Disables top-up allocation for a node operator. Only callable by its owner.
-    /// @dev Owner is the manager with extendedManagerPermissions enabled, and the reward address otherwise.
-    ///      Excludes the operator's weight and stake from the executable top-up allocation baseline.
-    ///      Does not change initial deposits, MetaRegistry configuration, or tracked stake.
+    /// @dev Excludes the operator's weight and stake from the executable top-up allocation baseline.
     ///      Callable while the module is paused or its deposit info is stale.
     ///      Top-up allocation is disabled by default.
     /// @param nodeOperatorId ID of the node operator.
     function disableTopUpAllocation(uint256 nodeOperatorId) external;
 
-    /// @notice Enables top-up allocation for a node operator.
-    /// @dev Requires ENABLE_TOP_UP_ALLOCATION_ROLE.
-    ///      Callable while the module is paused or its deposit info is stale, including before initial deposits.
-    /// @param nodeOperatorId ID of the node operator.
-    function enableTopUpAllocation(uint256 nodeOperatorId) external;
-
-    /// @notice Returns whether top-up allocation is enabled for an existing node operator.
+    /// @notice Returns whether top-up allocation is enabled for a node operator.
     /// @param nodeOperatorId ID of the node operator.
     /// @return enabled Whether top-up allocation is enabled.
     function isTopUpAllocationEnabled(uint256 nodeOperatorId) external view returns (bool enabled);

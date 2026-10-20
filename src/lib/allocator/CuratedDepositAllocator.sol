@@ -4,7 +4,6 @@
 pragma solidity 0.8.33;
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { CuratedModule } from "../../CuratedModule.sol";
 import { ICuratedModule } from "../../interfaces/ICuratedModule.sol";
 import { IMetaRegistry } from "../../interfaces/IMetaRegistry.sol";
 import { NodeOperator } from "../../interfaces/IBaseModule.sol";
@@ -13,6 +12,7 @@ import { AllocationState, DepositAllocatorGreedy } from "./DepositAllocatorGreed
 import { TransientUintUintMap, TransientUintUintMapLib } from "../TransientUintUintMapLib.sol";
 import { ValidatorBalanceLimits } from "../ValidatorBalanceLimits.sol";
 import { StakeTracker } from "../StakeTracker.sol";
+import { TopUpAllocationLib } from "../TopUpAllocationLib.sol";
 
 /// @notice Curated deposit allocation helpers.
 /// @dev External deployment-linked library used by CuratedModule for bytecode savings.
@@ -75,7 +75,6 @@ library CuratedDepositAllocator {
     ///      - `current_operator_balance` here is the module's tracked stake view, not a live decrementing oracle value:
     ///        active balance decreases are intentionally reflected later via withdrawal reporting.
     /// @param $ Base module storage pointer.
-    /// @param curated Curated module storage pointer.
     /// @param allocationAmount Total top-up amount in wei to allocate.
     /// @param operatorIds Unique operator ids to include in allocation.
     /// @return allocated Total allocated amount in wei.
@@ -83,12 +82,11 @@ library CuratedDepositAllocator {
     /// @return allocations Per-operator allocations aligned to allocatedOperatorIds.
     function allocateTopUps(
         ModuleLinearStorage.BaseModuleStorage storage $,
-        CuratedModule.CuratedModuleStorage storage curated,
         uint256 allocationAmount,
         uint256[] calldata operatorIds
     ) external view returns (uint256 allocated, uint256[] memory allocatedOperatorIds, uint256[] memory allocations) {
         uint256[] memory operatorIdsCopy = operatorIds;
-        return _allocateTopUps($, curated, allocationAmount, operatorIdsCopy);
+        return _allocateTopUps($, allocationAmount, operatorIdsCopy);
     }
 
     /// @dev Allocate top-ups across unique operators and immediately distribute them to keys.
@@ -105,7 +103,6 @@ library CuratedDepositAllocator {
     ///        applied during key-level distribution and may leave unallocated remainder.
     function allocateAndDistributeTopUps(
         ModuleLinearStorage.BaseModuleStorage storage $,
-        CuratedModule.CuratedModuleStorage storage curated,
         uint256 allocationAmount,
         uint256[] calldata operatorIds,
         uint256[] calldata topUpLimits
@@ -115,7 +112,6 @@ library CuratedDepositAllocator {
         uint256[] memory remainingOperatorAllocations;
         (, allocatedOperatorIds, remainingOperatorAllocations) = _allocateTopUps(
             $,
-            curated,
             allocationAmount,
             uniqueOperatorIds
         );
@@ -150,11 +146,10 @@ library CuratedDepositAllocator {
 
     function _allocateTopUps(
         ModuleLinearStorage.BaseModuleStorage storage $,
-        CuratedModule.CuratedModuleStorage storage curated,
         uint256 allocationAmount,
         uint256[] memory operatorIds
     ) private view returns (uint256 allocated, uint256[] memory allocatedOperatorIds, uint256[] memory allocations) {
-        DepositableOperatorsData memory data = _collectTopUpEligibleOperatorsData($, curated, operatorIds);
+        DepositableOperatorsData memory data = _collectTopUpEligibleOperatorsData($, operatorIds);
         if (data.count == 0) return (0, new uint256[](0), new uint256[](0));
 
         uint256[] memory eligibleAllocations;
@@ -215,7 +210,6 @@ library CuratedDepositAllocator {
     ///      Duplicates in operatorIds are disallowed and must be filtered by the caller.
     function _collectTopUpEligibleOperatorsData(
         ModuleLinearStorage.BaseModuleStorage storage $,
-        CuratedModule.CuratedModuleStorage storage curated,
         uint256[] memory operatorIds
     ) private view returns (DepositableOperatorsData memory data) {
         data.alloc.sharesX96 = new uint256[](operatorIds.length);
@@ -232,7 +226,7 @@ library CuratedDepositAllocator {
             weightsByOperatorId,
             capacitiesByOperatorId,
             currentStakeByOperatorId
-        ) = _collectTopUpGlobalBaseline($, curated);
+        ) = _collectTopUpGlobalBaseline($);
 
         uint256 eligibleCount;
         for (uint256 i; i < operatorIds.length; ++i) {
@@ -258,8 +252,7 @@ library CuratedDepositAllocator {
     }
 
     function _collectTopUpGlobalBaseline(
-        ModuleLinearStorage.BaseModuleStorage storage $,
-        CuratedModule.CuratedModuleStorage storage curated
+        ModuleLinearStorage.BaseModuleStorage storage $
     )
         private
         view
@@ -280,7 +273,7 @@ library CuratedDepositAllocator {
 
         // Build the global share baseline across operators with allocation enabled, non-zero weight and usable capacity.
         for (uint256 i; i < operatorsCount; ++i) {
-            if (!curated.topUpAllocationEnabled[i]) continue;
+            if (!TopUpAllocationLib.isEnabled(i)) continue;
 
             uint256 balance = StakeTracker.getOperatorBalance($, i);
             uint256 capacity = quantizeForTopUp(_topUpCapacity($.nodeOperators[i], balance));

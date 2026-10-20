@@ -1232,14 +1232,10 @@ contract CuratedIntegrationHelpers is ForkIntegrationHelpersBase {
         address nodeOperatorAddress
     ) external override returns (uint256 noId, uint256 keyIndex, bytes memory pubkey) {
         (noId, keyIndex) = this.getDepositedNodeOperatorWithSequentialActiveKeys(nodeOperatorAddress, 1);
-        if (module.getInitializedVersion() >= 2) {
-            ICuratedModule cm = ICuratedModule(address(module));
-            if (!cm.isTopUpAllocationEnabled(noId)) {
-                address enabler = module.getRoleMember(cm.ENABLE_TOP_UP_ALLOCATION_ROLE(), 0);
-                vm.prank(enabler);
-                cm.enableTopUpAllocation(noId);
-            }
-        }
+        ICuratedModule cm = ICuratedModule(address(module));
+        address enabler = module.getRoleMember(cm.ENABLE_TOP_UP_ALLOCATION_ROLE(), 0);
+        vm.prank(enabler);
+        cm.enableTopUpAllocation(noId);
         pubkey = module.getSigningKeys(noId, keyIndex, 1);
     }
 

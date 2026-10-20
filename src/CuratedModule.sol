@@ -14,19 +14,13 @@ import { SigningKeys } from "./lib/SigningKeys.sol";
 import { CuratedDepositAllocator } from "./lib/allocator/CuratedDepositAllocator.sol";
 import { NodeOperatorOps } from "./lib/NodeOperatorOps.sol";
 import { StakeTracker } from "./lib/StakeTracker.sol";
+import { TopUpAllocationLib } from "./lib/TopUpAllocationLib.sol";
 
 contract CuratedModule is ICuratedModule, BaseModule {
-    /// @custom:storage-location erc7201:CuratedModule
-    struct CuratedModuleStorage {
-        mapping(uint256 nodeOperatorId => bool) topUpAllocationEnabled;
-    }
+    // TopUpAllocationLib stores per-operator top-up allocation flags in this module's unstructured storage.
 
     /// @inheritdoc ICuratedModule
     bytes32 public constant ENABLE_TOP_UP_ALLOCATION_ROLE = keccak256("ENABLE_TOP_UP_ALLOCATION_ROLE");
-
-    // keccak256(abi.encode(uint256(keccak256("CuratedModule")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant CURATED_MODULE_STORAGE_LOCATION =
-        0x748416948424a2a643c796b7b8213bcf41155fd3a072f0851ad0a3d6ca632500;
 
     uint64 internal constant INITIALIZED_VERSION = 2;
 
@@ -55,11 +49,11 @@ contract CuratedModule is ICuratedModule, BaseModule {
     /// @inheritdoc ICuratedModule
     function finalizeUpgradeV2() external reinitializer(INITIALIZED_VERSION) {
         BaseModuleStorage storage $ = _baseStorage();
-        CuratedModuleStorage storage curated = _curatedStorage();
+        // Operators without non-withdrawn deposited keys stay disabled, even after new initial deposits.
         for (uint256 i; i < $.nodeOperatorsCount; ++i) {
             NodeOperator storage no = $.nodeOperators[i];
             if (no.totalDepositedKeys == no.totalWithdrawnKeys) continue;
-            curated.topUpAllocationEnabled[i] = true;
+            TopUpAllocationLib.setState(i, true);
             emit TopUpAllocationEnabled(i);
         }
 
@@ -67,20 +61,22 @@ contract CuratedModule is ICuratedModule, BaseModule {
     }
 
     /// @inheritdoc ICuratedModule
-    function disableTopUpAllocation(uint256 nodeOperatorId) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _baseStorage().nodeOperators[nodeOperatorId];
-        if (msg.sender != (no.extendedManagerPermissions ? no.managerAddress : no.rewardAddress)) {
-            revert SenderIsNotEligible();
-        }
-        _setTopUpAllocationEnabled(nodeOperatorId, false);
-    }
-
-    /// @inheritdoc ICuratedModule
     function enableTopUpAllocation(uint256 nodeOperatorId) external {
         _checkRole(ENABLE_TOP_UP_ALLOCATION_ROLE);
         _onlyExistingNodeOperator(nodeOperatorId);
-        _setTopUpAllocationEnabled(nodeOperatorId, true);
+        TopUpAllocationLib.setState(nodeOperatorId, true);
+        emit TopUpAllocationEnabled(nodeOperatorId);
+    }
+
+    /// @inheritdoc ICuratedModule
+    function disableTopUpAllocation(uint256 nodeOperatorId) external {
+        NodeOperator storage no = _baseStorage().nodeOperators[nodeOperatorId];
+        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
+        if ((no.extendedManagerPermissions ? no.managerAddress : no.rewardAddress) != msg.sender) {
+            revert SenderIsNotEligible();
+        }
+        TopUpAllocationLib.setState(nodeOperatorId, false);
+        emit TopUpAllocationDisabled(nodeOperatorId);
     }
 
     /// @inheritdoc IStakingModule
@@ -172,8 +168,6 @@ contract CuratedModule is ICuratedModule, BaseModule {
         );
 
         allocations = _allocateTopUps(maxDepositAmount, operatorIds, keyIndices, cappedTopUpLimits);
-
-        _incrementModuleNonce();
     }
 
     /// @inheritdoc ICuratedModule
@@ -196,8 +190,7 @@ contract CuratedModule is ICuratedModule, BaseModule {
 
     /// @inheritdoc ICuratedModule
     function isTopUpAllocationEnabled(uint256 nodeOperatorId) external view returns (bool enabled) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        return _curatedStorage().topUpAllocationEnabled[nodeOperatorId];
+        return TopUpAllocationLib.isEnabled(nodeOperatorId);
     }
 
     /// @inheritdoc ICuratedModule
@@ -253,7 +246,6 @@ contract CuratedModule is ICuratedModule, BaseModule {
 
         (allocated, operatorIds, allocations) = CuratedDepositAllocator.allocateTopUps({
             $: $,
-            curated: _curatedStorage(),
             allocationAmount: maxDepositAmount,
             operatorIds: allOperatorIds
         });
@@ -292,7 +284,6 @@ contract CuratedModule is ICuratedModule, BaseModule {
         BaseModuleStorage storage $ = _baseStorage();
         allocations = CuratedDepositAllocator.allocateAndDistributeTopUps({
             $: $,
-            curated: _curatedStorage(),
             allocationAmount: maxDepositAmount,
             operatorIds: operatorIds,
             topUpLimits: topUpLimits
@@ -323,21 +314,5 @@ contract CuratedModule is ICuratedModule, BaseModule {
         if (msg.sender != address(_accounting()) && msg.sender != address(_metaRegistry())) {
             revert SenderIsNotEligible();
         }
-    }
-
-    function _curatedStorage() internal pure returns (CuratedModuleStorage storage $) {
-        assembly ("memory-safe") {
-            // Bind the struct to CuratedModule's isolated ERC-7201 namespace.
-            $.slot := CURATED_MODULE_STORAGE_LOCATION
-        }
-    }
-
-    function _setTopUpAllocationEnabled(uint256 nodeOperatorId, bool enabled) private {
-        CuratedModuleStorage storage $ = _curatedStorage();
-        if ($.topUpAllocationEnabled[nodeOperatorId] == enabled) revert TopUpAllocationStateUnchanged();
-        $.topUpAllocationEnabled[nodeOperatorId] = enabled;
-        if (enabled) emit TopUpAllocationEnabled(nodeOperatorId);
-        else emit TopUpAllocationDisabled(nodeOperatorId);
-        _incrementModuleNonce();
     }
 }

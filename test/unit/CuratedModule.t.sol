@@ -453,7 +453,7 @@ contract CuratedDisableTopUpAllocation is CuratedCommon {
         cm.disableTopUpAllocation(noId);
 
         assertFalse(cm.isTopUpAllocationEnabled(noId));
-        assertEq(cm.getNonce(), nonceBefore + 1);
+        assertEq(cm.getNonce(), nonceBefore);
     }
 
     function test_disableTopUpAllocation_extendedManagerPermissions() public assertInvariants {
@@ -502,7 +502,7 @@ contract CuratedEnableTopUpAllocation is CuratedCommon {
         cm.enableTopUpAllocation(noId);
 
         assertTrue(cm.isTopUpAllocationEnabled(noId));
-        assertEq(cm.getNonce(), nonceBefore + 1);
+        assertEq(cm.getNonce(), nonceBefore);
     }
 
     function test_enableTopUpAllocation_modulePaused() public assertInvariants {
@@ -844,6 +844,7 @@ contract CuratedAllocateDeposits is CuratedCommon {
     function test_allocateDeposits_singleKey_fullAllocation() public assertInvariants {
         uint256 noId = createNodeOperator(1);
         module.obtainDepositData(1, "");
+        uint256 nonceBefore = module.getNonce();
 
         bytes memory key = module.getSigningKeys(noId, 0, 1);
         uint256 limitWei = 8 ether;
@@ -860,6 +861,7 @@ contract CuratedAllocateDeposits is CuratedCommon {
         assertEq(allocations[0], 6 ether);
         assertEq(cm.getNodeOperatorBalance(noId), ValidatorBalanceLimits.MIN_ACTIVATION_BALANCE + 6 ether);
         assertEq(module.getTotalModuleStake(), ValidatorBalanceLimits.MIN_ACTIVATION_BALANCE + 6 ether);
+        assertEq(module.getNonce(), nonceBefore);
     }
 
     function test_allocateDeposits_updatesOperatorBalances() public assertInvariants {
@@ -1508,7 +1510,7 @@ contract CuratedAllocateDeposits is CuratedCommon {
         uint256[] memory allocations = cm.allocateDeposits(1 ether, new bytes[](0), UintArr(), UintArr(), UintArr());
 
         assertEq(allocations.length, 0);
-        assertEq(module.getNonce(), nonce + 1);
+        assertEq(module.getNonce(), nonce);
     }
 
     function test_allocateDeposits_allZeroWeightsReturnsZeroAllocations() public assertInvariants {
@@ -1878,11 +1880,6 @@ contract CuratedIsTopUpAllocationEnabled is CuratedCommon {
         uint256 noId = createNodeOperator();
 
         assertFalse(cm.isTopUpAllocationEnabled(noId));
-    }
-
-    function test_isTopUpAllocationEnabled_revertWhen_NodeOperatorDoesNotExist() public {
-        vm.expectRevert(IBaseModule.NodeOperatorDoesNotExist.selector);
-        cm.isTopUpAllocationEnabled(0);
     }
 }
 
