@@ -64,7 +64,7 @@ contract CuratedV2UpgradeTest is Test, DeploymentFixtures {
             NodeOperator memory no = module.getNodeOperator(noId);
 
             vm.selectFork(forkIdAfterUpgrade);
-            assertEq(cm.isTopUpAllocationPaused(noId), no.totalDepositedKeys <= no.totalWithdrawnKeys);
+            assertEq(cm.isTopUpAllocationEnabled(noId), no.totalDepositedKeys > no.totalWithdrawnKeys);
         }
     }
 

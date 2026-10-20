@@ -37,10 +37,10 @@ contract ModuleDeploymentTest is DeploymentBaseTest {
     }
 
     function test_roles_onlyFull() public view {
-        bytes32 topUpRole = curatedModule.RESUME_TOP_UP_ALLOCATION_ROLE();
+        bytes32 topUpRole = curatedModule.ENABLE_TOP_UP_ALLOCATION_ROLE();
         assertEq(module.getRoleMemberCount(topUpRole), 1, "unexpected top-up allocation role members count");
-        assertTrue(deployParams.topUpAllocationResumer != address(0), "missing top-up allocation resumer");
-        assertTrue(module.hasRole(topUpRole, deployParams.topUpAllocationResumer), "missing top-up allocation role");
+        assertTrue(deployParams.topUpAllocationEnabler != address(0), "missing top-up allocation enabler");
+        assertTrue(module.hasRole(topUpRole, deployParams.topUpAllocationEnabler), "missing top-up allocation role");
 
         bytes32 role = module.CREATE_NODE_OPERATOR_ROLE();
         uint256 gatesCount = curatedGates.length;

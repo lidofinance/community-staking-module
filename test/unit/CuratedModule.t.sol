@@ -102,7 +102,7 @@ contract CuratedCommon is ModuleFixtures {
 
     function _setupRolesForTests() internal virtual {
         vm.startPrank(admin);
-        module.grantRole(cm.RESUME_TOP_UP_ALLOCATION_ROLE(), address(this));
+        module.grantRole(cm.ENABLE_TOP_UP_ALLOCATION_ROLE(), address(this));
         module.grantRole(module.CREATE_NODE_OPERATOR_ROLE(), address(this));
         module.grantRole(module.PAUSE_ROLE(), address(this));
         module.grantRole(module.RESUME_ROLE(), address(this));
@@ -180,8 +180,8 @@ contract CuratedCommon is ModuleFixtures {
         uint256 deltaWei = targetBalanceWei - currentBalanceWei;
         if (deltaWei == 0) return;
 
-        if (cm.isTopUpAllocationPaused(nodeOperatorId)) {
-            cm.resumeTopUpAllocation(nodeOperatorId);
+        if (!cm.isTopUpAllocationEnabled(nodeOperatorId)) {
+            cm.enableTopUpAllocation(nodeOperatorId);
         }
         bytes memory key = module.getSigningKeys(nodeOperatorId, keyIndex, 1);
         cm.allocateDeposits(deltaWei, BytesArr(key), UintArr(keyIndex), UintArr(nodeOperatorId), UintArr(deltaWei));
@@ -364,14 +364,14 @@ contract CuratedFinalizeUpgradeV2 is CuratedCommon {
         uint256 nonceBefore = cm.getNonce();
 
         vm.expectEmit(address(module));
-        emit ICuratedModule.TopUpAllocationPauseSet(firstId, false);
+        emit ICuratedModule.TopUpAllocationEnabled(firstId);
         vm.expectEmit(address(module));
-        emit ICuratedModule.TopUpAllocationPauseSet(secondId, false);
+        emit ICuratedModule.TopUpAllocationEnabled(secondId);
         cm.finalizeUpgradeV2();
 
         assertEq(module.getInitializedVersion(), 2);
-        assertFalse(cm.isTopUpAllocationPaused(firstId));
-        assertFalse(cm.isTopUpAllocationPaused(secondId));
+        assertTrue(cm.isTopUpAllocationEnabled(firstId));
+        assertTrue(cm.isTopUpAllocationEnabled(secondId));
         assertEq(cm.getNonce(), nonceBefore + 1);
     }
 
@@ -382,7 +382,7 @@ contract CuratedFinalizeUpgradeV2 is CuratedCommon {
 
         cm.finalizeUpgradeV2();
 
-        assertFalse(cm.isTopUpAllocationPaused(noId));
+        assertTrue(cm.isTopUpAllocationEnabled(noId));
     }
 
     function test_finalizeUpgradeV2_allKeysWithdrawn() public assertInvariants {
@@ -390,11 +390,11 @@ contract CuratedFinalizeUpgradeV2 is CuratedCommon {
         module.obtainDepositData(1, "");
         withdrawKey(noId, 0);
 
-        assertTrue(cm.isTopUpAllocationPaused(noId));
+        assertFalse(cm.isTopUpAllocationEnabled(noId));
 
         cm.finalizeUpgradeV2();
 
-        assertTrue(cm.isTopUpAllocationPaused(noId));
+        assertFalse(cm.isTopUpAllocationEnabled(noId));
     }
 
     function test_finalizeUpgradeV2_zeroWeight() public assertInvariants {
@@ -404,14 +404,14 @@ contract CuratedFinalizeUpgradeV2 is CuratedCommon {
 
         cm.finalizeUpgradeV2();
 
-        assertFalse(cm.isTopUpAllocationPaused(noId));
+        assertTrue(cm.isTopUpAllocationEnabled(noId));
     }
 
-    function test_finalizeUpgradeV2_newOperatorPaused() public assertInvariants {
+    function test_finalizeUpgradeV2_newOperatorDisabled() public assertInvariants {
         cm.finalizeUpgradeV2();
 
         uint256 noId = createNodeOperator();
-        assertTrue(cm.isTopUpAllocationPaused(noId));
+        assertFalse(cm.isTopUpAllocationEnabled(noId));
     }
 
     function test_finalizeUpgradeV2_noActiveKeys() public assertInvariants {
@@ -419,13 +419,13 @@ contract CuratedFinalizeUpgradeV2 is CuratedCommon {
         uint256 emptyId = createNodeOperator(0);
         uint256 nonceBefore = cm.getNonce();
 
-        assertTrue(cm.isTopUpAllocationPaused(pendingId));
-        assertTrue(cm.isTopUpAllocationPaused(emptyId));
+        assertFalse(cm.isTopUpAllocationEnabled(pendingId));
+        assertFalse(cm.isTopUpAllocationEnabled(emptyId));
 
         cm.finalizeUpgradeV2();
 
-        assertTrue(cm.isTopUpAllocationPaused(pendingId));
-        assertTrue(cm.isTopUpAllocationPaused(emptyId));
+        assertFalse(cm.isTopUpAllocationEnabled(pendingId));
+        assertFalse(cm.isTopUpAllocationEnabled(emptyId));
         assertEq(cm.getNonce(), nonceBefore + 1);
     }
 
@@ -441,90 +441,90 @@ contract CuratedPauseTest is ModulePauseTest, CuratedCommon {}
 
 contract CuratedPauseAffectingTest is ModulePauseAffectingTest, CuratedCommon {}
 
-contract CuratedPauseTopUpAllocation is CuratedCommon {
-    function test_pauseTopUpAllocation() public assertInvariants {
+contract CuratedDisableTopUpAllocation is CuratedCommon {
+    function test_disableTopUpAllocation() public assertInvariants {
         uint256 noId = createNodeOperator(nodeOperator, stranger, false);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
         uint256 nonceBefore = cm.getNonce();
 
         vm.expectEmit(address(module));
-        emit ICuratedModule.TopUpAllocationPauseSet(noId, true);
+        emit ICuratedModule.TopUpAllocationDisabled(noId);
         vm.prank(stranger);
-        cm.pauseTopUpAllocation(noId);
+        cm.disableTopUpAllocation(noId);
 
-        assertTrue(cm.isTopUpAllocationPaused(noId));
+        assertFalse(cm.isTopUpAllocationEnabled(noId));
         assertEq(cm.getNonce(), nonceBefore + 1);
     }
 
-    function test_pauseTopUpAllocation_extendedManagerPermissions() public assertInvariants {
+    function test_disableTopUpAllocation_extendedManagerPermissions() public assertInvariants {
         uint256 noId = createNodeOperator(nodeOperator, stranger, true);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
 
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(noId);
+        cm.disableTopUpAllocation(noId);
 
-        assertTrue(cm.isTopUpAllocationPaused(noId));
+        assertFalse(cm.isTopUpAllocationEnabled(noId));
     }
 
-    function test_pauseTopUpAllocation_modulePaused() public assertInvariants {
+    function test_disableTopUpAllocation_modulePaused() public assertInvariants {
         uint256 noId = createNodeOperator();
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
         module.pauseFor(1 days);
 
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(noId);
+        cm.disableTopUpAllocation(noId);
 
-        assertTrue(cm.isTopUpAllocationPaused(noId));
+        assertFalse(cm.isTopUpAllocationEnabled(noId));
     }
 
-    function test_pauseTopUpAllocation_revertWhen_NodeOperatorDoesNotExist() public {
+    function test_disableTopUpAllocation_revertWhen_NodeOperatorDoesNotExist() public {
         vm.expectRevert(IBaseModule.NodeOperatorDoesNotExist.selector);
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(0);
+        cm.disableTopUpAllocation(0);
     }
 
-    function test_pauseTopUpAllocation_revertWhen_AlreadyPaused() public {
+    function test_disableTopUpAllocation_revertWhen_AlreadyDisabled() public {
         uint256 noId = createNodeOperator();
 
-        vm.expectRevert(ICuratedModule.TopUpAllocationPauseUnchanged.selector);
+        vm.expectRevert(ICuratedModule.TopUpAllocationStateUnchanged.selector);
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(noId);
+        cm.disableTopUpAllocation(noId);
     }
 }
 
-contract CuratedResumeTopUpAllocation is CuratedCommon {
-    function test_resumeTopUpAllocation() public assertInvariants {
+contract CuratedEnableTopUpAllocation is CuratedCommon {
+    function test_enableTopUpAllocation() public assertInvariants {
         uint256 noId = createNodeOperator(0);
         uint256 nonceBefore = cm.getNonce();
 
         vm.expectEmit(address(module));
-        emit ICuratedModule.TopUpAllocationPauseSet(noId, false);
-        cm.resumeTopUpAllocation(noId);
+        emit ICuratedModule.TopUpAllocationEnabled(noId);
+        cm.enableTopUpAllocation(noId);
 
-        assertFalse(cm.isTopUpAllocationPaused(noId));
+        assertTrue(cm.isTopUpAllocationEnabled(noId));
         assertEq(cm.getNonce(), nonceBefore + 1);
     }
 
-    function test_resumeTopUpAllocation_modulePaused() public assertInvariants {
+    function test_enableTopUpAllocation_modulePaused() public assertInvariants {
         uint256 noId = createNodeOperator();
         module.pauseFor(1 days);
 
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
 
-        assertFalse(cm.isTopUpAllocationPaused(noId));
+        assertTrue(cm.isTopUpAllocationEnabled(noId));
     }
 
-    function test_resumeTopUpAllocation_revertWhen_NodeOperatorDoesNotExist() public {
+    function test_enableTopUpAllocation_revertWhen_NodeOperatorDoesNotExist() public {
         vm.expectRevert(IBaseModule.NodeOperatorDoesNotExist.selector);
-        cm.resumeTopUpAllocation(0);
+        cm.enableTopUpAllocation(0);
     }
 
-    function test_resumeTopUpAllocation_revertWhen_AlreadyUnpaused() public {
+    function test_enableTopUpAllocation_revertWhen_AlreadyEnabled() public {
         uint256 noId = createNodeOperator();
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
 
-        vm.expectRevert(ICuratedModule.TopUpAllocationPauseUnchanged.selector);
-        cm.resumeTopUpAllocation(noId);
+        vm.expectRevert(ICuratedModule.TopUpAllocationStateUnchanged.selector);
+        cm.enableTopUpAllocation(noId);
     }
 }
 
@@ -569,17 +569,17 @@ contract CuratedObtainDepositData is ModuleObtainDepositData, CuratedCommon {
         assertEq(firstBalance + secondBalance, ValidatorBalanceLimits.MIN_ACTIVATION_BALANCE);
     }
 
-    function test_obtainDepositData_topUpAllocationPaused() public assertInvariants {
+    function test_obtainDepositData_topUpAllocationDisabled() public assertInvariants {
         uint256 firstId = createNodeOperator(2);
         uint256 secondId = createNodeOperator(2);
-        cm.resumeTopUpAllocation(firstId);
+        cm.enableTopUpAllocation(firstId);
         module.obtainDepositData(2, "");
 
         assertEq(module.getNodeOperator(firstId).depositableValidatorsCount, 1);
         assertEq(module.getNodeOperator(secondId).depositableValidatorsCount, 1);
 
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(firstId);
+        cm.disableTopUpAllocation(firstId);
 
         assertEq(module.getNodeOperator(firstId).depositableValidatorsCount, 1);
         assertEq(module.getNodeOperator(secondId).depositableValidatorsCount, 1);
@@ -817,7 +817,7 @@ contract CuratedObtainDepositData is ModuleObtainDepositData, CuratedCommon {
 }
 
 contract CuratedAllocateDeposits is CuratedCommon {
-    function test_allocateDeposits_defaultPausedUntilCommitteeResumes() public assertInvariants {
+    function test_allocateDeposits_disabledUntilCommitteeEnables() public assertInvariants {
         uint256 noId = super.createNodeOperator(nodeOperator, false);
         uploadMoreKeys(noId, 1);
         module.obtainDepositData(1, "");
@@ -836,7 +836,7 @@ contract CuratedAllocateDeposits is CuratedCommon {
         );
         assertEq(allocations, UintArr(0));
 
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
         allocations = cm.allocateDeposits(10 ether, BytesArr(key), UintArr(0), UintArr(noId), UintArr(10 ether));
         assertEq(allocations, UintArr(10 ether));
     }
@@ -929,13 +929,13 @@ contract CuratedAllocateDeposits is CuratedCommon {
         assertEq(allocations[0], 2 ether);
     }
 
-    function test_allocateDeposits_pausedOperatorPreservesGlobalShareBaseline() public assertInvariants {
+    function test_allocateDeposits_disabledOperatorPreservesGlobalShareBaseline() public assertInvariants {
         uint256 firstId = createNodeOperator(1);
-        uint256 pausedId = createNodeOperator(1);
+        uint256 disabledId = createNodeOperator(1);
         createNodeOperator(1);
         module.obtainDepositData(3, "");
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(pausedId);
+        cm.disableTopUpAllocation(disabledId);
 
         uint256[] memory allocations = cm.allocateDeposits(
             8 ether,
@@ -1253,7 +1253,10 @@ contract CuratedAllocateDeposits is CuratedCommon {
         }
     }
 
-    function testFuzz_allocateDeposits_pauseMatchesPreview(uint256 budget, uint8 pauseMask) public assertInvariants {
+    function testFuzz_allocateDeposits_disableMatchesPreview(
+        uint256 budget,
+        uint8 disableMask
+    ) public assertInvariants {
         uint256 firstId = createNodeOperator(1);
         uint256 secondId = createNodeOperator(1);
         uint256 fullId = createNodeOperator(1);
@@ -1266,11 +1269,11 @@ contract CuratedAllocateDeposits is CuratedCommon {
         _mockOperatorWeightAndExternalStake(firstId, 1, 128 ether);
         _mockOperatorWeightAndExternalStake(secondId, 2, 32 ether);
         _mockOperatorWeight(fullId, 3);
-        pauseMask = uint8(bound(pauseMask, 0, 7));
+        disableMask = uint8(bound(disableMask, 0, 7));
         for (uint256 i; i < 3; ++i) {
-            if ((pauseMask & (1 << i)) != 0) {
+            if ((disableMask & (1 << i)) != 0) {
                 vm.prank(nodeOperator);
-                cm.pauseTopUpAllocation(i);
+                cm.disableTopUpAllocation(i);
             }
         }
         budget = bound(budget, 1, 6000 ether);
@@ -1278,12 +1281,12 @@ contract CuratedAllocateDeposits is CuratedCommon {
         (uint256 allocated, uint256[] memory ids, uint256[] memory amounts) = cm.getDepositsAllocation(budget);
         uint256[] memory expected = new uint256[](3);
         for (uint256 i; i < ids.length; ++i) {
-            assertFalse(cm.isTopUpAllocationPaused(ids[i]));
+            assertTrue(cm.isTopUpAllocationEnabled(ids[i]));
             expected[ids[i]] = amounts[i];
         }
         uint256 stakeBefore = module.getTotalModuleStake();
         assertEq(cm.getNodeOperatorBalance(fullId), 2048 ether);
-        // Submit every key with sufficient limits: only module capacity and the pause flags constrain allocation.
+        // Submit every key with sufficient limits: only module capacity and the enable flags constrain allocation.
         uint256[] memory actual = cm.allocateDeposits(
             budget,
             BytesArr(
@@ -1385,14 +1388,14 @@ contract CuratedAllocateDeposits is CuratedCommon {
         assertEq(allocs.length, 0);
     }
 
-    function test_getDepositsAllocation_allPausedReturnsEmpty() public assertInvariants {
+    function test_getDepositsAllocation_allDisabledReturnsEmpty() public assertInvariants {
         uint256 firstId = createNodeOperator(1);
         uint256 secondId = createNodeOperator(1);
         module.obtainDepositData(2, "");
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(firstId);
+        cm.disableTopUpAllocation(firstId);
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(secondId);
+        cm.disableTopUpAllocation(secondId);
 
         (uint256 allocated, uint256[] memory operatorIds, uint256[] memory allocations) = cm.getDepositsAllocation(
             100 ether
@@ -1530,14 +1533,14 @@ contract CuratedAllocateDeposits is CuratedCommon {
         assertEq(allocations[1], 0);
     }
 
-    function test_allocateDeposits_allPausedReturnsZeroAllocations() public assertInvariants {
+    function test_allocateDeposits_allDisabledReturnsZeroAllocations() public assertInvariants {
         uint256 firstId = createNodeOperator(1);
         uint256 secondId = createNodeOperator(1);
         module.obtainDepositData(2, "");
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(firstId);
+        cm.disableTopUpAllocation(firstId);
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(secondId);
+        cm.disableTopUpAllocation(secondId);
 
         uint256[] memory allocations = cm.allocateDeposits(
             100 ether,
@@ -1593,32 +1596,32 @@ contract CuratedAllocateDeposits is CuratedCommon {
         assertEq(allocations[1], 2 ether);
     }
 
-    function test_allocateDeposits_pausedKeysReceiveZeroInMixedBatch() public assertInvariants {
-        uint256 pausedId = createNodeOperator(1);
+    function test_allocateDeposits_disabledKeysReceiveZeroInMixedBatch() public assertInvariants {
+        uint256 disabledId = createNodeOperator(1);
         uint256 readyId = createNodeOperator(2);
         module.obtainDepositData(3, "");
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(pausedId);
+        cm.disableTopUpAllocation(disabledId);
 
-        assertEq(cm.getNodeOperatorBalance(pausedId), 32 ether);
+        assertEq(cm.getNodeOperatorBalance(disabledId), 32 ether);
 
         uint256[] memory allocations = cm.allocateDeposits(
             10 ether,
             BytesArr(
                 module.getSigningKeys(readyId, 0, 1),
-                module.getSigningKeys(pausedId, 0, 1),
+                module.getSigningKeys(disabledId, 0, 1),
                 module.getSigningKeys(readyId, 1, 1)
             ),
             UintArr(0, 0, 1),
-            UintArr(readyId, pausedId, readyId),
+            UintArr(readyId, disabledId, readyId),
             UintArr(3 ether, 10 ether, 10 ether)
         );
         assertEq(allocations, UintArr(2 ether, 0, 8 ether));
-        assertEq(cm.getNodeOperatorBalance(pausedId), 32 ether);
+        assertEq(cm.getNodeOperatorBalance(disabledId), 32 ether);
         assertEq(cm.getNodeOperatorBalance(readyId), 74 ether);
     }
 
-    function test_allocateDeposits_pausedOperatorExcludedFromBaseline() public assertInvariants {
+    function test_allocateDeposits_disabledOperatorExcludedFromBaseline() public assertInvariants {
         uint256 readyId = createNodeOperator(2);
         uint256 pendingId = createNodeOperator(2);
         module.obtainDepositData(4, "");
@@ -1646,7 +1649,7 @@ contract CuratedAllocateDeposits is CuratedCommon {
         assertEq(cm.getNodeOperatorBalance(pendingId), 64 ether);
 
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(pendingId);
+        cm.disableTopUpAllocation(pendingId);
         (, ids, amounts) = cm.getDepositsAllocation(3200 ether);
         assertEq(ids, UintArr(readyId));
         assertEq(amounts, UintArr(96 ether));
@@ -1662,13 +1665,13 @@ contract CuratedAllocateDeposits is CuratedCommon {
         assertEq(module.getTotalModuleStake(), 4156 ether);
     }
 
-    function test_allocateDeposits_resumedOperatorReceivesAllocation() public assertInvariants {
+    function test_allocateDeposits_enabledOperatorReceivesAllocation() public assertInvariants {
         uint256 firstId = createNodeOperator(1);
         uint256 secondId = createNodeOperator(1);
         module.obtainDepositData(2, "");
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(firstId);
-        cm.resumeTopUpAllocation(firstId);
+        cm.disableTopUpAllocation(firstId);
+        cm.enableTopUpAllocation(firstId);
         bytes memory key0 = module.getSigningKeys(firstId, 0, 1);
         bytes memory key1 = module.getSigningKeys(secondId, 0, 1);
 
@@ -1683,16 +1686,16 @@ contract CuratedAllocateDeposits is CuratedCommon {
         assertEq(allocations, UintArr(2 ether, 2 ether));
     }
 
-    function testFuzz_allocateDeposits_pausedWeightAndStakeDoNotAffectAllocation(
+    function testFuzz_allocateDeposits_disabledWeightAndStakeDoNotAffectAllocation(
         uint256 weight,
         uint256 externalStake,
         uint256 budget
     ) public assertInvariants {
-        uint256 pausedId = createNodeOperator(1);
+        uint256 disabledId = createNodeOperator(1);
         uint256 readyId = createNodeOperator(1);
         module.obtainDepositData(2, "");
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(pausedId);
+        cm.disableTopUpAllocation(disabledId);
         budget = bound(budget, 0, 3000 ether);
         uint256 expected = budget < 2016 ether ? budget : 2016 ether;
         expected -= expected % 2 ether;
@@ -1700,7 +1703,7 @@ contract CuratedAllocateDeposits is CuratedCommon {
         (uint256 allocated, , ) = cm.getDepositsAllocation(budget);
         assertEq(allocated, expected);
 
-        _mockOperatorWeightAndExternalStake(pausedId, bound(weight, 1, 1e18), bound(externalStake, 0, 1e12 ether));
+        _mockOperatorWeightAndExternalStake(disabledId, bound(weight, 1, 1e18), bound(externalStake, 0, 1e12 ether));
 
         (allocated, , ) = cm.getDepositsAllocation(budget);
         assertEq(allocated, expected);
@@ -1866,20 +1869,20 @@ contract CuratedAllocateDeposits is CuratedCommon {
         bool extendedManagerPermissions
     ) internal override returns (uint256 noId) {
         noId = super.createNodeOperator(managerAddress, extendedManagerPermissions);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
     }
 }
 
-contract CuratedIsTopUpAllocationPaused is CuratedCommon {
-    function test_isTopUpAllocationPaused_default() public assertInvariants {
+contract CuratedIsTopUpAllocationEnabled is CuratedCommon {
+    function test_isTopUpAllocationEnabled_default() public assertInvariants {
         uint256 noId = createNodeOperator();
 
-        assertTrue(cm.isTopUpAllocationPaused(noId));
+        assertFalse(cm.isTopUpAllocationEnabled(noId));
     }
 
-    function test_isTopUpAllocationPaused_revertWhen_NodeOperatorDoesNotExist() public {
+    function test_isTopUpAllocationEnabled_revertWhen_NodeOperatorDoesNotExist() public {
         vm.expectRevert(IBaseModule.NodeOperatorDoesNotExist.selector);
-        cm.isTopUpAllocationPaused(0);
+        cm.isTopUpAllocationEnabled(0);
     }
 }
 
@@ -1936,9 +1939,9 @@ contract CuratedGetNodeOperatorWeightAndExternalStake is CuratedCommon {
         assertEq(externalStake, 7 ether);
     }
 
-    function test_getNodeOperatorWeightAndExternalStake_topUpAllocationPaused() public assertInvariants {
+    function test_getNodeOperatorWeightAndExternalStake_topUpAllocationDisabled() public assertInvariants {
         uint256 noId = createNodeOperator(1);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
         _mockOperatorWeightAndExternalStake(noId, 3, 2048 ether);
 
         (uint256 weight, uint256 externalStake) = cm.getNodeOperatorWeightAndExternalStake(noId);
@@ -1946,7 +1949,7 @@ contract CuratedGetNodeOperatorWeightAndExternalStake is CuratedCommon {
         assertEq(externalStake, 2048 ether);
 
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(noId);
+        cm.disableTopUpAllocation(noId);
 
         (weight, externalStake) = cm.getNodeOperatorWeightAndExternalStake(noId);
         assertEq(weight, 3);
@@ -2020,10 +2023,10 @@ contract CuratedGetDepositAllocationTargets is CuratedCommon {
         assertEq(targets[secondId], 3);
     }
 
-    function test_getDepositAllocationTargets_topUpAllocationPaused() public assertInvariants {
+    function test_getDepositAllocationTargets_topUpAllocationDisabled() public assertInvariants {
         uint256 firstId = createNodeOperator(2);
         createNodeOperator(2);
-        cm.resumeTopUpAllocation(firstId);
+        cm.enableTopUpAllocation(firstId);
         module.obtainDepositData(2, "");
         _mockOperatorWeightAndExternalStake(firstId, 3, 2048 ether);
 
@@ -2032,7 +2035,7 @@ contract CuratedGetDepositAllocationTargets is CuratedCommon {
         assertEq(targets, UintArr(2, 0));
 
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(firstId);
+        cm.disableTopUpAllocation(firstId);
 
         (currents, targets) = cm.getDepositAllocationTargets();
         assertEq(currents, UintArr(2, 1));
@@ -2158,7 +2161,7 @@ contract CuratedGetTopUpAllocationTargets is CuratedCommon {
         assertEq(targets[secondId], 48 ether);
     }
 
-    function test_getTopUpAllocationTargets_allocationPauseDoesNotChangeTargets() public assertInvariants {
+    function test_getTopUpAllocationTargets_disablingAllocationDoesNotChangeTargets() public assertInvariants {
         uint256 firstId = createNodeOperator(1);
         createNodeOperator(1);
         module.obtainDepositData(2, "");
@@ -2168,13 +2171,13 @@ contract CuratedGetTopUpAllocationTargets is CuratedCommon {
         assertEq(currents, UintArr(2080 ether, 32 ether));
         assertEq(targets, UintArr(1584 ether, 528 ether));
 
-        cm.resumeTopUpAllocation(firstId);
+        cm.enableTopUpAllocation(firstId);
         (currents, targets) = cm.getTopUpAllocationTargets();
         assertEq(currents, UintArr(2080 ether, 32 ether));
         assertEq(targets, UintArr(1584 ether, 528 ether));
 
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(firstId);
+        cm.disableTopUpAllocation(firstId);
         (currents, targets) = cm.getTopUpAllocationTargets();
         assertEq(currents, UintArr(2080 ether, 32 ether));
         assertEq(targets, UintArr(1584 ether, 528 ether));
@@ -2224,9 +2227,9 @@ contract CuratedGetTopUpAllocationTargets is CuratedCommon {
 
     function test_getTopUpAllocationTargets_matchesAllocationWhenAllHaveCapacity() public assertInvariants {
         uint256 firstId = createNodeOperator(1);
-        cm.resumeTopUpAllocation(firstId);
+        cm.enableTopUpAllocation(firstId);
         uint256 secondId = createNodeOperator(1);
-        cm.resumeTopUpAllocation(secondId);
+        cm.enableTopUpAllocation(secondId);
         module.obtainDepositData(2, "");
 
         // Equal weights, both at 32 ether → both below 2048 ether capacity.
@@ -2249,9 +2252,9 @@ contract CuratedGetTopUpAllocationTargets is CuratedCommon {
 
     function test_getTopUpAllocationTargets_differsFromAllocationWhenNoCapacity() public assertInvariants {
         uint256 firstId = createNodeOperator(1);
-        cm.resumeTopUpAllocation(firstId);
+        cm.enableTopUpAllocation(firstId);
         uint256 secondId = createNodeOperator(1);
-        cm.resumeTopUpAllocation(secondId);
+        cm.enableTopUpAllocation(secondId);
         module.obtainDepositData(2, "");
 
         // Max out balance for firstId so capacity = 0.
@@ -2354,7 +2357,7 @@ contract CuratedReportWithdrawnValidators is ModuleReportWithdrawnValidators, Cu
         bool extendedManagerPermissions
     ) internal override returns (uint256 noId) {
         noId = super.createNodeOperator(managerAddress, extendedManagerPermissions);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
     }
 }
 
@@ -2363,7 +2366,7 @@ contract CuratedKeyAllocatedBalance is ModuleKeyAllocatedBalance, CuratedCommon 
 contract CuratedReportValidatorBalance is ModuleReportValidatorBalance, CuratedCommon {
     function test_reportValidatorBalance_doesNotDecreaseKeyAllocatedBalance() public {
         uint256 noId = createNodeOperator();
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
         cm.obtainDepositData(1, "");
 
         // Allocate 20 ether via top-up, setting keyAllocatedBalance to 20 ether.
@@ -2384,7 +2387,7 @@ contract CuratedReportValidatorBalance is ModuleReportValidatorBalance, CuratedC
 
     function test_reportValidatorBalance_afterTopUp_increasesStakeOnlyByDelta() public {
         uint256 noId = createNodeOperator();
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
         cm.obtainDepositData(1, "");
 
         bytes memory key = cm.getSigningKeys(noId, 0, 1);
@@ -2410,7 +2413,7 @@ contract CuratedReportValidatorBalance is ModuleReportValidatorBalance, CuratedC
 contract CuratedTopUpKeyAllocatedBalance is CuratedCommon {
     function test_topUp_emitsKeyAllocatedBalanceChanged() public {
         createNodeOperator(1);
-        cm.resumeTopUpAllocation(0);
+        cm.enableTopUpAllocation(0);
         cm.obtainDepositData(1, "");
 
         bytes memory key = cm.getSigningKeys(0, 0, 1);
@@ -2430,7 +2433,7 @@ contract CuratedTopUpKeyAllocatedBalance is CuratedCommon {
 
     function test_topUp_noEmitWhenKeyAtCap() public {
         createNodeOperator(1);
-        cm.resumeTopUpAllocation(0);
+        cm.enableTopUpAllocation(0);
         cm.obtainDepositData(1, "");
 
         setKeyConfirmedBalance(
@@ -2459,7 +2462,7 @@ contract CuratedTopUpKeyAllocatedBalance is CuratedCommon {
 
     function test_topUp_withdrawnKeyGetsZeroAllocation() public {
         uint256 noId = createNodeOperator(1);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
         cm.obtainDepositData(1, "");
 
         WithdrawnValidatorInfo[] memory validatorInfos = new WithdrawnValidatorInfo[](1);
@@ -2489,7 +2492,7 @@ contract CuratedTopUpKeyAllocatedBalance is CuratedCommon {
 
     function test_topUp_slashedKeyGetsZeroAllocation() public {
         uint256 noId = createNodeOperator(1);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
         cm.obtainDepositData(1, "");
 
         cm.reportValidatorSlashing(noId, 0);
@@ -2516,7 +2519,7 @@ contract CuratedTopUpKeyAllocatedBalance is CuratedCommon {
 
     function test_topUp_slashedKeySkippedAmongMixedBatch() public {
         uint256 noId = createNodeOperator(2);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
         cm.obtainDepositData(2, "");
 
         // Slash key 0, leave key 1 intact.
@@ -2542,7 +2545,7 @@ contract CuratedTopUpKeyAllocatedBalance is CuratedCommon {
 
     function test_topUp_duplicateKeySharesRemainingHeadroom() public {
         createNodeOperator(1);
-        cm.resumeTopUpAllocation(0);
+        cm.enableTopUpAllocation(0);
         cm.obtainDepositData(1, "");
 
         uint256 cap = ValidatorBalanceLimits.MAX_EFFECTIVE_BALANCE - ValidatorBalanceLimits.MIN_ACTIVATION_BALANCE;
@@ -2615,7 +2618,7 @@ contract CuratedTotalModuleStake is CuratedCommon {
 
     function test_getTotalModuleStake_tracksTopUps() public {
         uint256 noId = createNodeOperator(1);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
 
         cm.obtainDepositData(1, "");
 
@@ -2633,7 +2636,7 @@ contract CuratedTotalModuleStake is CuratedCommon {
         assertEq(cm.getNodeOperatorBalance(noId), 32 ether + topUpWei);
     }
 
-    function test_getTotalModuleStake_topUpAllocationPaused() public assertInvariants {
+    function test_getTotalModuleStake_topUpAllocationDisabled() public assertInvariants {
         uint256 noId = createNodeOperator(1);
         module.obtainDepositData(1, "");
         _topUpToOperatorBalance(noId, 0, 100 ether);
@@ -2642,7 +2645,7 @@ contract CuratedTotalModuleStake is CuratedCommon {
         assertEq(cm.getNodeOperatorBalance(noId), 100 ether);
 
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(noId);
+        cm.disableTopUpAllocation(noId);
 
         assertEq(module.getTotalModuleStake(), 100 ether);
         assertEq(cm.getNodeOperatorBalance(noId), 100 ether);
@@ -2650,7 +2653,7 @@ contract CuratedTotalModuleStake is CuratedCommon {
 
     function test_getTotalModuleStake_tracksVerifierIncreases() public {
         uint256 noId = createNodeOperator(1);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
 
         cm.obtainDepositData(1, "");
 
@@ -2672,7 +2675,7 @@ contract CuratedTotalModuleStake is CuratedCommon {
 
     function test_getTotalModuleStake_tracksWithdrawals() public {
         uint256 noId = createNodeOperator(1);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
 
         cm.obtainDepositData(1, "");
 
@@ -2705,65 +2708,65 @@ contract CuratedTotalModuleStake is CuratedCommon {
 contract CuratedGetStakingModuleSummary is ModuleGetStakingModuleSummary, CuratedCommon {}
 
 contract CuratedAccessControl is ModuleAccessControl, CuratedCommonNoRoles {
-    function test_pauseTopUpAllocation_RevertWhenNotOwner() public {
+    function test_disableTopUpAllocation_RevertWhenNotOwner() public {
         uint256 noId = createNodeOperator();
 
         vm.expectRevert(IBaseModule.SenderIsNotEligible.selector);
         vm.prank(stranger);
-        cm.pauseTopUpAllocation(noId);
+        cm.disableTopUpAllocation(noId);
     }
 
-    function test_pauseTopUpAllocation_RevertWhenOnlyResumeRole() public {
+    function test_disableTopUpAllocation_RevertWhenOnlyEnableRole() public {
         uint256 noId = createNodeOperator();
-        bytes32 role = cm.RESUME_TOP_UP_ALLOCATION_ROLE();
+        bytes32 role = cm.ENABLE_TOP_UP_ALLOCATION_ROLE();
         vm.prank(admin);
         module.grantRole(role, address(this));
 
         vm.expectRevert(IBaseModule.SenderIsNotEligible.selector);
-        cm.pauseTopUpAllocation(noId);
+        cm.disableTopUpAllocation(noId);
     }
 
-    function test_pauseTopUpAllocation_RevertWhenOnlyManager() public {
+    function test_disableTopUpAllocation_RevertWhenOnlyManager() public {
         uint256 noId = createNodeOperator(nodeOperator, stranger, false);
 
         vm.expectRevert(IBaseModule.SenderIsNotEligible.selector);
         vm.prank(nodeOperator);
-        cm.pauseTopUpAllocation(noId);
+        cm.disableTopUpAllocation(noId);
     }
 
-    function test_pauseTopUpAllocation_RevertWhenRewardAddressWithExtendedManagerPermissions() public {
+    function test_disableTopUpAllocation_RevertWhenRewardAddressWithExtendedManagerPermissions() public {
         uint256 noId = createNodeOperator(nodeOperator, stranger, true);
 
         vm.expectRevert(IBaseModule.SenderIsNotEligible.selector);
         vm.prank(stranger);
-        cm.pauseTopUpAllocation(noId);
+        cm.disableTopUpAllocation(noId);
     }
 
-    function test_resumeTopUpAllocation_RevertWhenNoRole() public {
+    function test_enableTopUpAllocation_RevertWhenNoRole() public {
         uint256 noId = createNodeOperator();
-        bytes32 role = cm.RESUME_TOP_UP_ALLOCATION_ROLE();
+        bytes32 role = cm.ENABLE_TOP_UP_ALLOCATION_ROLE();
 
         expectRoleRevert(stranger, role);
         vm.prank(stranger);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
     }
 
-    function test_resumeTopUpAllocation_RevertWhenOnlyOwner() public {
+    function test_enableTopUpAllocation_RevertWhenOnlyOwner() public {
         uint256 noId = createNodeOperator();
-        bytes32 role = cm.RESUME_TOP_UP_ALLOCATION_ROLE();
+        bytes32 role = cm.ENABLE_TOP_UP_ALLOCATION_ROLE();
 
         expectRoleRevert(nodeOperator, role);
         vm.prank(nodeOperator);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
     }
 
-    function test_resumeTopUpAllocation_RevertWhenOnlyAdminRole() public {
+    function test_enableTopUpAllocation_RevertWhenOnlyAdminRole() public {
         uint256 noId = createNodeOperator();
-        bytes32 role = cm.RESUME_TOP_UP_ALLOCATION_ROLE();
+        bytes32 role = cm.ENABLE_TOP_UP_ALLOCATION_ROLE();
 
         expectRoleRevert(admin, role);
         vm.prank(admin);
-        cm.resumeTopUpAllocation(noId);
+        cm.enableTopUpAllocation(noId);
     }
 }
 

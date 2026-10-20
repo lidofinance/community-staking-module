@@ -488,7 +488,7 @@ contract DeploymentHelpers is Asserts {
         // Module
         dst.moduleType = src.moduleType;
         dst.generalDelayedPenaltyReporter = src.generalDelayedPenaltyReporter;
-        dst.topUpAllocationResumer = src.topUpAllocationResumer;
+        dst.topUpAllocationEnabler = src.topUpAllocationEnabler;
 
         // ParametersRegistry
         dst.queueLowestPriority = src.queueLowestPriority;
@@ -1234,10 +1234,10 @@ contract CuratedIntegrationHelpers is ForkIntegrationHelpersBase {
         (noId, keyIndex) = this.getDepositedNodeOperatorWithSequentialActiveKeys(nodeOperatorAddress, 1);
         if (module.getInitializedVersion() >= 2) {
             ICuratedModule cm = ICuratedModule(address(module));
-            if (cm.isTopUpAllocationPaused(noId)) {
-                address resumer = module.getRoleMember(cm.RESUME_TOP_UP_ALLOCATION_ROLE(), 0);
-                vm.prank(resumer);
-                cm.resumeTopUpAllocation(noId);
+            if (!cm.isTopUpAllocationEnabled(noId)) {
+                address enabler = module.getRoleMember(cm.ENABLE_TOP_UP_ALLOCATION_ROLE(), 0);
+                vm.prank(enabler);
+                cm.enableTopUpAllocation(noId);
             }
         }
         pubkey = module.getSigningKeys(noId, keyIndex, 1);

@@ -22,7 +22,7 @@ contract CuratedModule is ICuratedModule, BaseModule {
     }
 
     /// @inheritdoc ICuratedModule
-    bytes32 public constant RESUME_TOP_UP_ALLOCATION_ROLE = keccak256("RESUME_TOP_UP_ALLOCATION_ROLE");
+    bytes32 public constant ENABLE_TOP_UP_ALLOCATION_ROLE = keccak256("ENABLE_TOP_UP_ALLOCATION_ROLE");
 
     // keccak256(abi.encode(uint256(keccak256("CuratedModule")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant CURATED_MODULE_STORAGE_LOCATION =
@@ -58,29 +58,29 @@ contract CuratedModule is ICuratedModule, BaseModule {
         CuratedModuleStorage storage curated = _curatedStorage();
         for (uint256 i; i < $.nodeOperatorsCount; ++i) {
             NodeOperator storage no = $.nodeOperators[i];
-            if (no.totalDepositedKeys <= no.totalWithdrawnKeys) continue;
+            if (no.totalDepositedKeys == no.totalWithdrawnKeys) continue;
             curated.topUpAllocationEnabled[i] = true;
-            emit TopUpAllocationPauseSet(i, false);
+            emit TopUpAllocationEnabled(i);
         }
 
         _incrementModuleNonce();
     }
 
     /// @inheritdoc ICuratedModule
-    function pauseTopUpAllocation(uint256 nodeOperatorId) external {
+    function disableTopUpAllocation(uint256 nodeOperatorId) external {
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _baseStorage().nodeOperators[nodeOperatorId];
         if (msg.sender != (no.extendedManagerPermissions ? no.managerAddress : no.rewardAddress)) {
             revert SenderIsNotEligible();
         }
-        _setTopUpAllocationPaused(nodeOperatorId, true);
+        _setTopUpAllocationEnabled(nodeOperatorId, false);
     }
 
     /// @inheritdoc ICuratedModule
-    function resumeTopUpAllocation(uint256 nodeOperatorId) external {
-        _checkRole(RESUME_TOP_UP_ALLOCATION_ROLE);
+    function enableTopUpAllocation(uint256 nodeOperatorId) external {
+        _checkRole(ENABLE_TOP_UP_ALLOCATION_ROLE);
         _onlyExistingNodeOperator(nodeOperatorId);
-        _setTopUpAllocationPaused(nodeOperatorId, false);
+        _setTopUpAllocationEnabled(nodeOperatorId, true);
     }
 
     /// @inheritdoc IStakingModule
@@ -195,9 +195,9 @@ contract CuratedModule is ICuratedModule, BaseModule {
     }
 
     /// @inheritdoc ICuratedModule
-    function isTopUpAllocationPaused(uint256 nodeOperatorId) external view returns (bool paused) {
+    function isTopUpAllocationEnabled(uint256 nodeOperatorId) external view returns (bool enabled) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        return !_curatedStorage().topUpAllocationEnabled[nodeOperatorId];
+        return _curatedStorage().topUpAllocationEnabled[nodeOperatorId];
     }
 
     /// @inheritdoc ICuratedModule
@@ -332,11 +332,12 @@ contract CuratedModule is ICuratedModule, BaseModule {
         }
     }
 
-    function _setTopUpAllocationPaused(uint256 nodeOperatorId, bool paused) private {
+    function _setTopUpAllocationEnabled(uint256 nodeOperatorId, bool enabled) private {
         CuratedModuleStorage storage $ = _curatedStorage();
-        if ($.topUpAllocationEnabled[nodeOperatorId] == !paused) revert TopUpAllocationPauseUnchanged();
-        $.topUpAllocationEnabled[nodeOperatorId] = !paused;
-        emit TopUpAllocationPauseSet(nodeOperatorId, paused);
+        if ($.topUpAllocationEnabled[nodeOperatorId] == enabled) revert TopUpAllocationStateUnchanged();
+        $.topUpAllocationEnabled[nodeOperatorId] = enabled;
+        if (enabled) emit TopUpAllocationEnabled(nodeOperatorId);
+        else emit TopUpAllocationDisabled(nodeOperatorId);
         _incrementModuleNonce();
     }
 }
