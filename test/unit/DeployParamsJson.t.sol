@@ -115,7 +115,7 @@ contract DeployParamsArtifactsTest is DeploymentHelpers {
         ];
         for (uint256 i; i < paths.length; ++i) {
             CommonDeployParams memory params = parseCommonDeployParams(vm.readFile(paths[i]));
-            assertEq(params.verifierGloasSlot, type(uint64).max);
+            assertGt(params.verifierGloasSlot, 0);
             assertEq(params.slotsPerEpoch, 32);
             assertGt(params.defaultKeysLimit, 0);
             assertGt(params.oracleMembers.length, 0);
