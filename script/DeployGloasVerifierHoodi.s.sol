@@ -59,6 +59,6 @@ contract DeployGloasVerifierHoodiCurated is DeployGloasVerifierHoodi {
     /// @inheritdoc DeployGloasVerifierBase
     function run(string memory gitRef, string memory paramsKey) public override {
         super.run(gitRef, paramsKey);
-        _deployCuratedModule(0x84DffcfB232594975C608DE92544Ff239a24c9E9); // CMC on Hoodi
+        _deployCuratedModule();
     }
 }

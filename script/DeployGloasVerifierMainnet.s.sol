@@ -59,6 +59,6 @@ contract DeployGloasVerifierMainnetCurated is DeployGloasVerifierMainnet {
     /// @inheritdoc DeployGloasVerifierBase
     function run(string memory gitRef, string memory paramsKey) public override {
         super.run(gitRef, paramsKey);
-        _deployCuratedModule(0x2570e0b22AD904501dfB0d49575991ACB801dD91); // CMC
+        _deployCuratedModule();
     }
 }

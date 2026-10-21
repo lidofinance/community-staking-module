@@ -62,7 +62,7 @@ abstract contract DeployGloasVerifierBase is Script {
         vm.writeJson(string.concat('"', gitRef, '"'), path, ".git-ref");
     }
 
-    function _deployCuratedModule(address topUpAllocationEnabler) internal {
+    function _deployCuratedModule() internal {
         CuratedModule cm = CuratedModule(module);
 
         vm.startBroadcast();
@@ -78,7 +78,6 @@ abstract contract DeployGloasVerifierBase is Script {
 
         string memory path = vm.envString("DEPLOY_CONFIG");
         vm.writeJson(vm.toString(address(implementation)), path, ".CuratedModuleImpl");
-        vm.writeJson(vm.toString(topUpAllocationEnabler), path, ".CuratedDeployParams.topUpAllocationEnabler");
     }
 
     function _deployVerifier() internal returns (Verifier verifier) {
