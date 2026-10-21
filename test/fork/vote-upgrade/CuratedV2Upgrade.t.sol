@@ -6,45 +6,31 @@ pragma solidity 0.8.33;
 import { Test } from "forge-std/Test.sol";
 
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
-import { CuratedModule } from "../../../src/CuratedModule.sol";
+import { CuratedDeployParams } from "../../../script/curated/DeployBase.s.sol";
 import { NodeOperator } from "../../../src/interfaces/IBaseModule.sol";
 import { OssifiableProxy } from "../../../src/lib/proxy/OssifiableProxy.sol";
 
 contract CuratedV2UpgradeTest is Test, DeploymentFixtures {
     uint256 internal forkIdBeforeUpgrade;
     uint256 internal forkIdAfterUpgrade;
-    CuratedModule internal cm;
-    CuratedModule internal implementation;
+    CuratedDeployParams internal deployParams;
 
     function setUp() public {
         Env memory env = envVars();
-        forkIdBeforeUpgrade = vm.createSelectFork(env.RPC_URL);
+        forkIdAfterUpgrade = vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
         if (moduleType != ModuleType.Curated) vm.skip(true, "Curated deployment required");
-        vm.skip(module.getInitializedVersion() != 1, "Migration requires a version 1 deployment");
 
-        forkIdAfterUpgrade = vm.createSelectFork(env.RPC_URL, block.number);
-        cm = CuratedModule(address(module));
+        uint256 votePrevBlock = vm.envUint("VOTE_PREV_BLOCK");
+        assertNotEq(votePrevBlock, 0, "VOTE_PREV_BLOCK not set");
+        forkIdBeforeUpgrade = vm.createFork(env.RPC_URL, votePrevBlock);
 
-        // Deployment phase: prepare the implementation linked to the updated allocator.
-        implementation = new CuratedModule({
-            moduleType: module.getType(),
-            lidoLocator: address(module.LIDO_LOCATOR()),
-            parametersRegistry: address(module.PARAMETERS_REGISTRY()),
-            accounting: address(module.ACCOUNTING()),
-            exitPenalties: address(module.EXIT_PENALTIES()),
-            metaRegistry: address(cm.META_REGISTRY())
-        });
-
-        // Vote phase: atomically upgrade and migrate.
-        OssifiableProxy proxy = OssifiableProxy(payable(address(module)));
-        address proxyAdmin = proxy.proxy__getAdmin();
-        vm.prank(proxyAdmin);
-        proxy.proxy__upgradeToAndCall(address(implementation), abi.encodeCall(CuratedModule.finalizeUpgradeV2, ()));
+        updateCuratedDeployParams(deployParams, env.DEPLOY_CONFIG);
     }
 
     function test_curatedModuleChanges() public {
         vm.selectFork(forkIdBeforeUpgrade);
+        assertEq(module.getInitializedVersion(), 1);
         uint256 nonceBefore = module.getNonce();
         address implementationBefore = OssifiableProxy(payable(address(module))).proxy__getImplementation();
         address adminBefore = OssifiableProxy(payable(address(module))).proxy__getAdmin();
@@ -52,8 +38,8 @@ contract CuratedV2UpgradeTest is Test, DeploymentFixtures {
         vm.selectFork(forkIdAfterUpgrade);
         assertEq(module.getInitializedVersion(), 2);
         assertEq(module.getNonce(), nonceBefore + 1);
-        assertNotEq(implementationBefore, address(implementation));
-        assertEq(OssifiableProxy(payable(address(module))).proxy__getImplementation(), address(implementation));
+        assertNotEq(implementationBefore, address(curatedModuleImpl));
+        assertEq(OssifiableProxy(payable(address(module))).proxy__getImplementation(), address(curatedModuleImpl));
         assertEq(OssifiableProxy(payable(address(module))).proxy__getAdmin(), adminBefore);
     }
 
@@ -64,8 +50,19 @@ contract CuratedV2UpgradeTest is Test, DeploymentFixtures {
             NodeOperator memory no = module.getNodeOperator(noId);
 
             vm.selectFork(forkIdAfterUpgrade);
-            assertEq(cm.isTopUpAllocationEnabled(noId), no.totalDepositedKeys > no.totalWithdrawnKeys);
+            assertEq(curatedModule.isTopUpAllocationEnabled(noId), no.totalDepositedKeys > no.totalWithdrawnKeys);
         }
+    }
+
+    function test_topUpAllocationRole() public {
+        bytes32 role = curatedModule.ENABLE_TOP_UP_ALLOCATION_ROLE();
+        vm.selectFork(forkIdBeforeUpgrade);
+        assertEq(module.getRoleMemberCount(role), 0);
+
+        vm.selectFork(forkIdAfterUpgrade);
+        assertNotEq(deployParams.topUpAllocationEnabler, address(0));
+        assertEq(module.getRoleMemberCount(role), 1);
+        assertTrue(module.hasRole(role, deployParams.topUpAllocationEnabler));
     }
 
     function test_curatedModuleState() public {
