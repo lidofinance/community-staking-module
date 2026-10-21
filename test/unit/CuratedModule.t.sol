@@ -7,6 +7,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 
 import { SigningKeys } from "src/lib/SigningKeys.sol";
 import { StakeTracker } from "src/lib/StakeTracker.sol";
+import { TopUpAllocationLib } from "src/lib/TopUpAllocationLib.sol";
 import { ValidatorBalanceLimits } from "src/lib/ValidatorBalanceLimits.sol";
 import { CuratedModule } from "src/CuratedModule.sol";
 import { IBaseModule, NodeOperator, NodeOperatorManagementProperties } from "src/interfaces/IBaseModule.sol";
@@ -486,7 +487,7 @@ contract CuratedDisableTopUpAllocation is CuratedCommon {
     function test_disableTopUpAllocation_revertWhen_AlreadyDisabled() public {
         uint256 noId = createNodeOperator();
 
-        vm.expectRevert(ICuratedModule.TopUpAllocationStateUnchanged.selector);
+        vm.expectRevert(TopUpAllocationLib.TopUpAllocationStateUnchanged.selector);
         vm.prank(nodeOperator);
         cm.disableTopUpAllocation(noId);
     }
@@ -523,7 +524,7 @@ contract CuratedEnableTopUpAllocation is CuratedCommon {
         uint256 noId = createNodeOperator();
         cm.enableTopUpAllocation(noId);
 
-        vm.expectRevert(ICuratedModule.TopUpAllocationStateUnchanged.selector);
+        vm.expectRevert(TopUpAllocationLib.TopUpAllocationStateUnchanged.selector);
         cm.enableTopUpAllocation(noId);
     }
 }

@@ -3,15 +3,15 @@
 
 pragma solidity 0.8.33;
 
-import { ICuratedModule } from "../interfaces/ICuratedModule.sol";
-
 library TopUpAllocationLib {
     bytes32 private constant TOP_UP_ALLOCATION_ENABLED_POSITION =
         keccak256("lido.CuratedModule.topUpAllocationEnabled");
 
+    error TopUpAllocationStateUnchanged();
+
     function setState(uint256 nodeOperatorId, bool enabled) internal {
         mapping(uint256 => bool) storage enabledByOperator = _enabledByOperator();
-        if (enabledByOperator[nodeOperatorId] == enabled) revert ICuratedModule.TopUpAllocationStateUnchanged();
+        if (enabledByOperator[nodeOperatorId] == enabled) revert TopUpAllocationStateUnchanged();
         enabledByOperator[nodeOperatorId] = enabled;
     }
 

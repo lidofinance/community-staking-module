@@ -13,7 +13,6 @@ interface ICuratedModule is IBaseModule, IStakingModuleV2 {
 
     error ZeroMetaRegistryAddress();
     error SenderIsNotMetaRegistry();
-    error TopUpAllocationStateUnchanged();
 
     /// @notice Role allowed to enable top-up allocation for node operators.
     function ENABLE_TOP_UP_ALLOCATION_ROLE() external view returns (bytes32);
@@ -33,8 +32,6 @@ interface ICuratedModule is IBaseModule, IStakingModuleV2 {
 
     /// @notice Disables top-up allocation for a node operator. Only callable by its owner.
     /// @dev Excludes the operator's weight and stake from the executable top-up allocation baseline.
-    ///      Callable while the module is paused or its deposit info is stale.
-    ///      Top-up allocation is disabled by default.
     /// @param nodeOperatorId ID of the node operator.
     function disableTopUpAllocation(uint256 nodeOperatorId) external;
 
