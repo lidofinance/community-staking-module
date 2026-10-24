@@ -7,7 +7,6 @@ import { Test } from "forge-std/Test.sol";
 
 import { BaseModule } from "src/abstract/BaseModule.sol";
 import { NodeOperatorManagementProperties, WithdrawnValidatorInfo } from "src/interfaces/IBaseModule.sol";
-import { WithdrawnValidatorLib } from "src/lib/WithdrawnValidatorLib.sol";
 import { ValidatorBalanceLimits } from "src/lib/ValidatorBalanceLimits.sol";
 
 import { AccountingMock } from "../../helpers/mocks/AccountingMock.sol";
@@ -111,7 +110,10 @@ abstract contract ModuleFixtures is Test, Fixtures, Utilities, InvariantAsserts 
         uploadMoreKeys(nodeOperatorId, keysCount, keys, signatures);
     }
 
-    function createNodeOperator(address managerAddress, bool extendedManagerPermissions) internal returns (uint256) {
+    function createNodeOperator(
+        address managerAddress,
+        bool extendedManagerPermissions
+    ) internal virtual returns (uint256) {
         return
             module.createNodeOperator(
                 managerAddress,
